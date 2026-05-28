@@ -21,7 +21,7 @@ export default function VerifyEmail() {
     }
 
     API
-      .get(`${backendUrl}/api/account/verify-email?token=${token}`)
+      .get(`${backendUrl}/api/auth/verify-email?token=${token}`)
       .then(() => {
         setStatus("success");
         toast.success("Account verified successfully!");

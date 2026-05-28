@@ -16,6 +16,32 @@ const signup = async (req, res) => {
     const existingUser = await UserModel.findOne({ email });
 
     if (existingUser) {
+      if (!existingUser.isVerified) {
+        const verifyToken = jwt.sign(
+          { userId: existingUser._id },
+          process.env.SECRET_KEY,
+          { expiresIn: process.env.JWT_EXPIRE_TIME }
+        );
+
+        const verifyUrl = `${process.env.FRONTEND_URL}/verify?token=${verifyToken}`;
+
+        await sendMail({
+          to: existingUser.email,
+          subject: "Verify your account",
+          templateName: "verify",
+          data: {
+            name: existingUser.name,
+            email: existingUser.email,
+            verifyUrl,
+          },
+        });
+
+        return res.status(200).json({
+          message: "Verification email sent again.",
+          success: true,
+        });
+      }
+
       return res.status(409).json({
         message: "User already exists, please login",
         success: false,
