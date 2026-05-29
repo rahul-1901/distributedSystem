@@ -13,6 +13,11 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log("AUTH SERVICE RECEIVED:", req.method, req.originalUrl);
+  next();
+});
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -21,7 +26,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
+// app.use("/api/auth", authRoutes);
 app.use("/", authRoutes); //through api-gateway
 
 connectDB();

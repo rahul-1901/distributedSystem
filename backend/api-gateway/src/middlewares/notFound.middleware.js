@@ -1,6 +1,10 @@
 export const notFound = (req, res) => {
-    res.status(404).json({
-      success: false,
-      message: "API Gateway route not found",
-    });
-  };
+  res.status(404).json({
+    success: false,
+    error: {
+      code: "ROUTE_NOT_FOUND",
+      message: `Route ${req.method} ${req.originalUrl} not found`,
+    },
+    timestamp: new Date().toISOString(),
+  });
+};

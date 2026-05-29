@@ -1,17 +1,14 @@
 import express from "express";
 import {
   googleLogin,
-  githubLogin,
   login,
   resetPassword,
   sendResetLink,
   signup,
-  verifyEmail,
+  verifyEmail
 } from "../controllers/auth.controller.js";
-import {
-  loginValidation,
-  signupValidation,
-} from "../middlewares/authValidation.js";
+import { validate } from "../middlewares/validate.middleware.js";
+import { signupSchema, loginSchema } from "../validations/auth.validation.js";
 import rateLimit from "express-rate-limit";
 
 const limiter = rateLimit({
@@ -27,12 +24,11 @@ const limiter = rateLimit({
 
 const router = express.Router();
 
-router.post("/signup", limiter, signup);
+router.post("/signup", limiter, validate(signupSchema), signup);
 router.get("/verify-email", limiter, verifyEmail);
 router.post("/send-reset-link", limiter, sendResetLink);
 router.post("/reset-password", limiter, resetPassword);
-router.post("/login", limiter, login);
+router.post("/login", limiter, validate(loginSchema), login);
 router.get("/google", limiter, googleLogin);
-router.get("/auth/callback/github", limiter, githubLogin);
 
 export default router;

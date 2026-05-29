@@ -26,7 +26,6 @@ app.get("/", (req, res) => {
 
 // Gateway strips /api/hackathons
 app.use("/", hackathonRoutes);
-// app.use("/api/hackathons", hackathonRoutes); //for in hackathon-service routes
 
 connectDB();
 

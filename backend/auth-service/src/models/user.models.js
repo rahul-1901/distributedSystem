@@ -1,4 +1,4 @@
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
@@ -12,9 +12,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
     },
     password: {
       type: String,
+      select: false
     },
 
     provider: {
@@ -51,6 +55,7 @@ const userSchema = new mongoose.Schema(
     resetPasswordToken: {
       type: String,
       default: "",
+      select: false
     },
 
     resetPasswordExpiresAt: Date,
@@ -58,21 +63,10 @@ const userSchema = new mongoose.Schema(
     verificationToken: {
       type: String,
       default: "",
-    },
-    isGitHubloggedIn: {
-      type: Boolean,
-      default: false,
-    },
-    isGoogleLoggedIn: {
-      type: Boolean,
-      default: false,
+      select: false
     },
     gitHubLink: {
       type: String,
-    },
-    gitHubAccessToken: {
-      type: String,
-      default: "",
     },
     streaks: {
       type: Number,
@@ -174,6 +168,7 @@ userSchema.virtual("submissions", {
 });
 userSchema.set("toObject", { virtuals: true });
 userSchema.set("toJSON", { virtuals: true });
+userSchema.index({ email: 1 });
 const UserModel = mongoose.model("users", userSchema);
 
 export default UserModel;

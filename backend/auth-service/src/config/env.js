@@ -2,7 +2,23 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const requiredEnvVars = [
+  "MONGO_URL",
+  "SECRET_KEY",
+  "FRONTEND_URL",
+  "BREVO_API_KEY",
+];
+
+requiredEnvVars.forEach((key) => {
+  if (!process.env[key]) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+});
+
 export const env = {
+  NODE_ENV: process.env.NODE_ENV || "development",
+  SERVICE_NAME: process.env.SERVICE_NAME || "auth-service",
+
   PORT: process.env.PORT || 5001,
   MONGO_URL: process.env.MONGO_URL,
 
