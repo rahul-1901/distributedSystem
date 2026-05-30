@@ -4,6 +4,7 @@ import fs from "fs";
 import handlebars from "handlebars";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { logger } from "../utils/logger.js";
 
 dotenv.config();
 
@@ -114,13 +115,13 @@ export async function sendMail({
         }
       );
 
-    console.log(
+    logger.info(
       `[EMAIL SENT] ${templateName} -> ${to}`
     );
 
     return response;
   } catch (error) {
-    console.error(
+    logger.error(
       "[BREVO EMAIL ERROR]",
       {
         template: templateName,

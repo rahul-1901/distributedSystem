@@ -18,7 +18,7 @@ export const validate = (schema) => {
         });
       }
 
-      console.error("Validation Middleware Error:", error);
+      logger.error("Validation Middleware Error:", error);
 
       return next(error);
     }

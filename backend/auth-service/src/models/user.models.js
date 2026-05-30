@@ -20,10 +20,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       select: false
     },
-
     provider: {
       type: String,
-      enum: ["local", "google", "github"],
+      enum: ["local", "google"],
       default: "local",
     },
     name: {
@@ -38,28 +37,23 @@ const userSchema = new mongoose.Schema(
     ],
     role: {
       type: String,
-      enum: ["participant", "organizer", "admin"],
+      enum: ["participant"],
       default: "participant",
     },
-
     lastLogin: {
       type: Date,
       default: Date.now,
     },
-
     isVerified: {
       type: Boolean,
       default: false,
     },
-
     resetPasswordToken: {
       type: String,
       default: "",
       select: false
     },
-
     resetPasswordExpiresAt: Date,
-
     verificationToken: {
       type: String,
       default: "",
@@ -88,7 +82,6 @@ const userSchema = new mongoose.Schema(
     currentQuizTotalPoints: { type: Number, default: 0 },
     contactNumber: {
       type: String,
-      // required: true,
       validate: {
         validator: function (v) {
           return /^\+?[0-9]{10,15}$/.test(v);
@@ -168,7 +161,6 @@ userSchema.virtual("submissions", {
 });
 userSchema.set("toObject", { virtuals: true });
 userSchema.set("toJSON", { virtuals: true });
-userSchema.index({ email: 1 });
 const UserModel = mongoose.model("users", userSchema);
 
 export default UserModel;

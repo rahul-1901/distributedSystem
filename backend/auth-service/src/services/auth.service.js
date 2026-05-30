@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import userRepository from "../repositories/user.repository.js";
 import tokenService from "./token.service.js";
-import emailService from "./email.service.js";
+import { addEmailJob } from "../jobs/email.job.js";
 
 export class AuthService {
   async signup({ email, password, name }) {
@@ -15,9 +15,15 @@ export class AuthService {
           existingUser._id
         );
 
-        emailService
-          .sendVerificationEmail(existingUser, verifyToken)
-          .catch(console.error);
+        await addEmailJob({
+          type: "verification",
+          user: {
+            id: existingUser._id,
+            email: existingUser.email,
+            name: existingUser.name,
+          },
+          token: verifyToken,
+        });
 
         return {
           statusCode: 200,
@@ -44,9 +50,24 @@ export class AuthService {
 
     const verifyToken = tokenService.generateVerificationToken(newUser._id);
 
-    emailService
-      .sendVerificationEmail(newUser, verifyToken)
-      .catch(console.error);
+    // emailService
+    //   .sendVerificationEmail(newUser, verifyToken)
+    //   .catch((err) =>
+    //     logger.error(
+    //       { err, userId: existingUser._id },
+    //       "Failed to send verification email"
+    //     )
+    //   );
+
+    await addEmailJob({
+      type: "verification",
+      user: {
+        id: newUser._id,
+        email: newUser.email,
+        name: newUser.name,
+      },
+      token: verifyToken,
+    });
 
     return {
       statusCode: 201,
@@ -159,7 +180,14 @@ export class AuthService {
 
     await userRepository.markVerified(user);
 
-    await emailService.sendWelcomeEmail(user);
+    await addEmailJob({
+      type: "welcome",
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+    });
 
     return {
       statusCode: 200,
@@ -199,7 +227,15 @@ export class AuthService {
 
     const resetToken = tokenService.generateResetToken(user._id);
 
-    await emailService.sendResetPasswordEmail(user, resetToken);
+    await addEmailJob({
+      type: "reset-password",
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+      token: resetToken,
+    });
 
     return {
       statusCode: 200,
@@ -243,7 +279,14 @@ export class AuthService {
 
     await userRepository.updatePassword(user, hashedPassword);
 
-    await emailService.sendPasswordResetSuccessEmail(user);
+    await addEmailJob({
+      type: "password-reset-success",
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+    });
 
     return {
       statusCode: 200,
