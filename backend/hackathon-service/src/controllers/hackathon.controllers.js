@@ -1,389 +1,123 @@
-import hackathonModel from "../models/hackathon.models.js";
-import SubmissionModel from "../models/submission.models.js";
-import UserModel from "../models/user.models.js";
-import { getNowUTC } from "../utils/dateUtils.js"
+import { wishlistService } from "../services/wishlistServices/wishlist.service.instance.js";
+import { hackathonService } from "../services/hackathonServices/hackathon.service.instance.js";
+import { submissionService } from "../services/submissionServices/submission.service.instance.js";
 
-export const getActiveHackathons = async (req, res) => {
+export const getActiveHackathons = async (req, res, next) => {
   try {
-    const now = getNowUTC(); // ✅ Always use UTC
-    const allHackathons = await hackathonModel
-      .find({
-        startDate: { $lte: now },
-        submissionEndDate: { $gte: now },
-      })
-      .sort({ endDate: 1 }); // Sort by ending soonest
+    const allHackathons = await hackathonService.getActiveHackathons();
 
-    res.status(200).json({ allHackathons });
-  } catch (error) {
-    res.status(500).json({
-      message: "Error fetching active hackathons",
-      error: error.message,
+    return res.status(200).json({
+      allHackathons,
     });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getExpiredHackathons = async (req, res) => {
+export const getExpiredHackathons = async (req, res, next) => {
   try {
-    const now = getNowUTC(); // ✅ Always use UTC
-    const expiredHackathons = await hackathonModel.find({
-      status: false,
-      submissionEndDate: { $lt: now },
+    const expiredHackathons = await hackathonService.getExpiredHackathons();
+
+    return res.status(200).json({
+      expiredHackathons,
     });
-    res.status(200).json({ expiredHackathons });
   } catch (error) {
-    res.status(500).json({
-      message: "Error fetching expired hackathons",
-      error: error.message,
+    next(error);
+  }
+};
+
+export const getUpcomingHackathons = async (req, res, next) => {
+  try {
+    const upcomingHackathons = await hackathonService.getUpcomingHackathons();
+
+    return res.status(200).json({
+      upcomingHackathons,
     });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getUpcomingHackathons = async (req, res) => {
+export const getHackathonById = async (req, res, next) => {
   try {
-    const now = getNowUTC(); // ✅ Always use UTC
-    const upcomingHackathons = await hackathonModel
-      .find({
-        startDate: { $gt: now },
-      })
-      .sort({ startDate: 1 }); // Sort by starting soonest
+    const hackathon = await hackathonService.getHackathonById(req.params.id);
 
-    res.status(200).json({ upcomingHackathons });
+    return res.status(200).json(hackathon);
   } catch (error) {
-    res.status(500).json({
-      message: "Error fetching upcoming hackathons",
-      error: error.message,
+    next(error);
+  }
+};
+
+export const getHackathonResults = async (req, res, next) => {
+  try {
+    const results = await submissionService.getHackathonResults(req.params.id);
+
+    return res.status(200).json(results);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHackathonGallery = async (req, res, next) => {
+  try {
+    const gallery = await hackathonService.getHackathonGallery(
+      req.params.hackathonId
+    );
+
+    return res.status(200).json({
+      success: true,
+      gallery,
     });
-  }
-};
-
-export const getHackathonById = async (req, res) => {
-  try {
-    const hackathon = await hackathonModel.findById(req.params.id);
-    if (!hackathon)
-      return res.status(404).json({ message: "Hackathon not found" });
-    return res.json(hackathon);
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
-  }
-};
-
-export const getHackathonResults = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const hackathon = await hackathonModel.findById(id);
-    if (!hackathon) {
-      return res.status(404).json({ message: "Hackathon not found" });
-    }
-
-    if (!hackathon.showResult) {
-      return res
-        .status(403)
-        .json({ message: "Results are not public for this hackathon." });
-    }
-
-    const results = await SubmissionModel.find({ hackathon: id })
-      .sort({ hackathonPoints: -1 })
-      .limit(10)
-      .populate("participant", "name avatar email")
-      .populate("team", "name members");
-
-    res.status(200).json(results);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching results", error: error.message });
+    next(error);
   }
 };
 
-export const getHackathonGallery = async (req, res) => {
-  try {
-    const { hackathonId } = req.params;
-    const hackathon = await hackathonModel
-      .findById(hackathonId)
-      .select("gallery");
-    if (!hackathon)
-      return res.status(404).json({ message: "Hackathon not found" });
-    res.status(200).json({ success: true, gallery: hackathon.gallery || [] });
-  } catch (error) {
-    console.error("Get gallery error:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching gallery", error: error.message });
-  }
-};
-
-export const toggleHackathonWishlist = async (req, res) => {
+export const toggleHackathonWishlist = async (req, res, next) => {
   try {
     const { hackathonId } = req.body;
-    const userId = req.user._id; // Try req.userId first
 
-    if (!hackathonId)
-      return res
-        .status(400)
-        .json({ message: "Hackathon ID is required", success: false });
-    if (!userId)
-      return res
-        .status(401)
-        .json({ message: "User not authenticated", success: false });
+    const result = await wishlistService.toggleHackathonWishlist(
+      req.user?._id,
+      hackathonId
+    );
 
-    const hackathon = await hackathonModel.findById(hackathonId);
-    if (!hackathon)
-      return res
-        .status(404)
-        .json({ message: "Hackathon not found", success: false });
-
-    const user = await UserModel.findById(userId);
-    if (!user)
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-
-    const wishlistIndex = user.wishlist.indexOf(hackathonId);
-    if (wishlistIndex > -1) {
-      user.wishlist.splice(wishlistIndex, 1);
-      await user.save();
-      return res.status(200).json({
-        message: "Removed from wishlist",
-        success: true,
-        liked: false,
-      });
-    } else {
-      user.wishlist.push(hackathonId);
-      await user.save();
-      return res
-        .status(201)
-        .json({ message: "Added to wishlist", success: true, liked: true });
-    }
-  } catch (error) {
-    console.error("Toggle hackathon wishlist error:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      success: false,
-      error: error.message,
+    return res.status(result.liked ? 201 : 200).json({
+      success: true,
+      liked: result.liked,
+      message: result.message,
     });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getUserHackathonWishlist = async (req, res) => {
+export const getUserHackathonWishlist = async (req, res, next) => {
   try {
-    const userId = req.user._id; // Try req.userId first
+    const result = await wishlistService.getUserWishlist(req.user?._id);
 
-    if (!userId) {
-      return res.status(401).json({
-        message: "User not authenticated",
-        success: false,
-      });
-    }
-
-    const user = await UserModel.findById(userId).populate({
-      path: "wishlist",
-      select:
-        "title subTitle description image startDate endDate submissionStartDate submissionEndDate prizeMoney difficulty category techStackUsed themes status",
+    return res.status(200).json({
+      success: true,
+      likedHackathons: result.likedHackathons,
+      count: result.count,
     });
-
-    if (!user)
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-
-    const likedHackathons = user.wishlist.filter((h) => h !== null);
-    return res
-      .status(200)
-      .json({ success: true, likedHackathons, count: likedHackathons.length });
   } catch (error) {
-    console.error("Get user hackathon wishlist error:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      success: false,
-      error: error.message,
-    });
+    next(error);
   }
 };
 
-export const checkHackathonLiked = async (req, res) => {
+export const checkHackathonLiked = async (req, res, next) => {
   try {
-    const { hackathonId } = req.params;
-    const userId = req.user._id; // Try req.userId first, fallback to req.body.userId
+    const result = await wishlistService.checkHackathonLiked(
+      req.user?._id,
+      req.params.hackathonId
+    );
 
-    if (!userId) {
-      return res.status(401).json({
-        message: "User not authenticated",
-        success: false,
-      });
-    }
-
-    const user = await UserModel.findById(userId);
-    if (!user)
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-
-    return res
-      .status(200)
-      .json({ success: true, liked: user.wishlist.includes(hackathonId) });
-  } catch (error) {
-    console.error("Check hackathon liked error:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      success: false,
-      error: error.message,
+    return res.status(200).json({
+      success: true,
+      liked: result.liked,
     });
+  } catch (error) {
+    next(error);
   }
 };
-
-
-
-
-
-
-// // ─── Helper: upload a single file to S3 and clean up temp ────────────────────
-// const uploadFileToS3 = async (file, s3KeyPrefix) => {
-//   const timestamp = Date.now();
-//   const randomString = Math.random().toString(36).substring(2, 9);
-//   const key = `${s3KeyPrefix}/${timestamp}-${randomString}-${file.originalname}`;
-
-//   const putObjectCommand = new PutObjectCommand({
-//     Bucket: process.env.AWS_S3_BUCKET_NAME,
-//     Key: key,
-//     Body: fs.readFileSync(file.path),
-//     ContentType: file.mimetype,
-//   });
-
-//   await s3Client.send(putObjectCommand);
-
-//   // Clean up temp file
-//   if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-
-//   const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-//   return { key, url };
-// };
-
-// // --- ADD IMAGES TO GALLERY (separate endpoint for post-creation uploads) ---
-// // Expects multer.array("image", 10)
-// export const addGalleryImages = async (req, res) => {
-//   try {
-//     const { hackathonId } = req.params;
-
-//     const hackathon = await hackathonModel.findById(hackathonId);
-
-//     if (!hackathon) {
-//       return res.status(404).json({ message: "Hackathon not found" });
-//     }
-
-//     if (
-//       !req.admin?.controller &&
-//       hackathon.createdBy.toString() !== req.admin._id.toString()
-//     ) {
-//       return res.status(403).json({
-//         message: "You are not allowed to modify this hackathon",
-//       });
-//     }
-
-//     if (!req.files || req.files.length === 0) {
-//       return res.status(400).json({ message: "No images provided" });
-//     }
-
-//     if (hackathon.gallery.length + req.files.length > 30) {
-//       return res.status(400).json({
-//         message: "Max 30 images allowed in gallery",
-//       });
-//     }
-
-//     const validTypes = ["image/jpeg", "image/png", "image/webp"];
-
-//     const uploadPromises = req.files.map(async (file) => {
-//       if (!validTypes.includes(file.mimetype)) {
-//         throw new Error(`Invalid file type: ${file.originalname}`);
-//       }
-
-//       const { url } = await uploadFileToS3(
-//         file,
-//         `hackathons/${hackathonId}/gallery`
-//       );
-
-//       try {
-//         fs.unlinkSync(file.path);
-//       } catch (e) {
-//         console.warn("File cleanup failed:", e.message);
-//       }
-
-//       return url;
-//     });
-
-//     const newImageUrls = await Promise.all(uploadPromises);
-
-//     hackathon.gallery.push(...newImageUrls);
-//     await hackathon.save();
-
-//     res.status(200).json({
-//       message: "Images added to gallery successfully",
-//       gallery: hackathon.gallery,
-//     });
-//   } catch (error) {
-//     console.error("Add gallery images error:", error);
-//     res.status(500).json({
-//       message: "Error adding images to gallery",
-//       error: error.message,
-//     });
-//   }
-// };
-
-// // --- DELETE IMAGE FROM GALLERY ---
-// export const deleteGalleryImage = async (req, res) => {
-//   try {
-//     const { hackathonId } = req.params;
-//     const { imageUrl } = req.body;
-
-//     const hackathon = await hackathonModel.findById(hackathonId);
-//     if (!hackathon) {
-//       return res.status(404).json({ message: "Hackathon not found" });
-//     }
-
-//     if (
-//       !req.admin?.controller &&
-//       hackathon.createdBy.toString() !== req.admin._id.toString()
-//     ) {
-//       return res.status(403).json({
-//         message: "You are not allowed to modify this hackathon",
-//       });
-//     }
-
-//     const imageIndex = hackathon.gallery.indexOf(imageUrl);
-
-//     if (imageIndex === -1) {
-//       return res.status(404).json({ message: "Image not found in gallery" });
-//     }
-
-//     // ✅ Delete from S3
-//     try {
-//       const urlParts = new URL(imageUrl);
-//       const s3Key = urlParts.pathname.substring(1);
-
-//       await s3Client.send(
-//         new DeleteObjectCommand({
-//           Bucket: process.env.AWS_S3_BUCKET_NAME,
-//           Key: s3Key,
-//         })
-//       );
-//     } catch (s3Error) {
-//       console.warn("S3 deletion failed:", s3Error.message);
-//     }
-
-//     hackathon.gallery.splice(imageIndex, 1);
-//     await hackathon.save();
-
-//     res.status(200).json({
-//       message: "Image deleted successfully",
-//       gallery: hackathon.gallery,
-//     });
-//   } catch (error) {
-//     console.error("Delete gallery image error:", error);
-//     res.status(500).json({
-//       message: "Error deleting image from gallery",
-//       error: error.message,
-//     });
-//   }
-// };

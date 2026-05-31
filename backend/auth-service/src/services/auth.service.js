@@ -50,15 +50,6 @@ export class AuthService {
 
     const verifyToken = tokenService.generateVerificationToken(newUser._id);
 
-    // emailService
-    //   .sendVerificationEmail(newUser, verifyToken)
-    //   .catch((err) =>
-    //     logger.error(
-    //       { err, userId: existingUser._id },
-    //       "Failed to send verification email"
-    //     )
-    //   );
-
     await addEmailJob({
       type: "verification",
       user: {

@@ -1,4 +1,4 @@
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
@@ -12,14 +12,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
     },
     password: {
       type: String,
+      select: false,
     },
-
     provider: {
       type: String,
-      enum: ["local", "google", "github"],
+      enum: ["local", "google"],
       default: "local",
     },
     name: {
@@ -34,45 +37,30 @@ const userSchema = new mongoose.Schema(
     ],
     role: {
       type: String,
-      enum: ["participant", "organizer", "admin"],
+      enum: ["participant"],
       default: "participant",
     },
-
     lastLogin: {
       type: Date,
       default: Date.now,
     },
-
     isVerified: {
       type: Boolean,
       default: false,
     },
-
     resetPasswordToken: {
       type: String,
       default: "",
+      select: false,
     },
-
     resetPasswordExpiresAt: Date,
-
     verificationToken: {
       type: String,
       default: "",
-    },
-    isGitHubloggedIn: {
-      type: Boolean,
-      default: false,
-    },
-    isGoogleLoggedIn: {
-      type: Boolean,
-      default: false,
+      select: false,
     },
     gitHubLink: {
       type: String,
-    },
-    gitHubAccessToken: {
-      type: String,
-      default: "",
     },
     streaks: {
       type: Number,
@@ -94,7 +82,6 @@ const userSchema = new mongoose.Schema(
     currentQuizTotalPoints: { type: Number, default: 0 },
     contactNumber: {
       type: String,
-      // required: true,
       validate: {
         validator: function (v) {
           return /^\+?[0-9]{10,15}$/.test(v);

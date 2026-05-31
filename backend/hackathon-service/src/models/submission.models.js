@@ -2,16 +2,16 @@ import mongoose from "mongoose";
 import TeamModel from "./team.js";
 
 const mediaSchema = new mongoose.Schema({
-  public_id: { type: String, required: true }, // from Cloudinary
-  url: { type: String, required: true }, // secure_url
+  public_id: { type: String, required: true },
+  url: { type: String, required: true },
   resource_type: {
     type: String,
     enum: ["image", "video", "raw"],
     required: true,
   },
-  format: { type: String }, // jpg, mp4, pdf, etc.
+  format: { type: String },
   original_filename: { type: String },
-  size: { type: Number }, // bytes
+  size: { type: Number },
   uploadedAt: { type: Date, default: Date.now },
 });
 
@@ -48,25 +48,23 @@ const submissionSchema = new mongoose.Schema({
     watchers: { type: Number, default: 0 },
     description: { type: String, default: "" },
   },
-
-  // 🔹 New fields for docs, images, videos
-  docs: [mediaSchema], // array of PDFs or other docs
-  images: [mediaSchema], // array of screenshots/images
-  videos: [mediaSchema], // array of demo videos
-
+  docs: [mediaSchema],
+  images: [mediaSchema],
+  videos: [mediaSchema],
   submittedAt: {
     type: Date,
     default: Date.now,
   },
 });
 
-// Ensure either participant OR team is set (not both null)
 submissionSchema.pre("validate", function (next) {
   if (!this.participant && !this.team) {
     return next(new Error("Either participant or team must be provided"));
   }
   next();
 });
+submissionSchema.index({ hackathon: 1 });
+submissionSchema.index({ hackathon: 1, hackathonPoints: -1 });
 
 const SubmissionModel = mongoose.model("submissions", submissionSchema);
 export default SubmissionModel;

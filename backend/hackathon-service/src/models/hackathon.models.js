@@ -124,7 +124,7 @@ const hackathonSchema = new mongoose.Schema(
     contact: [
       {
         title: { type: String, required: true },
-        value: { type: String, required: true }
+        value: { type: String, required: true },
       },
     ],
     createdBy: {
@@ -158,6 +158,55 @@ hackathonSchema.pre(/^find/, async function () {
   );
 });
 
+hackathonSchema.index({
+  startDate: 1,
+});
+
+hackathonSchema.index({
+  submissionEndDate: 1,
+});
+
+hackathonSchema.index({
+  status: 1,
+});
+
+hackathonSchema.index({
+  createdBy: 1,
+});
+
+hackathonSchema.index({
+  createdAt: -1,
+});
+
 const hackathonModel = mongoose.model("hackathons", hackathonSchema);
 
 export default hackathonModel;
+
+
+// TODO (Future Migration):
+// Do not store growing submission references inside Hackathon.
+// Source of truth should be Submission collection using:
+// Submission.find({ hackathon: hackathonId })
+// Kept for backward compatibility with existing data.
+
+// TODO (Future Migration):
+// Do not store growing team references inside Hackathon.
+// Source of truth should be Team collection using:
+// Team.find({ hackathon: hackathonId })
+// Kept for backward compatibility with existing data.
+
+// TODO (Future Migration):
+// Do not store growing registration references inside Hackathon.
+// Source of truth should be RegisteredParticipant collection using:
+// RegisteredParticipant.find({ hackathon: hackathonId })
+// Kept for backward compatibility with existing data.
+
+// TODO (Future Migration):
+// Replace Boolean status with enum:
+// "upcoming" | "active" | "completed"
+// Boolean status is currently retained for backward compatibility.
+
+// TODO (Performance Improvement):
+// Current implementation performs write operations on every read query.
+// Replace with BullMQ scheduled job or cron-based status updater.
+// Do not remove until replacement is implemented and tested.
