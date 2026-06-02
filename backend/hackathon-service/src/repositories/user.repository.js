@@ -1,16 +1,12 @@
 import UserModel from "../models/user.models.js";
 
 export class UserRepository {
-
   async getById(id) {
-    return UserModel
-      .findById(id)
-      .lean();
+    return UserModel.findById(id).lean();
   }
 
   async getWishlist(userId) {
-    return UserModel
-      .findById(userId)
+    return UserModel.findById(userId)
       .populate({
         path: "wishlist",
         select:
@@ -20,16 +16,10 @@ export class UserRepository {
   }
 
   async getWishlistIds(userId) {
-    return UserModel
-      .findById(userId)
-      .select("wishlist")
-      .lean();
+    return UserModel.findById(userId).select("wishlist").lean();
   }
 
-  async addToWishlist(
-    userId,
-    hackathonId
-  ) {
+  async addToWishlist(userId, hackathonId) {
     return UserModel.findByIdAndUpdate(
       userId,
       {
@@ -43,10 +33,7 @@ export class UserRepository {
     );
   }
 
-  async removeFromWishlist(
-    userId,
-    hackathonId
-  ) {
+  async removeFromWishlist(userId, hackathonId) {
     return UserModel.findByIdAndUpdate(
       userId,
       {
@@ -56,6 +43,24 @@ export class UserRepository {
       },
       {
         new: true,
+      }
+    );
+  }
+
+  async addTeam(userId, hackathonId, teamId, session = null) {
+    return UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $addToSet: {
+          teams: {
+            hackathon: hackathonId,
+            team: teamId,
+          },
+        },
+      },
+      {
+        new: true,
+        session,
       }
     );
   }

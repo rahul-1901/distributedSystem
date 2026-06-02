@@ -30,16 +30,11 @@ export class HackathonRepository {
   }
 
   async getById(id) {
-    return hackathonModel
-      .findById(id)
-      .lean();
+    return hackathonModel.findById(id).lean();
   }
 
   async getGallery(id) {
-    return hackathonModel
-      .findById(id)
-      .select("gallery")
-      .lean();
+    return hackathonModel.findById(id).select("gallery").lean();
   }
 
   async exists(id) {
@@ -49,9 +44,24 @@ export class HackathonRepository {
   }
 
   async getResultVisibility(id) {
-    return hackathonModel
-      .findById(id)
-      .select("showResult")
-      .lean();
+    return hackathonModel.findById(id).select("showResult").lean();
+  }
+
+  async incrementParticipants(
+    id,
+    session = null
+  ) {
+    return hackathonModel.findByIdAndUpdate(
+      id,
+      {
+        $inc: {
+          numParticipants: 1,
+        },
+      },
+      {
+        session,
+        new: true,
+      }
+    );
   }
 }

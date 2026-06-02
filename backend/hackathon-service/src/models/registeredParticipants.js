@@ -4,57 +4,45 @@ const registeredParticipantsSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "users",
-    required: true
+    required: true,
   },
   hackathon: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "hackathons",
-    required: true
+    required: true,
   },
   team: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "teams",
-    default: null
+    default: null,
   },
-  // Dynamic form fields (like frontend registration form)
-  name: {
-    type: String,
-    // required: true
-  },
-  contactNumber: {
-    type: String,
-    // required: true
-  },
-  email:{
-    type : String,
-    // required : true
-  },
-  college:{
-    type : String,
-  },
-  gender : {
-    type : String,
-  },
-  currentYearOfStudy : {
-    type : String
-  },
-  city: {
-    type: String
-  },
-  state:{
-    type : String
-  },
-  yearsOfExperience: {
-    type: String
-  },
-  workEmailAddress:{
-    type : String,
+  formData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
+
+registeredParticipantsSchema.index({
+  user: 1,
+});
+
+registeredParticipantsSchema.index({
+  hackathon: 1,
+});
+
+registeredParticipantsSchema.index(
+  {
+    user: 1,
+    hackathon: 1,
+  },
+  {
+    unique: true,
+  }
+);
 
 const RegisteredParticipantsModel = mongoose.model(
   "registeredParticipants",

@@ -17,7 +17,6 @@ const hackathonSchema = new mongoose.Schema(
     },
     submissions: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "submissions" }],
-      //No. of participants of a hackathon are equal to submissions array no.of elements.
     },
     startDate: {
       type: Date,
@@ -131,6 +130,57 @@ const hackathonSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
+    registrationForm: [
+      {
+        fieldName: {
+          type: String,
+          required: true,
+        },
+    
+        label: {
+          type: String,
+          required: true,
+        },
+    
+        type: {
+          type: String,
+          enum: [
+            "text",
+            "email",
+            "number",
+            "textarea",
+            "select",
+            "checkbox",
+            "url",
+          ],
+          default: "text",
+        },
+    
+        required: {
+          type: Boolean,
+          default: false,
+        },
+    
+        editable: {
+          type: Boolean,
+          default: true,
+        },
+    
+        options: [String],
+      },
+    ],
+    participationType: {
+      type: String,
+      enum: [
+        "INDIVIDUAL",
+        "TEAM"
+      ],
+      default: "INDIVIDUAL"
+    },
+    maxTeamSize: {
+      type: Number,
+      default: 1
+    }
   },
   { timestamps: true }
 );
@@ -181,7 +231,6 @@ hackathonSchema.index({
 const hackathonModel = mongoose.model("hackathons", hackathonSchema);
 
 export default hackathonModel;
-
 
 // TODO (Future Migration):
 // Do not store growing submission references inside Hackathon.

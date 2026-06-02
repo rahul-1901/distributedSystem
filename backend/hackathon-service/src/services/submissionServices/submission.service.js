@@ -51,7 +51,7 @@ export class SubmissionService {
     const results = await this.submissionRepository.getTopResults(hackathonId);
 
     try {
-      await this.cacheService.set(cacheKey, results, 300);
+      await this.cacheService.set(cacheKey, results, 86400);
     } catch (error) {
       this.logger.error({ error }, "Redis write failed");
     }

@@ -1,0 +1,389 @@
+import mongoose from "mongoose";
+import crypto from "crypto";
+import { BadRequestError } from "../../errors/BadRequestError.js";
+import { NotFoundError } from "../../errors/NotFoundError.js";
+
+export class TeamService {
+  constructor(
+    teamRepository,
+    registrationRepository,
+    userRepository,
+    hackathonRepository,
+    logger
+  ) {
+    this.teamRepository = teamRepository;
+    this.registrationRepository = registrationRepository;
+    this.userRepository = userRepository;
+    this.hackathonRepository = hackathonRepository;
+    this.logger = logger;
+  }
+
+  generateCode(length = 12) {
+    return crypto
+      .randomBytes(length)
+      .toString("hex")
+      .slice(0, length)
+      .toUpperCase();
+  }
+
+  async createTeam({ userId, hackathonId, teamName }) {
+    if (!mongoose.Types.ObjectId.isValid(hackathonId)) {
+      throw new BadRequestError("Invalid hackathon id");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError(
+        "Seems like the hackathon you are trying to join does not exist"
+      );
+    }
+
+    if (hackathon.participationType !== "TEAM") {
+      throw new BadRequestError(
+        "This hackathon does not support team participation"
+      );
+    }
+
+    const registration =
+      await this.registrationRepository.findByUserAndHackathon(
+        userId,
+        hackathonId
+      );
+
+    if (!registration) {
+      throw new BadRequestError(
+        "Please register for the hackathon before creating a team"
+      );
+    }
+
+    if (registration.team) {
+      throw new BadRequestError("You are already in a team for this hackathon");
+    }
+
+    const existingTeam = await this.teamRepository.findByNameAndHackathon(
+      teamName,
+      hackathonId
+    );
+
+    if (existingTeam) {
+      throw new BadRequestError("This team name is already taken");
+    }
+
+    let secretCode;
+    let secretLink;
+    let codeExists = true;
+
+    while (codeExists) {
+      secretCode = this.generateCode();
+      secretLink = `${process.env.FRONTEND_URL}/join/${secretCode}`;
+      codeExists = await this.teamRepository.findByCode(secretCode);
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const team = await this.teamRepository.create(
+        {
+          name: teamName,
+          leader: userId,
+          hackathon: hackathonId,
+          members: [],
+          pendingMembers: [],
+          secretCode,
+          secretLink,
+          maxTeamSize: hackathon.maxTeamSize,
+        },
+        session
+      );
+
+      await this.registrationRepository.updateTeam(
+        registration._id,
+        team._id,
+        session
+      );
+
+      await this.userRepository.addTeam(userId, hackathonId, team._id, session);
+
+      await session.commitTransaction();
+
+      this.logger.info(
+        {
+          userId,
+          teamId: team._id,
+          hackathonId,
+        },
+        "Team created"
+      );
+
+      return team;
+    } catch (error) {
+      await session.abortTransaction();
+
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async joinTeam({ userId, secretCode }) {
+    if (!secretCode?.trim()) {
+      throw new BadRequestError("Team code is required");
+    }
+
+    const team = await this.teamRepository.findByCode(secretCode.trim());
+
+    if (!team) {
+      throw new NotFoundError("The team with the provided code does not exist");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+
+    if (!hackathon) {
+      throw new NotFoundError(
+        "The hackathon you are trying to join does not exist"
+      );
+    }
+
+    if (hackathon.participationType !== "TEAM") {
+      throw new BadRequestError(
+        "This hackathon does not support team participation"
+      );
+    }
+
+    const registration =
+      await this.registrationRepository.findByUserAndHackathon(
+        userId,
+        team.hackathon
+      );
+
+    if (!registration) {
+      throw new BadRequestError(
+        "Please register for the hackathon before joining a team"
+      );
+    }
+
+    if (registration.team) {
+      throw new BadRequestError("You are already in a team for this hackathon");
+    }
+
+    const isPending = team.pendingMembers.some(
+      (memberId) => memberId.toString() === userId.toString()
+    );
+
+    if (isPending) {
+      throw new BadRequestError(
+        "You have already requested to join this team. Please wait for the team leader to respond to your request."
+      );
+    }
+
+    const isAlreadyMember = team.members.some(
+      (memberId) => memberId.toString() === userId.toString()
+    );
+
+    if (isAlreadyMember) {
+      throw new BadRequestError("You are already a member of this team");
+    }
+
+    if (team.members.length + 1 >= team.maxTeamSize) {
+      throw new BadRequestError(
+        "Unfortunately, this team is already full. Please join another team or create your own team."
+      );
+    }
+
+    team.pendingMembers.push(userId);
+
+    await this.teamRepository.save(team);
+
+    this.logger.info(
+      {
+        userId,
+        teamId: team._id,
+      },
+      "Join request created"
+    );
+
+    return {
+      success: true,
+      message:
+        "Your request to join the team has been sent to the team leader. They will review your request and respond accordingly.",
+    };
+  }
+
+  async handleRequest({ leaderId, teamId, userId, action }) {
+    if (!["accept", "reject"].includes(action)) {
+      throw new BadRequestError("Invalid action");
+    }
+
+    const team = await this.teamRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundError(
+        "Sorry, the team you are trying to manage does not exist"
+      );
+    }
+
+    if (team.leader.toString() !== leaderId.toString()) {
+      throw new BadRequestError("Only the team leader can manage requests");
+    }
+
+    const pendingIndex = team.pendingMembers.findIndex(
+      (memberId) => memberId.toString() === userId.toString()
+    );
+
+    if (pendingIndex === -1) {
+      throw new BadRequestError(
+        "Seems like there is no pending request from this user"
+      );
+    }
+
+    team.pendingMembers.splice(pendingIndex, 1);
+
+    if (action === "reject") {
+      await this.teamRepository.save(team);
+
+      return {
+        success: true,
+        message: "Request rejected successfully",
+      };
+    }
+
+    const registration =
+      await this.registrationRepository.findByUserAndHackathon(
+        userId,
+        team.hackathon
+      );
+
+    if (!registration) {
+      throw new BadRequestError("The user is not registered for the hackathon");
+    }
+
+    if (registration.team) {
+      throw new BadRequestError(
+        "The user is already in a team for this hackathon"
+      );
+    }
+
+    const currentTeamSize = team.members.length + 1;
+
+    if (currentTeamSize >= team.maxTeamSize) {
+      throw new BadRequestError(
+        "Sorry, the team is already full. You cannot accept more members."
+      );
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const alreadyMember = team.members.some(
+        (memberId) => memberId.toString() === userId.toString()
+      );
+
+      if (alreadyMember) {
+        throw new BadRequestError("The user is already a member of the team");
+      }
+
+      team.members.push(userId);
+
+      await this.teamRepository.save(team, session);
+
+      await this.registrationRepository.updateTeam(
+        registration._id,
+        team._id,
+        session
+      );
+
+      await this.userRepository.addTeam(
+        userId,
+        team.hackathon,
+        team._id,
+        session
+      );
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+
+    this.logger.info(
+      {
+        leaderId,
+        userId,
+        teamId,
+      },
+      "Join request accepted"
+    );
+
+    return {
+      success: true,
+      message: "Member added successfully",
+    };
+  }
+
+  async getPendingRequests({ leaderId, teamId }) {
+    const team = await this.teamRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundError("Team not found");
+    }
+
+    if (team.leader.toString() !== leaderId.toString()) {
+      throw new BadRequestError("Only team leader can view requests");
+    }
+
+    const populatedTeam = await this.teamRepository.getPendingRequests(teamId);
+
+    return populatedTeam.pendingMembers;
+  }
+
+  async getTeamById(teamId) {
+    const team = await this.teamRepository.getTeamDetails(teamId);
+
+    if (!team) {
+      throw new NotFoundError(
+        "Seems like the team you are trying to view does not exist"
+      );
+    }
+
+    return team;
+  }
+
+  async searchTeamByCode(secretCode) {
+    if (!secretCode?.trim()) {
+      throw new BadRequestError(
+        "Kindly provide the team code to search for the team"
+      );
+    }
+
+    const team = await this.teamRepository.searchByCode(secretCode.trim());
+
+    if (!team) {
+      throw new NotFoundError(
+        "Seems like the team with given code does not exist"
+      );
+    }
+
+    return {
+      id: team._id,
+      name: team.name,
+      code: team.secretCode,
+      leader: {
+        name: team.leader.name,
+        email: team.leader.email,
+      },
+      membersCount: team.members.length + 1,
+      maxTeamSize: team.maxTeamSize,
+      hackathon: {
+        title: team.hackathon.title,
+      },
+    };
+  }
+}

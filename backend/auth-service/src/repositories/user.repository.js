@@ -4,7 +4,7 @@ export class UserRepository {
   async findByEmail(email) {
     return await UserModel.findOne({
       email: email.toLowerCase().trim(),
-    });
+    }).select("+password");
   }
 
   async findByEmailWithPassword(email) {

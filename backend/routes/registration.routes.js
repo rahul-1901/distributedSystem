@@ -33,6 +33,5 @@ export const strictLimiter = rateLimit({
 });
 
 // router.post("/:hackathonId", verifyAuth, strictLimiter, registerParicipants);
-// router.post("/:hackathonId/team" ,  verifyAuth, registerTeam);
 router.get("/:hackathonId/:userId", verifyAuth, getLimiter, isregistered);
 export default router;

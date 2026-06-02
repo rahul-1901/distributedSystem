@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import TeamModel from "./team.js";
 
 const mediaSchema = new mongoose.Schema({
   public_id: { type: String, required: true },
@@ -63,8 +62,10 @@ submissionSchema.pre("validate", function (next) {
   }
   next();
 });
+
 submissionSchema.index({ hackathon: 1 });
 submissionSchema.index({ hackathon: 1, hackathonPoints: -1 });
 
 const SubmissionModel = mongoose.model("submissions", submissionSchema);
+
 export default SubmissionModel;

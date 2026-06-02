@@ -1,0 +1,61 @@
+import TeamModel from "../models/team.js";
+
+export class TeamRepository {
+  async create(teamData, session = null) {
+    const [team] = await TeamModel.create([teamData], { session });
+
+    return team;
+  }
+
+  async findById(teamId) {
+    return TeamModel.findById(teamId);
+  }
+
+  async findByCode(secretCode) {
+    return TeamModel.findOne({
+      secretCode,
+    });
+  }
+
+  async findByNameAndHackathon(name, hackathonId) {
+    return TeamModel.findOne({
+      name,
+      hackathon: hackathonId,
+    });
+  }
+
+  async save(team) {
+    return team.save();
+  }
+
+  async getTeamDetails(teamId) {
+    return TeamModel.findById(teamId)
+      .populate("leader", "name email")
+      .populate("members", "name email")
+      .populate("pendingMembers", "name email")
+      .populate("hackathon", "title participationType maxTeamSize")
+      .lean();
+  }
+
+  async searchByCode(secretCode) {
+    return TeamModel.findOne({
+      secretCode,
+    })
+      .populate("leader", "name email")
+      .populate("members", "name email")
+      .populate("hackathon", "title participationType maxTeamSize")
+      .lean();
+  }
+
+  async removePendingMember(team, userId) {
+    team.pendingMembers = team.pendingMembers.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+
+    return team.save();
+  }
+
+  async getPendingRequests(teamId) {
+    return TeamModel.findById(teamId).populate("pendingMembers", "name email");
+  }
+}

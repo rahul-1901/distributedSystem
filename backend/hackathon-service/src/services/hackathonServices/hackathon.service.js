@@ -63,7 +63,7 @@ export class HackathonService {
     const hackathons = await this.hackathonRepository.getExpiredHackathons(now);
 
     try {
-      await this.cacheService.set(cacheKey, hackathons, 1800);
+      await this.cacheService.set(cacheKey, hackathons, 86400);
     } catch (error) {
       this.logger.error({ error }, "Redis write failed");
     }
