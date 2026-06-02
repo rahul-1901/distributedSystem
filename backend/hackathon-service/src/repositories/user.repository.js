@@ -64,4 +64,38 @@ export class UserRepository {
       }
     );
   }
+
+  async leaveTeam(userId, hackathonId, session = null) {
+    return UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $pull: {
+          teams: {
+            hackathon: hackathonId,
+          },
+        },
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+  }
+
+  async removeTeam(userId, hackathonId, session = null) {
+    return UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $pull: {
+          teams: {
+            hackathon: hackathonId,
+          },
+        },
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+  }
 }

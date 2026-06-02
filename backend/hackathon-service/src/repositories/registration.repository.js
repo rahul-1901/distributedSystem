@@ -58,4 +58,30 @@ export class RegistrationRepository {
       }
     );
   }
+
+  async leaveTeam(registrationId, session = null) {
+    return RegisteredParticipantsModel.findByIdAndUpdate(
+      registrationId,
+      {
+        team: null,
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+  }
+
+  async removeTeam(registrationId, session = null) {
+    return RegisteredParticipantsModel.findByIdAndUpdate(
+      registrationId,
+      {
+        team: null,
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+  }
 }

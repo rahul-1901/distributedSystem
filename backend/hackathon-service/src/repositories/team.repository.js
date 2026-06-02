@@ -58,4 +58,27 @@ export class TeamRepository {
   async getPendingRequests(teamId) {
     return TeamModel.findById(teamId).populate("pendingMembers", "name email");
   }
+
+  async findByIdWithSession(teamId, session) {
+    return TeamModel.findById(teamId).session(session);
+  }
+
+  async updateTeamName(teamId, teamName, session = null) {
+    return TeamModel.findByIdAndUpdate(
+      teamId,
+      {
+        name: teamName,
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+  }
+
+  async deleteTeam(teamId, session = null) {
+    return TeamModel.findByIdAndDelete(teamId, {
+      session,
+    });
+  }
 }

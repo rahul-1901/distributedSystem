@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
+import { getNowUTC } from "../../utils/dateUtils.js";
 
 export class TeamService {
   constructor(
@@ -385,5 +386,350 @@ export class TeamService {
         title: team.hackathon.title,
       },
     };
+  }
+
+  async cancelJoinRequest({ userId, teamId }) {
+    if (!mongoose.Types.ObjectId.isValid(teamId)) {
+      throw new BadRequestError("Invalid team id");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const team = await this.teamRepository.findByIdWithSession(
+        teamId,
+        session
+      );
+
+      if (!team) {
+        throw new NotFoundError("Team not found");
+      }
+
+      const pendingIndex = team.pendingMembers.findIndex(
+        (memberId) => memberId.toString() === userId.toString()
+      );
+
+      if (pendingIndex === -1) {
+        throw new BadRequestError("No pending request found");
+      }
+
+      team.pendingMembers.splice(pendingIndex, 1);
+
+      await this.teamRepository.save(team, session);
+
+      await session.commitTransaction();
+
+      this.logger.info(
+        {
+          userId,
+          teamId,
+        },
+        "Join request cancelled"
+      );
+
+      return {
+        success: true,
+        message: "Join request cancelled successfully",
+      };
+    } catch (error) {
+      await session.abortTransaction();
+
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async leaveTeam({ userId, teamId }) {
+    const team = await this.teamRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundError("Team not found");
+    }
+
+    if (team.leader.toString() === userId.toString()) {
+      throw new BadRequestError("Team leader cannot leave the team");
+    }
+
+    const memberIndex = team.members.findIndex(
+      (memberId) => memberId.toString() === userId.toString()
+    );
+
+    if (memberIndex === -1) {
+      throw new BadRequestError("You are not a member of this team");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const now = getNowUTC();
+
+    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+      throw new BadRequestError("Registration is closed");
+    }
+
+    const registration =
+      await this.registrationRepository.findByUserAndHackathon(
+        userId,
+        team.hackathon
+      );
+
+    if (!registration) {
+      throw new NotFoundError("Registration not found");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      await this.removeMemberFromTeam({
+        team,
+        userId,
+        session,
+      });
+
+      await session.commitTransaction();
+
+      this.logger.info(
+        {
+          userId,
+          teamId,
+        },
+        "User left team"
+      );
+
+      return {
+        success: true,
+        message: "You have left the team successfully",
+      };
+    } catch (error) {
+      await session.abortTransaction();
+
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async removeMemberFromTeam({ team, userId, session }) {
+    const memberIndex = team.members.findIndex(
+      (memberId) => memberId.toString() === userId.toString()
+    );
+
+    if (memberIndex === -1) {
+      throw new BadRequestError("User is not a member of this team");
+    }
+
+    const registration =
+      await this.registrationRepository.findByUserAndHackathon(
+        userId,
+        team.hackathon
+      );
+
+    if (!registration) {
+      throw new NotFoundError("Registration not found");
+    }
+
+    team.members.splice(memberIndex, 1);
+
+    await this.teamRepository.save(team, session);
+
+    await this.registrationRepository.removeTeam(registration._id, session);
+
+    await this.userRepository.removeTeam(userId, team.hackathon, session);
+  }
+
+  async removeMember({ leaderId, teamId, userId }) {
+    const team = await this.teamRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundError("Team not found");
+    }
+
+    if (team.leader.toString() !== leaderId.toString()) {
+      throw new BadRequestError("Only the team leader can remove members");
+    }
+
+    if (team.leader.toString() === userId.toString()) {
+      throw new BadRequestError("Leader cannot remove themselves");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const transactionalTeam = await this.teamRepository.findByIdWithSession(
+        teamId,
+        session
+      );
+
+      await this.removeMemberFromTeam({
+        team: transactionalTeam,
+        userId,
+        session,
+      });
+
+      await session.commitTransaction();
+
+      return {
+        success: true,
+        message: "Member removed successfully",
+      };
+    } catch (error) {
+      await session.abortTransaction();
+
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async updateTeam({ leaderId, teamId, teamName }) {
+    if (!teamName?.trim()) {
+      throw new BadRequestError("Team name is required");
+    }
+
+    const team = await this.teamRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundError("Team not found");
+    }
+
+    if (team.leader.toString() !== leaderId.toString()) {
+      throw new BadRequestError("Only the team leader can edit the team");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const now = getNowUTC();
+
+    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+      throw new BadRequestError("Registration is closed");
+    }
+
+    const existingTeam = await this.teamRepository.findByNameAndHackathon(
+      teamName.trim(),
+      team.hackathon
+    );
+
+    if (existingTeam && existingTeam._id.toString() !== teamId.toString()) {
+      throw new BadRequestError("Team name already exists");
+    }
+
+    const updatedTeam = await this.teamRepository.updateTeamName(
+      teamId,
+      teamName.trim()
+    );
+
+    this.logger.info(
+      {
+        leaderId,
+        teamId,
+      },
+      "Team name updated"
+    );
+
+    return updatedTeam;
+  }
+
+  async clearUserTeamRelation(userId, hackathonId, session) {
+    const registration =
+      await this.registrationRepository.findByUserAndHackathon(
+        userId,
+        hackathonId
+      );
+
+    if (registration) {
+      await this.registrationRepository.removeTeam(registration._id, session);
+    }
+
+    await this.userRepository.removeTeam(userId, hackathonId, session);
+  }
+
+  async deleteTeam({ leaderId, teamId }) {
+    const team = await this.teamRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundError("Team not found");
+    }
+
+    if (team.leader.toString() !== leaderId.toString()) {
+      throw new BadRequestError("Only the team leader can delete the team");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const now = getNowUTC();
+
+    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+      throw new BadRequestError("Registration is closed");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const transactionalTeam = await this.teamRepository.findByIdWithSession(
+        teamId,
+        session
+      );
+
+      if (!transactionalTeam) {
+        throw new NotFoundError("Team not found");
+      }
+
+      await this.clearUserTeamRelation(
+        transactionalTeam.leader,
+        transactionalTeam.hackathon,
+        session
+      );
+
+      for (const memberId of transactionalTeam.members) {
+        await this.clearUserTeamRelation(
+          memberId,
+          transactionalTeam.hackathon,
+          session
+        );
+      }
+
+      await this.teamRepository.deleteTeam(teamId, session);
+
+      await session.commitTransaction();
+
+      this.logger.info(
+        {
+          leaderId,
+          teamId,
+        },
+        "Team deleted"
+      );
+
+      return {
+        success: true,
+        message: "Team deleted successfully",
+      };
+    } catch (error) {
+      await session.abortTransaction();
+
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 }

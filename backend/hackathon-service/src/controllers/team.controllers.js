@@ -130,3 +130,85 @@ export const searchTeamByCode = async (req, res, next) => {
   }
 };
 
+export const cancelJoinRequest = async (req, res, next) => {
+  try {
+    const { teamId } = req.params;
+
+    const result = await teamService.cancelJoinRequest({
+      userId: req.user._id,
+      teamId,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const leaveTeam = async (req, res, next) => {
+  try {
+    const { teamId } = req.params;
+
+    const result = await teamService.leaveTeam({
+      userId: req.user._id,
+      teamId,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeMember = async (req, res, next) => {
+  try {
+    const { teamId, userId } = req.params;
+
+    const result = await teamService.removeMember({
+      leaderId: req.user._id,
+      teamId,
+      userId,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTeam = async (req, res, next) => {
+  try {
+    const { teamId } = req.params;
+
+    const { teamName } = req.body;
+
+    const team = await teamService.updateTeam({
+      leaderId: req.user._id,
+      teamId,
+      teamName,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Team updated successfully",
+      team,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTeam = async (req, res, next) => {
+  try {
+    const { teamId } = req.params;
+
+    const result = await teamService.deleteTeam({
+      leaderId: req.user._id,
+      teamId,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};

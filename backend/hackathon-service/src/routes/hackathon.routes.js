@@ -27,7 +27,12 @@ import {
   handleRequest,
   getPendingRequests,
   getTeamById,
-  searchTeamByCode
+  searchTeamByCode,
+  cancelJoinRequest,
+  leaveTeam,
+  removeMember,
+  updateTeam,
+  deleteTeam
 } from "../controllers/team.controllers.js";
 
 const router = express.Router();
@@ -80,7 +85,11 @@ router.patch("/teams/:teamId/handleRequests", verifyAuth, strictLimiter, handleR
 router.get("/teams/:teamId/pending-requests", verifyAuth, getLimiter, getPendingRequests)
 router.get("/teams/:teamId", verifyAuth, getLimiter, getTeamById)
 router.get("/teams/code/:secretCode", verifyAuth, getLimiter, searchTeamByCode);
-
+router.delete("/teams/:teamId/revert-request", verifyAuth, strictLimiter, cancelJoinRequest);
+router.delete("/teams/:teamId/leaveTeam", verifyAuth, strictLimiter, leaveTeam);
+router.delete("/teams/:teamId/members/:userId", verifyAuth, strictLimiter, removeMember);
+router.patch("/teams/:teamId/updateTeam", verifyAuth, strictLimiter, updateTeam);
+router.delete("/teams/:teamId/deleteTeam", verifyAuth, strictLimiter, deleteTeam);
 
 export default router;
 
