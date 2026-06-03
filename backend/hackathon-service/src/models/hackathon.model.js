@@ -1,5 +1,102 @@
 import mongoose from "mongoose";
 
+const submissionFieldSchema = new mongoose.Schema(
+  {
+    fieldName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    label: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    fieldType: {
+      type: String,
+      enum: [
+        "TEXT",
+        "TEXTAREA",
+
+        "URL",
+
+        "DOCUMENT",
+        "IMAGE",
+        "VIDEO",
+
+        "MULTI_DOCUMENT",
+        "MULTI_IMAGE",
+        "MULTI_VIDEO",
+      ],
+      required: true,
+    },
+
+    required: {
+      type: Boolean,
+      default: false,
+    },
+
+    editable: {
+      type: Boolean,
+      default: true,
+    },
+
+    maxFiles: {
+      type: Number,
+      default: 1,
+    },
+
+    maxSizeMB: {
+      type: Number,
+      default: 50,
+    },
+  },
+  {
+    _id: true,
+  }
+);
+
+const phaseSchema = new mongoose.Schema(
+  {
+    phaseName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    phaseType: {
+      type: String,
+      enum: ["REGISTRATION", "SUBMISSION", "REVIEW", "ANNOUNCEMENT"],
+      required: true,
+    },
+
+    startDate: {
+      type: Date,
+      required: true,
+    },
+
+    endDate: {
+      type: Date,
+      required: true,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    submissionForm: {
+      type: [submissionFieldSchema],
+      default: [],
+    },
+  },
+  {
+    _id: true,
+  }
+);
+
 const hackathonSchema = new mongoose.Schema(
   {
     image: {
@@ -130,18 +227,23 @@ const hackathonSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
+
+    phases: {
+      type: [phaseSchema],
+      default: [],
+    },
     registrationForm: [
       {
         fieldName: {
           type: String,
           required: true,
         },
-    
+
         label: {
           type: String,
           required: true,
         },
-    
+
         type: {
           type: String,
           enum: [
@@ -155,32 +257,29 @@ const hackathonSchema = new mongoose.Schema(
           ],
           default: "text",
         },
-    
+
         required: {
           type: Boolean,
           default: false,
         },
-    
+
         editable: {
           type: Boolean,
           default: true,
         },
-    
+
         options: [String],
       },
     ],
     participationType: {
       type: String,
-      enum: [
-        "INDIVIDUAL",
-        "TEAM"
-      ],
-      default: "INDIVIDUAL"
+      enum: ["INDIVIDUAL", "TEAM"],
+      default: "INDIVIDUAL",
     },
     maxTeamSize: {
       type: Number,
-      default: 1
-    }
+      default: 1,
+    },
   },
   { timestamps: true }
 );

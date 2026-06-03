@@ -1,6 +1,6 @@
-import { wishlistService } from "../services/wishlistServices/wishlist.service.instance.js";
-import { hackathonService } from "../services/hackathonServices/hackathon.service.instance.js";
-import { submissionService } from "../services/submissionServices/submission.service.instance.js";
+import { wishlistService } from "../services/wishlistService/wishlist.service.instance.js";
+import { hackathonService } from "../services/hackathonService/hackathon.service.instance.js";
+import { submissionService } from "../services/submissionService/submission.service.instance.js";
 
 export const getActiveHackathons = async (req, res, next) => {
   try {

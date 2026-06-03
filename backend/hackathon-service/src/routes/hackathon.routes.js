@@ -12,7 +12,7 @@ import {
   toggleHackathonWishlist,
   getUserHackathonWishlist,
   checkHackathonLiked
-} from "../controllers/hackathon.controllers.js";
+} from "../controllers/hackathon.controller.js";
 
 import { 
   registerParticipants, 
@@ -33,7 +33,14 @@ import {
   removeMember,
   updateTeam,
   deleteTeam
-} from "../controllers/team.controllers.js";
+} from "../controllers/team.controller.js";
+
+import {
+  createSubmission,
+  getMySubmission,
+  updateSubmission,
+  getSubmissionById
+} from "../controllers/submission.controller.js";
 
 const router = express.Router();
 
@@ -91,7 +98,10 @@ router.delete("/teams/:teamId/members/:userId", verifyAuth, strictLimiter, remov
 router.patch("/teams/:teamId/updateTeam", verifyAuth, strictLimiter, updateTeam);
 router.delete("/teams/:teamId/deleteTeam", verifyAuth, strictLimiter, deleteTeam);
 
-export default router;
+//hackathon submission routes
+router.post("/:hackathonId/creatSubmission", verifyAuth, createSubmission);
+router.get("/:hackathonId/my-submission", verifyAuth, getLimiter, getMySubmission);
+router.get("/submissions/:submissionId", verifyAuth, getLimiter, getSubmissionById);
+router.patch("/:hackathonId/submission/:submissionId", verifyAuth, strictLimiter, updateSubmission);
 
-// router.post("/:hackathonId/gallery", adminAuth, strictLimiter, uploadGalleryImages, addGalleryImages);
-// router.delete("/:hackathonId/gallery", adminAuth, strictLimiter, deleteGalleryImage);
+export default router;

@@ -1,4 +1,4 @@
-import RegisteredParticipantsModel from "../models/registeredParticipants.js";
+import RegisteredParticipantsModel from "../models/registeredParticipants.model.js";
 
 export class RegistrationRepository {
   async findByUserAndHackathon(userId, hackathonId) {

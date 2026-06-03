@@ -70,16 +70,6 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    devQuestionsCorrectlyAnswered: {
-      type: Number,
-      default: 0,
-    },
-    devQuestionsIncorrectlyAnswered: {
-      type: Number,
-      default: 0,
-    },
-    currentQuizPoints: { type: Number, default: 0 },
-    currentQuizTotalPoints: { type: Number, default: 0 },
     contactNumber: {
       type: String,
       validate: {
@@ -99,12 +89,6 @@ const userSchema = new mongoose.Schema(
       { type: mongoose.Schema.Types.ObjectId, ref: "hackathons" },
     ],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "hackathons" }],
-    attemptedDevQuestions: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "dailyQuiz" },
-    ],
-    devQuestionSubmittedTime: {
-      type: Date,
-    },
     education: [
       {
         institute: {

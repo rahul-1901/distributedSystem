@@ -1,10 +1,24 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
+import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
 import hackathonRoutes from "./routes/hackathon.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { connectRedis } from "./config/redis.js";
+import uploadRoutes from "./routes/upload.routes.js";
+import multer from "multer";
+
+dotenv.config();
+
+if (
+  !process.env.AWS_REGION ||
+  !process.env.AWS_ACCESS_KEY_ID ||
+  !process.env.AWS_SECRET_ACCESS_KEY ||
+  !process.env.AWS_S3_BUCKET_NAME
+) {
+  throw new Error("AWS configuration missing");
+}
 
 const app = express();
 
@@ -27,8 +41,19 @@ app.get("/", (req, res) => {
 });
 
 app.use("/", hackathonRoutes);
+app.use("/uploads", uploadRoutes);
 
 app.use(errorHandler);
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+
+  next(error);
+});
 
 await connectDB();
 await connectRedis();

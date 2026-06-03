@@ -1,4 +1,4 @@
-import hackathonModel from "../models/hackathon.models.js";
+import hackathonModel from "../models/hackathon.model.js";
 
 export class HackathonRepository {
   async getActiveHackathons(now) {
@@ -33,6 +33,18 @@ export class HackathonRepository {
     return hackathonModel.findById(id).lean();
   }
 
+  async getByIdForSubmission(id) {
+    return hackathonModel.findById(id).select(
+      `
+        title
+        participationType
+        phases
+        submissionStartDate
+        submissionEndDate
+        `
+    );
+  }
+
   async getGallery(id) {
     return hackathonModel.findById(id).select("gallery").lean();
   }
@@ -47,10 +59,7 @@ export class HackathonRepository {
     return hackathonModel.findById(id).select("showResult").lean();
   }
 
-  async incrementParticipants(
-    id,
-    session = null
-  ) {
+  async incrementParticipants(id, session = null) {
     return hackathonModel.findByIdAndUpdate(
       id,
       {
@@ -63,5 +72,48 @@ export class HackathonRepository {
         new: true,
       }
     );
+  }
+
+  async getActiveSubmissionPhase(hackathonId, currentTime) {
+    return hackathonModel.findOne(
+      {
+        _id: hackathonId,
+        phases: {
+          $elemMatch: {
+            phaseType: "SUBMISSION",
+            isActive: true,
+            startDate: {
+              $lte: currentTime,
+            },
+            endDate: {
+              $gte: currentTime,
+            },
+          },
+        },
+      },
+      {
+        phases: {
+          $elemMatch: {
+            phaseType: "SUBMISSION",
+            isActive: true,
+            startDate: {
+              $lte: currentTime,
+            },
+            endDate: {
+              $gte: currentTime,
+            },
+          },
+        },
+        participationType: 1,
+        title: 1,
+      }
+    );
+  }
+
+  async getPhases(hackathonId) {
+    return hackathonModel
+      .findById(hackathonId)
+      .select("phases participationType")
+      .lean();
   }
 }

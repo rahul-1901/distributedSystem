@@ -1,4 +1,4 @@
-import UserModel from "../models/user.models.js";
+import UserModel from "../models/user.model.js";
 
 export class UserRepository {
   async getById(id) {

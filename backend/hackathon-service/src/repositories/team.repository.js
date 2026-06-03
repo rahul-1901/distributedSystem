@@ -1,4 +1,4 @@
-import TeamModel from "../models/team.js";
+import TeamModel from "../models/team.model.js";
 
 export class TeamRepository {
   async create(teamData, session = null) {

@@ -1,0 +1,104 @@
+import { BadRequestError } from "../errors/BadRequestError.js";
+
+export const validateSubmissionData = (submissionData, submissionForm) => {
+  const allowedFields = new Set(submissionForm.map((field) => field.fieldName));
+
+  for (const key of Object.keys(submissionData)) {
+    if (!allowedFields.has(key)) {
+      throw new BadRequestError(`Unexpected field: ${key}`);
+    }
+  }
+
+  for (const field of submissionForm) {
+    const value = submissionData[field.fieldName];
+
+    if (
+      field.required &&
+      (value === undefined || value === null || value === "")
+    ) {
+      throw new BadRequestError(`${field.label} is required`);
+    }
+
+    if (field.required && Array.isArray(value) && value.length === 0) {
+      throw new BadRequestError(`${field.label} is required`);
+    }
+
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    switch (field.fieldType) {
+      case "TEXT":
+      case "TEXTAREA": {
+        if (typeof value !== "string") {
+          throw new BadRequestError(`${field.label} must be text`);
+        }
+
+        break;
+      }
+
+      case "URL": {
+        if (typeof value !== "string") {
+          throw new BadRequestError(`${field.label} must be a URL`);
+        }
+
+        try {
+          new URL(value);
+        } catch {
+          throw new BadRequestError(`${field.label} must be a valid URL`);
+        }
+
+        break;
+      }
+
+      case "DOCUMENT":
+      case "IMAGE":
+      case "VIDEO": {
+        if (typeof value !== "object" || Array.isArray(value)) {
+          throw new BadRequestError(`${field.label} is invalid`);
+        }
+
+        if (
+          !value.url ||
+          !value.public_id ||
+          !value.format ||
+          value.size === undefined
+        ) {
+          throw new BadRequestError(`${field.label} is invalid`);
+        }
+
+        break;
+      }
+
+      case "MULTI_DOCUMENT":
+      case "MULTI_IMAGE":
+      case "MULTI_VIDEO": {
+        if (!Array.isArray(value)) {
+          throw new BadRequestError(`${field.label} must be an array`);
+        }
+
+        if (field.maxFiles && value.length > field.maxFiles) {
+          throw new BadRequestError(
+            `${field.label} exceeds maximum allowed files`
+          );
+        }
+
+        for (const file of value) {
+          if (
+            !file.url ||
+            !file.public_id ||
+            !file.format ||
+            file.size === undefined
+          ) {
+            throw new BadRequestError(`${field.label} contains invalid files`);
+          }
+        }
+
+        break;
+      }
+
+      default:
+        throw new BadRequestError(`Unsupported field type: ${field.fieldType}`);
+    }
+  }
+};
