@@ -40,17 +40,22 @@ export class SubmissionRepository {
       .populate("hackathon", "title");
   }
 
-  async getTopResults(hackathonId) {
-    return SubmissionModel.find({
+  async getTopResults(hackathonId, leaderboardLimit = null) {
+    const query = SubmissionModel.find({
       hackathon: hackathonId,
     })
       .sort({
         hackathonPoints: -1,
+        submittedAt: 1,
       })
-      .limit(10)
       .populate("participant", "name avatar email")
-      .populate("team", "name members")
-      .lean();
+      .populate("team", "name members");
+
+    if (leaderboardLimit && leaderboardLimit > 0) {
+      query.limit(leaderboardLimit);
+    }
+
+    return query.lean();
   }
 
   async getMyIndividualSubmission(participantId, hackathonId, phaseId) {
@@ -75,17 +80,6 @@ export class SubmissionRepository {
 
   async deleteSubmission(submissionId, session = null) {
     return SubmissionModel.findByIdAndDelete(submissionId, { session });
-  }
-
-  async getHackathonSubmissions(hackathonId) {
-    return SubmissionModel.find({
-      hackathon: hackathonId,
-    })
-      .populate("participant", "name email")
-      .populate("team", "name leader members")
-      .sort({
-        createdAt: -1,
-      });
   }
 
   async findByIdWithHackathon(submissionId) {
@@ -129,5 +123,95 @@ export class SubmissionRepository {
     return SubmissionModel.exists({
       _id: submissionId,
     });
+  }
+
+  async getHackathonSubmissions(hackathonId) {
+    return SubmissionModel.find({
+      hackathon: hackathonId,
+    })
+      .populate("participant", "name email")
+      .populate("team", "name leader members")
+      .sort({
+        submittedAt: -1,
+      })
+      .lean();
+  }
+
+  async getLeaderboard(hackathonId) {
+    return SubmissionModel.find({
+      hackathon: hackathonId,
+    })
+      .populate("participant", "name email")
+      .populate("team", "name")
+      .sort({
+        hackathonPoints: -1,
+        submittedAt: 1,
+      })
+      .lean();
+  }
+
+  async updateVoteCount(submissionId, voteCount) {
+    return SubmissionModel.findByIdAndUpdate(
+      submissionId,
+      {
+        voteCount,
+      },
+      {
+        new: true,
+      }
+    );
+  }
+
+  async getVotingSubmissions(hackathonId, phaseId) {
+    return SubmissionModel.find({
+      hackathon: hackathonId,
+      phaseId,
+    })
+      .select(
+        `
+        title
+        description
+        voteCount
+        team
+        participant
+        submittedAt
+      `
+      )
+      .populate("team", "name")
+      .populate("participant", "name")
+      .sort({
+        voteCount: -1,
+      })
+      .lean();
+  }
+
+  async getVotingSubmissionById(submissionId) {
+    return SubmissionModel.findById(submissionId)
+      .select(
+        `
+        title
+        description
+        submissionData
+        voteCount
+        phaseId
+        hackathon
+        team
+        participant
+        submittedAt
+      `
+      )
+      .populate("team", "name leader members")
+      .populate("participant", "name")
+      .lean();
+  }
+
+  async getLeaderboardSubmissions(hackathonId, phaseId) {
+    return SubmissionModel.find({
+      hackathon: hackathonId,
+      phaseId,
+    })
+      .populate("participant", "name avatar email")
+      .populate("team", "name members")
+      .lean();
   }
 }

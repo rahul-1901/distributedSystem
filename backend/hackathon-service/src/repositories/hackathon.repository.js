@@ -56,7 +56,22 @@ export class HackathonRepository {
   }
 
   async getResultVisibility(id) {
-    return hackathonModel.findById(id).select("showResult").lean();
+    return hackathonModel
+      .findById(id)
+      .select(
+        `
+        showResult
+        publicLeaderboardLimit
+        title
+  
+        phases
+  
+        votingConfig
+  
+        judgingConfig
+      `
+      )
+      .lean();
   }
 
   async incrementParticipants(id, session = null) {
@@ -115,5 +130,83 @@ export class HackathonRepository {
       .findById(hackathonId)
       .select("phases participationType")
       .lean();
+  }
+
+  async create(data) {
+    return hackathonModel.create(data);
+  }
+
+  async findById(id) {
+    return hackathonModel.findById(id);
+  }
+
+  async findByCreator(adminId) {
+    return hackathonModel
+      .find({
+        createdBy: adminId,
+      })
+      .sort({
+        createdAt: -1,
+      });
+  }
+
+  async findByTitle(title) {
+    return hackathonModel.findOne({
+      title: title.trim(),
+    });
+  }
+
+  async update(id, updateData) {
+    return hackathonModel.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+  }
+
+  async delete(id) {
+    return hackathonModel.findByIdAndDelete(id);
+  }
+
+  async getRegistrationCount(hackathonId) {
+    return RegisteredParticipantModel.countDocuments({
+      hackathon: hackathonId,
+    });
+  }
+  
+  async getSubmissionCount(hackathonId) {
+    return SubmissionModel.countDocuments({
+      hackathon: hackathonId,
+    });
+  }
+
+  async updateStatus(
+    hackathonId,
+    status,
+    extraData = {}
+  ) {
+    return hackathonModel.findByIdAndUpdate(
+      hackathonId,
+      {
+        status,
+        ...extraData,
+      },
+      {
+        new: true,
+      }
+    );
+  }
+
+  async getPendingHackathons() {
+    return hackathonModel
+      .find({
+        status: "PENDING_APPROVAL",
+      })
+      .populate(
+        "createdBy",
+        "adminName email organizationName"
+      )
+      .sort({
+        createdAt: -1,
+      });
   }
 }

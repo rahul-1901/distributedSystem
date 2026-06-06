@@ -64,7 +64,10 @@ const submissionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    
+    voteCount: {
+      type: Number,
+      default: 0,
+    },
     reviewCount: {
       type: Number,
       default: 0,

@@ -1,76 +1,56 @@
 import mongoose from "mongoose";
-
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
+import { REDIS_KEYS } from "../../config/redisKeys.js";
 
 export class SubmissionReviewService {
   constructor(
     submissionReviewRepository,
     submissionRepository,
     judgeAssignmentRepository,
+    hackathonRepository,
     logger
   ) {
-    this.submissionReviewRepository =
-      submissionReviewRepository;
-
-    this.submissionRepository =
-      submissionRepository;
-
-    this.judgeAssignmentRepository =
-      judgeAssignmentRepository;
-
-    this.logger =
-      logger;
+    this.submissionReviewRepository = submissionReviewRepository;
+    this.submissionRepository = submissionRepository;
+    this.judgeAssignmentRepository = judgeAssignmentRepository;
+    this.hackathonRepository = hackathonRepository;
+    this.logger = logger;
   }
 
-  async reviewSubmission({
-    submissionId,
-    judgeId,
-    score,
-    feedback,
-  }) {
-    if (
-      !mongoose.Types.ObjectId.isValid(
-        submissionId
-      )
-    ) {
-      throw new BadRequestError(
-        "Invalid submission id"
-      );
+  async reviewSubmission({ submissionId, judgeId, score, feedback }) {
+    if (!mongoose.Types.ObjectId.isValid(submissionId)) {
+      throw new BadRequestError("Invalid submission id");
     }
 
-    if (
-      typeof score !== "number" ||
-      score < 0 ||
-      score > 100
-    ) {
-      throw new BadRequestError(
-        "Score must be between 0 and 100"
-      );
-    }
-
-    const submission =
-      await this.submissionRepository.findById(
-        submissionId
-      );
+    const submission = await this.submissionRepository.findById(submissionId);
 
     if (!submission) {
-      throw new NotFoundError(
-        "Submission not found"
+      throw new NotFoundError("Submission not found");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(
+      submission.hackathon
+    );
+
+    const minScore = hackathon?.judgingConfig?.minScore ?? 0;
+
+    const maxScore = hackathon?.judgingConfig?.maxScore ?? 100;
+
+    if (typeof score !== "number" || score < minScore || score > maxScore) {
+      throw new BadRequestError(
+        `Score must be between ${minScore} and ${maxScore}`
       );
     }
 
-    const assignment =
-      await this.judgeAssignmentRepository.findJudgeAssignment(
-        submission.hackathon,
-        judgeId
-      );
+    const assignment = await this.judgeAssignmentRepository.findJudgeAssignment(
+      submission.hackathon,
+      judgeId
+    );
 
     if (!assignment) {
-      throw new ForbiddenError(
-        "You are not assigned as a judge"
-      );
+      throw new ForbiddenError("You are not assigned as a judge");
     }
 
     const existingReview =
@@ -82,32 +62,25 @@ export class SubmissionReviewService {
     let review;
 
     if (existingReview) {
-      review =
-        await this.submissionReviewRepository.updateReview(
-          existingReview._id,
-          {
-            score,
-            feedback,
-          }
-        );
+      review = await this.submissionReviewRepository.updateReview(
+        existingReview._id,
+        {
+          score,
+          feedback,
+        }
+      );
     } else {
-      review =
-        await this.submissionReviewRepository.create(
-          {
-            submission:
-              submissionId,
+      review = await this.submissionReviewRepository.create({
+        submission: submissionId,
 
-            hackathon:
-              submission.hackathon,
+        hackathon: submission.hackathon,
 
-            judge:
-              judgeId,
+        judge: judgeId,
 
-            score,
+        score,
 
-            feedback,
-          }
-        );
+        feedback,
+      });
     }
 
     const aggregate =
@@ -121,6 +94,14 @@ export class SubmissionReviewService {
       aggregate.reviewCount
     );
 
+    try {
+      await this.cacheService.del(
+        REDIS_KEYS.RESULTS(submission.hackathon.toString())
+      );
+    } catch (error) {
+      this.logger.error({ error }, "Failed to invalidate results cache");
+    }
+
     this.logger.info(
       {
         submissionId,
@@ -130,5 +111,60 @@ export class SubmissionReviewService {
     );
 
     return review;
+  }
+
+  async getHackathonSubmissionsForJudge({ hackathonId, judgeId }) {
+    const assignment = await this.judgeAssignmentRepository.findJudgeAssignment(
+      hackathonId,
+      judgeId
+    );
+
+    if (!assignment) {
+      throw new ForbiddenError("You are not assigned to this hackathon");
+    }
+
+    return this.submissionRepository.getHackathonSubmissions(hackathonId);
+  }
+
+  async getSubmissionDetailsForJudge({ submissionId, judgeId }) {
+    const submission = await this.submissionRepository.getSubmissionById(
+      submissionId
+    );
+
+    if (!submission) {
+      throw new NotFoundError("Submission not found");
+    }
+
+    const assignment = await this.judgeAssignmentRepository.findJudgeAssignment(
+      submission.hackathon._id,
+      judgeId
+    );
+
+    if (!assignment) {
+      throw new ForbiddenError("You are not assigned to this hackathon");
+    }
+
+    return submission;
+  }
+
+  async getSubmissionReviews({ submissionId, judgeId }) {
+    const submission = await this.submissionRepository.getSubmissionById(
+      submissionId
+    );
+
+    if (!submission) {
+      throw new NotFoundError("Submission not found");
+    }
+
+    const assignment = await this.judgeAssignmentRepository.findJudgeAssignment(
+      submission.hackathon._id,
+      judgeId
+    );
+
+    if (!assignment) {
+      throw new ForbiddenError("You are not assigned to this hackathon");
+    }
+
+    return this.submissionReviewRepository.getSubmissionReviews(submissionId);
   }
 }

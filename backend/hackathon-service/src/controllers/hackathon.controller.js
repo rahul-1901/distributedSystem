@@ -122,3 +122,110 @@ export const checkHackathonLiked = async (req, res, next) => {
   }
 };
 
+export const createHackathon = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.createHackathon({
+      adminId: req.admin._id,
+
+      payload: req.body,
+    });
+
+    return res.status(201).json({
+      success: true,
+
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateHackathon = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.updateHackathon({
+      hackathonId: req.params.id,
+
+      adminId: req.admin._id,
+
+      payload: req.body,
+    });
+
+    return res.status(200).json({
+      success: true,
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const submitForApproval = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.submitForApproval({
+      hackathonId: req.params.id,
+
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Hackathon submitted for approval",
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPendingHackathons = async (req, res, next) => {
+  try {
+    const hackathons = await hackathonService.getPendingHackathons(
+      req.admin._id
+    );
+
+    return res.status(200).json({
+      success: true,
+      hackathons,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveHackathon = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.approveHackathon({
+      hackathonId: req.params.id,
+
+      controllerId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Hackathon approved",
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectHackathon = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.rejectHackathon({
+      hackathonId: req.params.id,
+
+      controllerId: req.admin._id,
+
+      reason: req.body.reason,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Hackathon rejected",
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

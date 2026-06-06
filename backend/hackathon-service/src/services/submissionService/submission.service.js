@@ -3,6 +3,7 @@ import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import { REDIS_KEYS } from "../../config/redisKeys.js";
+import { calculateFinalScore } from "../../utils/scoreCalculator.js";
 import { validateSubmissionData } from "../../utils/validateSubmissionData.js";
 
 export class SubmissionService {
@@ -41,31 +42,49 @@ export class SubmissionService {
       throw new ForbiddenError("Results are not public");
     }
 
-    const cacheKey = REDIS_KEYS.RESULTS(hackathonId);
+    const finalPhase = hackathon.phases[hackathon.phases.length - 1];
 
-    try {
-      const cachedData = await this.cacheService.get(cacheKey);
+    const submissions =
+      await this.submissionRepository.getLeaderboardSubmissions(
+        hackathonId,
+        finalPhase._id
+      );
 
-      if (cachedData) {
-        this.logger.info({ hackathonId }, "Results cache hit");
+    const maxVoteCount = submissions.length
+      ? Math.max(...submissions.map((submission) => submission.voteCount || 0))
+      : 0;
 
-        return cachedData;
-      }
-    } catch (error) {
-      this.logger.error({ error }, "Redis read failed");
+    const voteWeight = hackathon.votingConfig?.voteWeight || 0;
+
+    const maxJudgeScore = hackathon.judgingConfig?.maxScore || 100;
+
+    const leaderboard = submissions.map((submission) => {
+      const finalScore = calculateFinalScore({
+        averageScore: submission.averageScore,
+
+        voteCount: submission.voteCount,
+
+        maxVoteCount,
+
+        voteWeight,
+
+        maxJudgeScore,
+      });
+
+      return {
+        ...submission,
+
+        finalScore,
+      };
+    });
+
+    leaderboard.sort((a, b) => b.finalScore - a.finalScore);
+
+    if (hackathon.publicLeaderboardLimit) {
+      return leaderboard.slice(0, hackathon.publicLeaderboardLimit);
     }
 
-    this.logger.info({ hackathonId }, "Results cache miss");
-
-    const results = await this.submissionRepository.getTopResults(hackathonId);
-
-    try {
-      await this.cacheService.set(cacheKey, results, 86400);
-    } catch (error) {
-      this.logger.error({ error }, "Redis write failed");
-    }
-
-    return results;
+    return leaderboard;
   }
 
   async createSubmission({

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import slugify from "slugify";
 
 const submissionFieldSchema = new mongoose.Schema(
   {
@@ -105,6 +106,7 @@ const hackathonSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
+      trim: true,
     },
     subTitle: {
       type: String,
@@ -112,9 +114,14 @@ const hackathonSchema = new mongoose.Schema(
     description: {
       type: String,
     },
-    submissions: {
-      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "submissions" }],
+
+    detailsContent: {
+      type: String,
+      trim: true,
+      maxlength: 100000,
+      default: "",
     },
+
     startDate: {
       type: Date,
     },
@@ -127,15 +134,23 @@ const hackathonSchema = new mongoose.Schema(
     submissionEndDate: {
       type: Date,
     },
-    votingDate: {
-      type: Date,
-    },
-    refMaterial: {
-      type: [String],
-    },
+
     status: {
       type: Boolean,
       default: false,
+    },
+
+    category: {
+      type: [String],
+      default: [],
+    },
+    techStacks: {
+      type: [String],
+      default: [],
+    },
+    gallery: {
+      type: [String],
+      default: [],
     },
     difficulty: {
       type: String,
@@ -143,91 +158,100 @@ const hackathonSchema = new mongoose.Schema(
         values: ["Advanced", "Expert", "Intermediate", "Beginner", "Tough"],
       },
     },
-    category: {
-      type: Array,
-    },
-    rewards: [
-      {
-        description: { type: String, required: true },
-        amount: { type: Number, required: true },
-      },
-    ],
-    prizeMoney1: {
-      type: Number,
-    },
-    prizeMoney2: {
-      type: Number,
-    },
-    prizeMoney3: {
-      type: Number,
-    },
-    techStackUsed: {
-      type: Array,
-    },
     numParticipants: {
       type: Number,
       default: 0,
     },
-    overview: {
-      type: String,
-    },
-    themes: {
-      type: [String],
-    },
-    FAQs: [
+    contacts: [
       {
-        question: { type: String },
-        answer: { type: String },
+        label: String,
+
+        type: {
+          type: String,
+          enum: ["EMAIL", "PHONE", "LINKEDIN", "DISCORD", "WEBSITE", "OTHER"],
+        },
+
+        value: String,
       },
     ],
-    teams: {
-      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "teams" }],
-    },
-    aboutUs: {
-      type: String,
-    },
-    projectSubmission: {
-      type: [String],
-    },
-    TandCforHackathon: {
-      type: [String],
-    },
-    evaluationCriteria: {
-      type: [String],
-    },
-    registeredParticipants: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "registeredParticipants" },
-    ],
-    allowedFileTypes: {
-      docs: { type: [String], default: ["pdf", "docx", "ppt", "pptx"] },
-      images: { type: [String], default: ["jpg", "jpeg", "png"] },
-      videos: { type: [String], default: ["mp4"] },
-    },
-    gallery: [
+    resources: [
       {
-        type: String,
-        required: true,
+        title: String,
+        url: String,
       },
     ],
-    showVoting: {
-      type: Boolean,
-      default: true,
+    faqs: [
+      {
+        question: String,
+        answer: String,
+      },
+    ],
+    votingConfig: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+
+      allowSelfVote: {
+        type: Boolean,
+        default: false,
+      },
+
+      onlyParticipantsCanVote: {
+        type: Boolean,
+        default: true,
+      },
+
+      voteWeight: {
+        type: Number,
+        default: 20,
+        min: 0,
+        max: 100,
+      },
     },
+    prizes: [
+      {
+        title: String,
+        description: String,
+        amount: {
+          type: Number,
+          min: 0,
+        },
+      },
+    ],
     showResult: {
       type: Boolean,
       default: true,
     },
-    contact: [
-      {
-        title: { type: String, required: true },
-        value: { type: String, required: true },
+    publicLeaderboardLimit: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+    judgingConfig: {
+      minScore: {
+        type: Number,
+        default: 0,
       },
-    ],
+
+      maxScore: {
+        type: Number,
+        default: 100,
+      },
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
-
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "admins",
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
     phases: {
       type: [phaseSchema],
       default: [],
@@ -276,9 +300,31 @@ const hackathonSchema = new mongoose.Schema(
       enum: ["INDIVIDUAL", "TEAM"],
       default: "INDIVIDUAL",
     },
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+    featuredOrder: {
+      type: Number,
+      default: 0,
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
     maxTeamSize: {
       type: Number,
       default: 1,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    rejectionReason: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true }
@@ -327,34 +373,14 @@ hackathonSchema.index({
   createdAt: -1,
 });
 
+hackathonSchema.index({
+  featured: 1,
+});
+
+hackathonSchema.index({
+  tags: 1,
+});
+
 const hackathonModel = mongoose.model("hackathons", hackathonSchema);
 
 export default hackathonModel;
-
-// TODO (Future Migration):
-// Do not store growing submission references inside Hackathon.
-// Source of truth should be Submission collection using:
-// Submission.find({ hackathon: hackathonId })
-// Kept for backward compatibility with existing data.
-
-// TODO (Future Migration):
-// Do not store growing team references inside Hackathon.
-// Source of truth should be Team collection using:
-// Team.find({ hackathon: hackathonId })
-// Kept for backward compatibility with existing data.
-
-// TODO (Future Migration):
-// Do not store growing registration references inside Hackathon.
-// Source of truth should be RegisteredParticipant collection using:
-// RegisteredParticipant.find({ hackathon: hackathonId })
-// Kept for backward compatibility with existing data.
-
-// TODO (Future Migration):
-// Replace Boolean status with enum:
-// "upcoming" | "active" | "completed"
-// Boolean status is currently retained for backward compatibility.
-
-// TODO (Performance Improvement):
-// Current implementation performs write operations on every read query.
-// Replace with BullMQ scheduled job or cron-based status updater.
-// Do not remove until replacement is implemented and tested.

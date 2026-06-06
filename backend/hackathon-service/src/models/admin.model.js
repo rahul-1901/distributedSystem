@@ -1,60 +1,164 @@
 import mongoose from "mongoose";
 
-const adminSchema = new mongoose.Schema({
+const adminSchema = new mongoose.Schema(
+  {
     avatar: {
-        type: String
-    },
-    adminName: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-    },
-    password: {  // hashed password
-        type: String,
-        required: false,
+      type: String,
+      default: "",
     },
 
-    lastLogin: {
-        type: Date,
-        default: Date.now,
+    adminName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["ADMIN", "JUDGE"],
+      default: "ADMIN",
+    },
+
+    controller: {
+      type: Boolean,
+      default: false,
+      immutable: true,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
     },
 
     isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    verificationStatus: {
+      type: String,
+      enum: [
+        "NOT_SUBMITTED",
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+      ],
+      default: "NOT_SUBMITTED",
+    },
+
+    profileCompleted: {
         type: Boolean,
         default: false,
+      },
+
+    organizationName: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-    resetPasswordToken: {
-        type: String,
-        default: "",
+    organizerType: {
+      type: String,
+      enum: [
+        "INDIVIDUAL",
+        "COLLEGE",
+        "COMPANY",
+        "COMMUNITY",
+        "STARTUP",
+      ],
+      default: "INDIVIDUAL",
     },
 
-    resetPasswordExpiresAt: Date,
-
-    verificationToken: {
-        type: String,
-        default: "",
-    },
     contactNumber: {
       type: String,
-      // required: true,
       validate: {
-        validator: function (v) {
-          return /^\+?[0-9]{10,15}$/.test(v);
+        validator(v) {
+          return !v || /^\+?[0-9]{10,15}$/.test(v);
         },
-        message: props => `${props.value} is not a valid phone number!`
-      }
+        message: (props) =>
+          `${props.value} is not a valid phone number`,
+      },
     },
-    controller:{
-        type : Boolean,
-        default : false,
-        immutable: true
-    }
-}, { timestamps: true });
+
+    country: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    bio: {
+      type: String,
+      default: "",
+      maxlength: 1000,
+    },
+
+    website: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    linkedin: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    verificationDocument: {
+      type: String,
+      default: "",
+    },
+
+    verificationRemarks: {
+      type: String,
+      default: "",
+    },
+
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "admins",
+      default: null,
+    },
+
+    lastLogin: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+adminSchema.index({
+  email: 1,
+});
+
+adminSchema.index({
+  role: 1,
+});
+
+adminSchema.index({
+  isVerified: 1,
+});
+
+adminSchema.index({
+  verificationStatus: 1,
+});
 
 const Admin = mongoose.model("admins", adminSchema);
+
 export default Admin;
