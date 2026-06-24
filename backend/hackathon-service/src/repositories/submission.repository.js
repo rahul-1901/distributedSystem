@@ -1,6 +1,32 @@
 import SubmissionModel from "../models/submission.models.js";
 
 export class SubmissionRepository {
+  async countByHackathon(hackathonId) {
+    return SubmissionModel.countDocuments({
+      hackathon: hackathonId,
+    });
+  }
+
+  async countByHackathonAndPhase(hackathonId, phaseId) {
+    return SubmissionModel.countDocuments({
+      hackathon: hackathonId,
+      phaseId,
+    });
+  }
+
+  async getSubmissionsByPhase(hackathonId, phaseId) {
+    return SubmissionModel.find({
+      hackathon: hackathonId,
+      phaseId,
+    })
+      .populate("participant", "name email")
+      .populate("team", "name")
+      .sort({
+        submittedAt: -1,
+      })
+      .lean();
+  }
+
   async create(data, session = null) {
     const [submission] = await SubmissionModel.create([data], { session });
 
@@ -83,7 +109,16 @@ export class SubmissionRepository {
   }
 
   async findByIdWithHackathon(submissionId) {
-    return SubmissionModel.findById(submissionId).populate("hackathon");
+    return SubmissionModel.findById(submissionId).populate(
+      "hackathon",
+      `
+        title
+        phases
+        showResult
+        publicLeaderboardLimit
+        votingConfig
+        `
+    );
   }
 
   async getMyIndividualSubmissions(participantId, hackathonId) {

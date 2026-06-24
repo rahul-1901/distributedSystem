@@ -27,7 +27,7 @@ export class JudgeAssignmentRepository {
     return JudgeAssignmentModel.find({
       judge: judgeId,
     })
-      .populate("hackathon", "title startDate endDate")
+      .populate("hackathon", "title slug lifecycleStatus image")
       .lean();
   }
 

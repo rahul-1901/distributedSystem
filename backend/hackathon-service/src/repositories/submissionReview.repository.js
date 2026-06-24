@@ -73,4 +73,17 @@ export class SubmissionReviewRepository {
       judge: judgeId,
     });
   }
+
+  async countReviews(submissionId) {
+    return SubmissionReviewModel.countDocuments({
+      submission: submissionId,
+    });
+  }
+
+  async getJudgeReviews(hackathonId, judgeId) {
+    return SubmissionReviewModel.find({
+      hackathon: hackathonId,
+      judge: judgeId,
+    }).lean();
+  }
 }

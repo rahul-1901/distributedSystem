@@ -27,12 +27,40 @@ export class TeamService {
       .toUpperCase();
   }
 
+  getRegistrationPhase(hackathon, now) {
+    return hackathon.phases?.find(
+      (phase) =>
+        phase.phaseType === "REGISTRATION" &&
+        phase.isActive &&
+        now >= phase.startDate &&
+        now <= phase.endDate
+    );
+  }
+
+  ensureTeamModificationAllowed(hackathon) {
+    if (hackathon.lifecycleStatus === "COMPLETED") {
+      throw new BadRequestError("Team modifications are no longer allowed");
+    }
+  }
+
   async createTeam({ userId, hackathonId, teamName }) {
     if (!mongoose.Types.ObjectId.isValid(hackathonId)) {
       throw new BadRequestError("Invalid hackathon id");
     }
 
     const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (hackathon.lifecycleStatus === "COMPLETED") {
+      throw new BadRequestError("Team modifications are no longer allowed");
+    }
+
+    const now = getNowUTC();
+
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
+      throw new BadRequestError("Registration is closed");
+    }
 
     if (!hackathon) {
       throw new NotFoundError(
@@ -148,6 +176,14 @@ export class TeamService {
       );
     }
 
+    const now = getNowUTC();
+
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
+      throw new BadRequestError("Registration is closed");
+    }
+
     if (hackathon.participationType !== "TEAM") {
       throw new BadRequestError(
         "This hackathon does not support team participation"
@@ -241,6 +277,18 @@ export class TeamService {
     }
 
     team.pendingMembers.splice(pendingIndex, 1);
+
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+
+    this.ensureTeamModificationAllowed(hackathon);
+
+    const now = getNowUTC();
+
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
+      throw new BadRequestError("Registration is closed");
+    }
 
     if (action === "reject") {
       await this.teamRepository.save(team);
@@ -467,9 +515,13 @@ export class TeamService {
       throw new NotFoundError("Hackathon not found");
     }
 
+    this.ensureTeamModificationAllowed(hackathon);
+
     const now = getNowUTC();
 
-    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
       throw new BadRequestError("Registration is closed");
     }
 
@@ -548,6 +600,9 @@ export class TeamService {
   async removeMember({ leaderId, teamId, userId }) {
     const team = await this.teamRepository.findById(teamId);
 
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+    this.ensureTeamModificationAllowed(hackathon);
+
     if (!team) {
       throw new NotFoundError("Team not found");
     }
@@ -608,13 +663,17 @@ export class TeamService {
 
     const hackathon = await this.hackathonRepository.getById(team.hackathon);
 
+    this.ensureTeamModificationAllowed(hackathon);
+
     if (!hackathon) {
       throw new NotFoundError("Hackathon not found");
     }
 
     const now = getNowUTC();
 
-    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
       throw new BadRequestError("Registration is closed");
     }
 
@@ -670,16 +729,19 @@ export class TeamService {
 
     const hackathon = await this.hackathonRepository.getById(team.hackathon);
 
+    this.ensureTeamModificationAllowed(hackathon);
+
     if (!hackathon) {
       throw new NotFoundError("Hackathon not found");
     }
 
     const now = getNowUTC();
 
-    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
       throw new BadRequestError("Registration is closed");
     }
-
     const session = await mongoose.startSession();
 
     try {

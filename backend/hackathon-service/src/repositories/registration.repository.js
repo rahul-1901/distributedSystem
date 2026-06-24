@@ -84,4 +84,10 @@ export class RegistrationRepository {
       }
     );
   }
+
+  async countByHackathon(hackathonId) {
+    return RegisteredParticipantsModel.countDocuments({
+      hackathon: hackathonId,
+    });
+  }
 }

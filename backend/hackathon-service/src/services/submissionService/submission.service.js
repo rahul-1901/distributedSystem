@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
-import { REDIS_KEYS } from "../../config/redisKeys.js";
 import { calculateFinalScore } from "../../utils/scoreCalculator.js";
 import { validateSubmissionData } from "../../utils/validateSubmissionData.js";
 
@@ -34,6 +33,10 @@ export class SubmissionService {
       hackathonId
     );
 
+    if (hackathon.lifecycleStatus !== "COMPLETED") {
+      throw new ForbiddenError("Results are not available yet");
+    }
+
     if (!hackathon) {
       throw new NotFoundError("Hackathon not found");
     }
@@ -42,7 +45,15 @@ export class SubmissionService {
       throw new ForbiddenError("Results are not public");
     }
 
-    const finalPhase = hackathon.phases[hackathon.phases.length - 1];
+    const submissionPhases = hackathon.phases.filter(
+      (phase) => phase.phaseType === "SUBMISSION"
+    );
+
+    const finalPhase = submissionPhases[submissionPhases.length - 1];
+
+    if (!finalPhase) {
+      throw new BadRequestError("No submission phase configured");
+    }
 
     const submissions =
       await this.submissionRepository.getLeaderboardSubmissions(
@@ -110,7 +121,7 @@ export class SubmissionService {
       throw new BadRequestError("Submission data is required.");
     }
 
-    const currentTime = new Date();
+    const currentTime = getNowUTC();
 
     const hackathon = await this.hackathonRepository.getActiveSubmissionPhase(
       hackathonId,
@@ -272,32 +283,27 @@ export class SubmissionService {
 
     const now = new Date();
 
-    const phases = hackathon.phases.map((phase) => {
-      const existing = submissionMap.get(phase._id.toString());
+    const phases = hackathon.phases
+      .filter((phase) => phase.phaseType === "SUBMISSION")
+      .map((phase) => {
+        const existing = submissionMap.get(phase._id.toString());
 
-      let canSubmit = false;
+        let canSubmit = false;
 
-      if (phase.submissionStartDate && phase.submissionEndDate) {
-        canSubmit =
-          now >= phase.submissionStartDate && now <= phase.submissionEndDate;
-      }
+        if (phase.phaseType === "SUBMISSION" && phase.isActive) {
+          canSubmit = now >= phase.startDate && now <= phase.endDate;
+        }
 
-      return {
-        phaseId: phase._id,
-
-        phaseName: phase.name,
-
-        phaseType: phase.phaseType,
-
-        submitted: !!existing,
-
-        submissionId: existing?._id || null,
-
-        submittedAt: existing?.submittedAt || null,
-
-        canSubmit,
-      };
-    });
+        return {
+          phaseId: phase._id,
+          phaseName: phase.phaseName,
+          phaseType: phase.phaseType,
+          submitted: !!existing,
+          submissionId: existing?._id || null,
+          submittedAt: existing?.submittedAt || null,
+          canSubmit,
+        };
+      });
 
     return {
       phases,

@@ -114,32 +114,17 @@ const hackathonSchema = new mongoose.Schema(
     description: {
       type: String,
     },
-
     detailsContent: {
       type: String,
       trim: true,
       maxlength: 100000,
       default: "",
     },
-
-    startDate: {
-      type: Date,
-    },
-    endDate: {
-      type: Date,
-    },
-    submissionStartDate: {
-      type: Date,
-    },
-    submissionEndDate: {
-      type: Date,
-    },
-
     status: {
-      type: Boolean,
-      default: false,
+      type: String,
+      enum: ["DRAFT", "PENDING_APPROVAL", "REJECTED", "APPROVED"],
+      default: "DRAFT",
     },
-
     category: {
       type: [String],
       default: [],
@@ -318,47 +303,55 @@ const hackathonSchema = new mongoose.Schema(
     },
     slug: {
       type: String,
+      trim: true,
       unique: true,
       sparse: true,
-      trim: true,
+      index: true,
     },
     rejectionReason: {
       type: String,
       default: "",
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+    },
+    toObject: {
+      virtuals: true,
+    },
+  }
 );
 
-hackathonSchema.pre(/^find/, async function () {
-  const currentTime = new Date();
+hackathonSchema.virtual("lifecycleStatus").get(function () {
+  if (this.status !== "APPROVED") {
+    return this.status;
+  }
 
-  await this.model.updateMany(
-    {
-      startDate: { $lte: currentTime },
-      submissionEndDate: { $gte: currentTime },
-    },
-    {
-      status: true,
-    }
+  const now = new Date();
+
+  if (!this.phases || this.phases.length === 0) {
+    return "UPCOMING";
+  }
+
+  const earliest = new Date(
+    Math.min(...this.phases.map((p) => new Date(p.startDate)))
   );
 
-  await this.model.updateMany(
-    {
-      submissionEndDate: { $lt: currentTime },
-    },
-    {
-      status: false,
-    }
+  const latest = new Date(
+    Math.max(...this.phases.map((p) => new Date(p.endDate)))
   );
-});
 
-hackathonSchema.index({
-  startDate: 1,
-});
+  if (now < earliest) {
+    return "UPCOMING";
+  }
 
-hackathonSchema.index({
-  submissionEndDate: 1,
+  if (now >= earliest && now <= latest) {
+    return "ACTIVE";
+  }
+
+  return "COMPLETED";
 });
 
 hackathonSchema.index({
@@ -379,6 +372,17 @@ hackathonSchema.index({
 
 hackathonSchema.index({
   tags: 1,
+});
+
+hackathonSchema.pre("save", function (next) {
+  if (this.isModified("title") || !this.slug) {
+    this.slug = slugify(`${this.title}-${Date.now()}`, {
+      lower: true,
+      strict: true,
+    });
+  }
+
+  next();
 });
 
 const hackathonModel = mongoose.model("hackathons", hackathonSchema);

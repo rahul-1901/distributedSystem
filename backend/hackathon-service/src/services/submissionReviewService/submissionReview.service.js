@@ -10,12 +10,14 @@ export class SubmissionReviewService {
     submissionRepository,
     judgeAssignmentRepository,
     hackathonRepository,
+    cacheService,
     logger
   ) {
     this.submissionReviewRepository = submissionReviewRepository;
     this.submissionRepository = submissionRepository;
     this.judgeAssignmentRepository = judgeAssignmentRepository;
     this.hackathonRepository = hackathonRepository;
+    this.cacheService = cacheService;
     this.logger = logger;
   }
 
@@ -33,6 +35,10 @@ export class SubmissionReviewService {
     const hackathon = await this.hackathonRepository.getById(
       submission.hackathon
     );
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
 
     const minScore = hackathon?.judgingConfig?.minScore ?? 0;
 

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
+import { REDIS_KEYS } from "../../config/redisKeys.js";
 
 export class VoteService {
   constructor(
@@ -14,17 +15,11 @@ export class VoteService {
     logger
   ) {
     this.submissionVoteRepository = submissionVoteRepository;
-
     this.submissionRepository = submissionRepository;
-
     this.registrationRepository = registrationRepository;
-
     this.hackathonRepository = hackathonRepository;
-
     this.teamRepository = teamRepository;
-
     this.cacheService = cacheService;
-
     this.logger = logger;
   }
 
@@ -94,9 +89,7 @@ export class VoteService {
     } else {
       await this.submissionVoteRepository.create({
         submission: submissionId,
-
         hackathon: hackathon._id,
-
         voter: userId,
       });
 
@@ -141,7 +134,15 @@ export class VoteService {
       throw new ForbiddenError("Voting is disabled");
     }
 
-    const finalPhase = hackathon.phases[hackathon.phases.length - 1];
+    const submissionPhases = hackathon.phases.filter(
+      (phase) => phase.phaseType === "SUBMISSION"
+    );
+
+    const finalPhase = submissionPhases[submissionPhases.length - 1];
+
+    if (!finalPhase) {
+      throw new BadRequestError("No submission phase configured");
+    }
 
     return this.submissionRepository.getVotingSubmissions(
       hackathonId,
@@ -159,8 +160,12 @@ export class VoteService {
     }
 
     const hackathon = await this.hackathonRepository.getPhases(
-      submission.hackathon
+      submission.hackathon._id || submission.hackathon
     );
+
+    if (hackathon.lifecycleStatus !== "COMPLETED") {
+      throw new ForbiddenError("Voting is not available yet");
+    }
 
     if (!hackathon.votingConfig?.enabled) {
       throw new ForbiddenError("Voting is disabled");

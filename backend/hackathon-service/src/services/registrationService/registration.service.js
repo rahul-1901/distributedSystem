@@ -16,6 +16,18 @@ export class RegistrationService {
     this.logger = logger;
   }
 
+  getRegistrationPhase(hackathon, now) {
+    const registrationPhase = hackathon.phases?.find(
+      (phase) => phase.phaseType === "REGISTRATION" && phase.isActive
+    );
+
+    if (!registrationPhase) {
+      return null;
+    }
+
+    return registrationPhase;
+  }
+
   async registerParticipant({ userId, hackathonId, registrationData }) {
     if (!mongoose.Types.ObjectId.isValid(hackathonId)) {
       throw new BadRequestError("Invalid hackathon id");
@@ -43,13 +55,17 @@ export class RegistrationService {
       throw new BadRequestError("User already registered for this hackathon");
     }
 
-    const now = getNowUTC();
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
 
-    if (hackathon.startDate && hackathon.startDate > now) {
+    if (!registrationPhase) {
+      throw new BadRequestError("Registration phase is not configured");
+    }
+
+    if (now < registrationPhase.startDate) {
       throw new BadRequestError("Registration has not started yet");
     }
 
-    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+    if (now > registrationPhase.endDate) {
       throw new BadRequestError("Registration is closed");
     }
 
@@ -85,7 +101,7 @@ export class RegistrationService {
         session
       );
 
-      await this.hackathonRepository.incrementParticipantCount(
+      await this.hackathonRepository.incrementParticipant(
         hackathonId,
         session
       );
@@ -163,9 +179,17 @@ export class RegistrationService {
       throw new NotFoundError("Hackathon not found");
     }
 
-    const now = getNowUTC();
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
 
-    if (hackathon.submissionEndDate && hackathon.submissionEndDate < now) {
+    if (now < registrationPhase.startDate) {
+      throw new BadRequestError("Registration has not started yet");
+    }
+
+    if (!registrationPhase) {
+      throw new BadRequestError("Registration phase is not configured");
+    }
+
+    if (now > registrationPhase.endDate) {
       throw new BadRequestError("Registration is closed");
     }
 

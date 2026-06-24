@@ -4,9 +4,6 @@ import { adminAuth } from "../middlewares/adminAuth.js";
 import rateLimit from "express-rate-limit";
 
 import {
-  getActiveHackathons,
-  getExpiredHackathons,
-  getUpcomingHackathons,
   getHackathonById,
   getHackathonResults,
   getHackathonGallery,
@@ -18,7 +15,12 @@ import {
   submitForApproval,
   getPendingHackathons,
   rejectHackathon,
-  approveHackathon
+  approveHackathon,
+  deleteHackathon,
+  getPublicHackathons,
+  getHackathonBySlug,
+  getOrganizerHackathon,
+  getMyHackathons
 } from "../controllers/hackathon.controller.js";
 
 import { 
@@ -80,15 +82,14 @@ export const strictLimiter = rateLimit({
 });
 
 //hackathon public routes
-router.get("/activeHackathons", getLimiter, getActiveHackathons);
-router.get("/expiredHackathons", getLimiter, getExpiredHackathons);
-router.get("/upcomingHackathons", getLimiter, getUpcomingHackathons);
+router.get("/hackathon", getLimiter, getPublicHackathons);
 router.get("/:id", getLimiter, getHackathonById);
 router.get("/:id/results", getLimiter, getHackathonResults);
 router.get("/:hackathonId/gallery", getLimiter, getHackathonGallery);
 router.post("/:submissionId/vote", verifyAuth, strictLimiter, toggleVote);
 router.get("/:hackathonId/voting-submissions", getLimiter, getVotingSubmissions);
 router.get("/voting-submissions/:submissionId", getLimiter, getVotingSubmissionById);
+router.get("/slug/:slug", getLimiter, getHackathonBySlug);
 
 //hackathon user wishlist
 router.post("/wishlist/toggle", verifyAuth, getLimiter, toggleHackathonWishlist);
@@ -120,11 +121,15 @@ router.get("/:hackathonId/my-submission", verifyAuth, getLimiter, getMySubmissio
 router.get("/submissions/:submissionId", verifyAuth, getLimiter, getSubmissionById);
 router.patch("/:hackathonId/submission/:submissionId", verifyAuth, strictLimiter, updateSubmission);
 
-router.post("admin/createHackathon",adminAuth,createHackathon);
-router.patch("admin/updateHackathon/:id", adminAuth, updateHackathon);
-router.post("admin/:id/submitHackathon", adminAuth, submitForApproval);
-router.get("admin/pendingHackathon", adminAuth, getPendingHackathons);
-router.post("admin/:id/approveHackathon", adminAuth, approveHackathon);
-router.post("admin/:id/rejectHackathon", adminAuth, rejectHackathon);
+//hackathon admin routes
+router.post("/admin/createHackathon",adminAuth,createHackathon);
+router.patch("/admin/updateHackathon/:id", adminAuth, updateHackathon);
+router.post("/admin/:id/submitHackathon", adminAuth, submitForApproval);
+router.get("/admin/pendingHackathon", adminAuth, getPendingHackathons);
+router.post("/admin/:id/approveHackathon", adminAuth, approveHackathon);
+router.post("/admin/:id/rejectHackathon", adminAuth, rejectHackathon);
+router.delete("/admin/:id/deleteHackathon", adminAuth, deleteHackathon);
+router.get("/admin/hackathons/:id", adminAuth, getOrganizerHackathon);
+router.get("/admin/my-hackathons", adminAuth, getMyHackathons);
 
 export default router;

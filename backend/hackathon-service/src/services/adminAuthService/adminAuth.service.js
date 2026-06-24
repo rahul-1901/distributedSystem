@@ -35,17 +35,11 @@ export class AdminAuthService {
     if (!admin) {
       admin = await this.adminRepository.create({
         adminName: name,
-
         email,
-
         avatar: picture || "",
-
         role: "ADMIN",
-
         profileCompleted: false,
-
         isVerified: false,
-
         verificationStatus: "NOT_SUBMITTED",
       });
 
@@ -69,7 +63,6 @@ export class AdminAuthService {
     const token = jwt.sign(
       {
         id: admin._id,
-
         role: admin.role,
       },
       process.env.SECRET_KEY,
@@ -80,9 +73,7 @@ export class AdminAuthService {
 
     return {
       success: true,
-
       token,
-
       admin: {
         id: admin._id,
         adminName: admin.adminName,

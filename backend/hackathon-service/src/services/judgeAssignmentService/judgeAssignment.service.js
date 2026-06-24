@@ -35,7 +35,8 @@ export class JudgeAssignmentService {
     }
 
     const canManage =
-      isController || hackathon.createdBy?.toString() === adminId.toString();
+      isController ||
+      hackathon.createdBy?._id?.toString() === adminId.toString();
 
     if (!canManage) {
       throw new ForbiddenError("Unauthorized");
@@ -84,7 +85,8 @@ export class JudgeAssignmentService {
     }
 
     const canView =
-      isController || hackathon.createdBy?.toString() === adminId.toString();
+      isController ||
+      hackathon.createdBy?._id?.toString() === adminId.toString();
 
     if (!canView) {
       throw new ForbiddenError("Unauthorized");
@@ -101,8 +103,9 @@ export class JudgeAssignmentService {
     }
 
     const canManage =
-      isController || hackathon.createdBy?.toString() === adminId.toString();
-
+      isController ||
+      hackathon.createdBy?._id?.toString() === adminId.toString();
+      
     if (!canManage) {
       throw new ForbiddenError("Unauthorized");
     }

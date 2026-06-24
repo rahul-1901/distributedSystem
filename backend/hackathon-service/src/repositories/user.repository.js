@@ -10,7 +10,7 @@ export class UserRepository {
       .populate({
         path: "wishlist",
         select:
-          "title subTitle description image startDate endDate submissionStartDate submissionEndDate difficulty category techStackUsed themes status",
+          "title subTitle description image difficulty category tags phases lifecycleStatus slug",
       })
       .lean();
   }

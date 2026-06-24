@@ -1,7 +1,3 @@
-/**
- * UTC Date Utility Functions
- * Always work with UTC on the backend to avoid timezone issues
- */
 
 /**
  * Get current UTC time
@@ -19,38 +15,6 @@ export const getNowUTC = () => {
 export const toUTC = (date) => {
     if (!date) return new Date();
     return new Date(date.getTime());
-};
-
-/**
- * Check if a hackathon is currently active
- * @param {Date} startDate - Hackathon start date
- * @param {Date} submissionEndDate - Submission end date
- * @returns {boolean} True if hackathon is active
- */
-export const isHackathonActive = (startDate, submissionEndDate) => {
-    const now = getNowUTC();
-    return new Date(startDate).getTime() <= now.getTime() &&
-        new Date(submissionEndDate).getTime() >= now.getTime();
-};
-
-/**
- * Check if a hackathon has expired
- * @param {Date} submissionEndDate - Submission end date
- * @returns {boolean} True if hackathon has expired
- */
-export const isHackathonExpired = (submissionEndDate) => {
-    const now = getNowUTC();
-    return new Date(submissionEndDate).getTime() < now.getTime();
-};
-
-/**
- * Check if a hackathon is upcoming
- * @param {Date} startDate - Hackathon start date
- * @returns {boolean} True if hackathon is upcoming
- */
-export const isHackathonUpcoming = (startDate) => {
-    const now = getNowUTC();
-    return new Date(startDate).getTime() > now.getTime();
 };
 
 /**

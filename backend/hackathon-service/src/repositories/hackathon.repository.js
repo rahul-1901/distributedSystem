@@ -1,36 +1,28 @@
 import hackathonModel from "../models/hackathon.model.js";
 
 export class HackathonRepository {
-  async getActiveHackathons(now) {
+  async getApprovedHackathons() {
     return hackathonModel
       .find({
-        startDate: { $lte: now },
-        submissionEndDate: { $gte: now },
+        status: "APPROVED",
       })
-      .sort({ endDate: 1 })
-      .lean();
-  }
-
-  async getExpiredHackathons(now) {
-    return hackathonModel
-      .find({
-        submissionEndDate: { $lt: now },
+      .sort({
+        featured: -1,
+        featuredOrder: 1,
+        createdAt: -1,
       })
-      .sort({ submissionEndDate: -1 })
-      .lean();
-  }
-
-  async getUpcomingHackathons(now) {
-    return hackathonModel
-      .find({
-        startDate: { $gt: now },
-      })
-      .sort({ startDate: 1 })
-      .lean();
+      .lean({
+        virtuals: true,
+      });
   }
 
   async getById(id) {
-    return hackathonModel.findById(id).lean();
+    return hackathonModel
+      .findById(id)
+      .populate("createdBy", "adminName email organizationName")
+      .lean({
+        virtuals: true,
+      });
   }
 
   async getByIdForSubmission(id) {
@@ -39,8 +31,6 @@ export class HackathonRepository {
         title
         participationType
         phases
-        submissionStartDate
-        submissionEndDate
         `
     );
   }
@@ -128,8 +118,8 @@ export class HackathonRepository {
   async getPhases(hackathonId) {
     return hackathonModel
       .findById(hackathonId)
-      .select("phases participationType")
-      .lean();
+      .select("phases participationType votingConfig lifecycleStatus")
+      .lean({ virtuals: true });
   }
 
   async create(data) {
@@ -140,6 +130,12 @@ export class HackathonRepository {
     return hackathonModel.findById(id);
   }
 
+  async findByIdLean(id) {
+    return hackathonModel.findById(id).lean({
+      virtuals: true,
+    });
+  }
+
   async findByCreator(adminId) {
     return hackathonModel
       .find({
@@ -147,12 +143,18 @@ export class HackathonRepository {
       })
       .sort({
         createdAt: -1,
+      })
+      .lean({
+        virtuals: true,
       });
   }
 
   async findByTitle(title) {
     return hackathonModel.findOne({
-      title: title.trim(),
+      title: {
+        $regex: `^${title.trim()}$`,
+        $options: "i",
+      },
     });
   }
 
@@ -167,23 +169,7 @@ export class HackathonRepository {
     return hackathonModel.findByIdAndDelete(id);
   }
 
-  async getRegistrationCount(hackathonId) {
-    return RegisteredParticipantModel.countDocuments({
-      hackathon: hackathonId,
-    });
-  }
-  
-  async getSubmissionCount(hackathonId) {
-    return SubmissionModel.countDocuments({
-      hackathon: hackathonId,
-    });
-  }
-
-  async updateStatus(
-    hackathonId,
-    status,
-    extraData = {}
-  ) {
+  async updateStatus(hackathonId, status, extraData = {}) {
     return hackathonModel.findByIdAndUpdate(
       hackathonId,
       {
@@ -201,12 +187,29 @@ export class HackathonRepository {
       .find({
         status: "PENDING_APPROVAL",
       })
-      .populate(
-        "createdBy",
-        "adminName email organizationName"
-      )
+      .populate("createdBy", "adminName email organizationName")
       .sort({
         createdAt: -1,
+      })
+      .lean();
+  }
+
+  async findBySlug(slug) {
+    return hackathonModel
+      .findOne({
+        slug,
+        status: "APPROVED",
+      })
+      .populate("createdBy", "adminName organizationName avatar")
+      .lean({
+        virtuals: true,
       });
+  }
+
+  async existsPublic(id) {
+    return hackathonModel.exists({
+      _id: id,
+      status: "APPROVED",
+    });
   }
 }

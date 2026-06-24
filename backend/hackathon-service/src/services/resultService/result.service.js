@@ -29,19 +29,12 @@ export class ResultService {
 
     return leaderboard.map((submission, index) => ({
       rank: index + 1,
-
       submissionId: submission._id,
-
       title: submission.title,
-
       team: submission.team,
-
       participant: submission.participant,
-
       averageScore: submission.averageScore,
-
       reviewCount: submission.reviewCount,
-
       hackathonPoints: submission.hackathonPoints,
     }));
   }

@@ -24,8 +24,10 @@ export class TeamRepository {
     });
   }
 
-  async save(team) {
-    return team.save();
+  async save(team, session = null) {
+    return team.save({
+      session,
+    });
   }
 
   async getTeamDetails(teamId) {

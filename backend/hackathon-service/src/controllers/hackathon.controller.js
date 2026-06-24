@@ -2,42 +2,6 @@ import { wishlistService } from "../services/wishlistService/wishlist.service.in
 import { hackathonService } from "../services/hackathonService/hackathon.service.instance.js";
 import { submissionService } from "../services/submissionService/submission.service.instance.js";
 
-export const getActiveHackathons = async (req, res, next) => {
-  try {
-    const allHackathons = await hackathonService.getActiveHackathons();
-
-    return res.status(200).json({
-      allHackathons,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getExpiredHackathons = async (req, res, next) => {
-  try {
-    const expiredHackathons = await hackathonService.getExpiredHackathons();
-
-    return res.status(200).json({
-      expiredHackathons,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getUpcomingHackathons = async (req, res, next) => {
-  try {
-    const upcomingHackathons = await hackathonService.getUpcomingHackathons();
-
-    return res.status(200).json({
-      upcomingHackathons,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const getHackathonById = async (req, res, next) => {
   try {
     const hackathon = await hackathonService.getHackathonById(req.params.id);
@@ -214,9 +178,7 @@ export const rejectHackathon = async (req, res, next) => {
   try {
     const hackathon = await hackathonService.rejectHackathon({
       hackathonId: req.params.id,
-
       controllerId: req.admin._id,
-
       reason: req.body.reason,
     });
 
@@ -224,6 +186,77 @@ export const rejectHackathon = async (req, res, next) => {
       success: true,
       message: "Hackathon rejected",
       hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteHackathon = async (req, res, next) => {
+  try {
+    const result = await hackathonService.deleteHackathon({
+      hackathonId: req.params.id,
+
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPublicHackathons = async (req, res, next) => {
+  try {
+    const result = await hackathonService.getPublicHackathons(req.query);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHackathonBySlug = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.getHackathonBySlug(
+      req.params.slug
+    );
+
+    return res.status(200).json({
+      success: true,
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getOrganizerHackathon = async (req, res, next) => {
+  try {
+    const hackathon = await hackathonService.getOrganizerHackathon({
+      hackathonId: req.params.id,
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      hackathon,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMyHackathons = async (req, res, next) => {
+  try {
+    const hackathons = await hackathonService.getMyHackathons(req.admin._id);
+
+    return res.status(200).json({
+      success: true,
+      hackathons,
     });
   } catch (error) {
     next(error);
