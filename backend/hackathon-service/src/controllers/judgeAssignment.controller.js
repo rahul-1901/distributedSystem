@@ -1,4 +1,4 @@
-import { judgeAssignmentService } from "../services/judgeAssignment/judgeAssignment.service.instance.js";
+import { judgeAssignmentService } from "../services/judgeAssignmentService/judgeAssignment.service.instance.js";
 
 export const assignJudge = async (req, res, next) => {
   try {

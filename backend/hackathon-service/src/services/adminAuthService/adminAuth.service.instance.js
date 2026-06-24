@@ -1,4 +1,4 @@
-import logger from "../../config/logger.js";
+import { logger } from "../../utils/logger.js";
 import { adminRepository } from "../../repositories/admin.repository.instance.js";
 import { AdminAuthService } from "./adminAuth.service.js";
 

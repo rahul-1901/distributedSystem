@@ -7,6 +7,9 @@ import hackathonRoutes from "./routes/hackathon.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { connectRedis } from "./config/redis.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import adminAuthRoutes from "./routes/adminAuth.routes.js";
+import discussionRoutes from "./routes/discussion.routes.js";
 import multer from "multer";
 
 dotenv.config();
@@ -42,6 +45,9 @@ app.get("/", (req, res) => {
 
 app.use("/", hackathonRoutes);
 app.use("/uploads", uploadRoutes);
+app.use("/api/discussions",discussionRoutes);
+app.use("/platform/admin", adminRoutes);
+app.use("/admin/auth", adminAuthRoutes);
 
 app.use(errorHandler);
 app.use((error, req, res, next) => {

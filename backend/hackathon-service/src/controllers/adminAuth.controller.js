@@ -1,4 +1,4 @@
-import { adminAuthService } from "../services/adminAuth/adminAuth.service.instance.js";
+import { adminAuthService } from "../services/adminAuthService/adminAuth.service.instance.js";
 
 export const adminGoogleLogin =
   async (

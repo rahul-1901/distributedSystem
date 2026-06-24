@@ -1,4 +1,4 @@
-import { adminService } from "../services/admin/admin.service.instance.js";
+import { adminService } from "../services/adminService/admin.service.instance.js";
 
 export const getProfile = async (req, res, next) => {
   try {
