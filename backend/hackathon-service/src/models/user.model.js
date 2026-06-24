@@ -4,9 +4,15 @@ const userSchema = new mongoose.Schema(
   {
     image: {
       type: String,
+      default: "",
     },
     userName: {
       type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+      index: true,
     },
     email: {
       type: String,
@@ -28,13 +34,32 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
-    teams: [
-      {
-        hackathon: { type: mongoose.Schema.Types.ObjectId, ref: "hackathons" },
-        team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
-      },
-    ],
+    bio: {
+      type: String,
+      default: "",
+      maxlength: 500,
+    },
+    location: {
+      type: String,
+      default: "",
+    },
+    teams: {
+      type: [
+        {
+          hackathon: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "hackathons",
+          },
+          team: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Team",
+          },
+        },
+      ],
+      default: [],
+    },
     role: {
       type: String,
       enum: ["participant"],
@@ -59,92 +84,142 @@ const userSchema = new mongoose.Schema(
       default: "",
       select: false,
     },
-    gitHubLink: {
-      type: String,
-    },
-    streaks: {
-      type: Number,
-      default: 0,
-    },
-    points: {
-      type: Number,
-      default: 0,
-    },
+    verificationTokenExpiresAt: Date,
     contactNumber: {
       type: String,
+      trim: true,
+      default: "",
       validate: {
         validator: function (v) {
-          return /^\+?[0-9]{10,15}$/.test(v);
+          return !v || /^\+?[0-9]{10,15}$/.test(v);
         },
         message: (props) => `${props.value} is not a valid phone number!`,
       },
     },
-    leaderOfHackathons: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "hackathons" },
-    ],
-    registeredHackathons: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "hackathons" },
-    ],
-    submittedHackathons: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "hackathons" },
-    ],
-    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "hackathons" }],
-    education: [
-      {
-        institute: {
-          type: String,
-          required: true,
-        },
-        passOutYear: {
-          type: String,
-          required: true,
-        },
-        department: {
-          type: String,
-          required: true,
-        },
-        location: {
-          type: String,
-          required: true,
-        },
-      },
-    ],
-    connectedApps: [
-      {
-        appName: { type: String, required: true },
-        appURL: { type: String, required: true },
-      },
-    ],
-    languages: [
-      {
-        language: { type: String, required: true },
-      },
-    ],
-    skills: [
-      {
-        skill: { type: String, required: true },
-      },
-    ],
-    coins: {
-      type: Number,
-      default: 0,
+    badges: {
+      type: [String],
+      default: [],
     },
-    hackathonPoints: {
-      type: Number,
-      default: 0,
+    leaderOfHackathons: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "hackathons",
+      default: [],
     },
-    verificationTokenExpiresAt: Date,
+    registeredHackathons: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "hackathons",
+      default: [],
+    },
+    submittedHackathons: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "hackathons",
+      default: [],
+    },
+    wishlist: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "hackathons",
+      default: [],
+    },
+    education: {
+      type: [
+        {
+          institute: {
+            type: String,
+            required: true,
+          },
+          passOutYear: {
+            type: String,
+            required: true,
+          },
+          department: {
+            type: String,
+            required: true,
+          },
+          location: {
+            type: String,
+            required: true,
+          },
+        },
+      ],
+      default: [],
+    },
+    connectedApps: {
+      type: [
+        {
+          appName: {
+            type: String,
+            required: true,
+          },
+          appURL: {
+            type: String,
+            required: true,
+          },
+        },
+      ],
+      default: [],
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    languages: {
+      type: [String],
+      default: [],
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
+userSchema.index({
+  userName: 1,
+});
+userSchema.index({
+  isVerified: 1,
+});
 userSchema.virtual("submissions", {
   ref: "submissions",
   localField: "_id",
   foreignField: "participant",
 });
-userSchema.set("toObject", { virtuals: true });
-userSchema.set("toJSON", { virtuals: true });
+userSchema.virtual("publicProfile").get(function () {
+  return {
+    _id: this._id,
+    name: this.name,
+    userName: this.userName,
+    image: this.image,
+    bio: this.bio,
+    location: this.location,
+    connectedApps: this.connectedApps,
+    skills: this.skills,
+    languages: this.languages,
+    badges: this.badges,
+  };
+});
+userSchema.virtual("profileCompletion").get(function () {
+  let completed = 0;
+  const total = 9;
+
+  if (this.image) completed++;
+  if (this.userName) completed++;
+  if (this.bio) completed++;
+  if (this.location) completed++;
+  if (this.contactNumber) completed++;
+  if (this.education?.length > 0) completed++;
+  if (this.connectedApps?.length > 0) completed++;
+  if (this.skills?.length > 0) completed++;
+  if (this.languages?.length > 0) completed++;
+
+  return Math.round((completed / total) * 100);
+});
+userSchema.set("toObject", {
+  virtuals: true,
+});
+userSchema.set("toJSON", {
+  virtuals: true,
+});
+
 const UserModel = mongoose.model("users", userSchema);
 
 export default UserModel;

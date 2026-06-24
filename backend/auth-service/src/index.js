@@ -8,6 +8,7 @@ import { connectDB } from "./config/db.js";
 import { connectRedis, redisClient } from "./config/redis.js";
 import authRoutes from "./routes/auth.routes.js";
 import { logger } from "./utils/logger.js";
+import profileRoutes from "./routes/profile.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
@@ -50,6 +51,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/", authRoutes);
+app.use("/profile",profileRoutes);
 
 app.use(errorHandler);
 

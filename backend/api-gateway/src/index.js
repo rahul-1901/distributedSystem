@@ -42,7 +42,6 @@ app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
   inside individual services (auth-service, hackathon-service, team-service, etc.)
   and not in the API Gateway.
 */
-
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
