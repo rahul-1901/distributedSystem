@@ -1,11 +1,10 @@
 import { Worker } from "bullmq";
-import emailService from "../../../auth-service/src/services/email.service.js";
-import { logger } from "../../../auth-service/src/utils/logger.js";
-import { env } from "../../../auth-service/src/config/env.js";
+import emailService from "../services/email.service.js";
+import { logger } from "../utils/logger.js";
+import { env } from "../config/env.js";
 
 export const emailWorker = new Worker(
   "email",
-
   async (job) => {
     const { type, user, token } = job.data;
 
@@ -39,7 +38,6 @@ export const emailWorker = new Worker(
       "Email processed successfully"
     );
   },
-
   {
     connection: {
       host: env.REDIS_HOST,
