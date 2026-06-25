@@ -21,6 +21,53 @@ export class HackathonService {
     this.cacheService = cacheService;
   }
 
+  async deleteHackathonImage(hackathon, payload) {
+    if (
+      payload.image &&
+      hackathon.image?.key &&
+      payload.image.key !== hackathon.image.key
+    ) {
+      try {
+        await this.mediaServiceClient.deleteFile(hackathon.image.key);
+      } catch (error) {
+        this.logger.error(
+          {
+            err: error,
+            hackathonId: hackathon._id,
+          },
+          "Failed to delete old hackathon image"
+        );
+      }
+    }
+  }
+
+  async deleteRemovedGalleryImages(hackathon, payload) {
+    if (!payload.gallery) {
+      return;
+    }
+
+    const newKeys = new Set(
+      payload.gallery.filter((img) => img?.key).map((img) => img.key)
+    );
+
+    for (const image of hackathon.gallery || []) {
+      if (image?.key && !newKeys.has(image.key)) {
+        try {
+          await this.mediaServiceClient.deleteFile(image.key);
+        } catch (error) {
+          this.logger.error(
+            {
+              err: error,
+              hackathonId: hackathon._id,
+              key: image.key,
+            },
+            "Failed to delete gallery image"
+          );
+        }
+      }
+    }
+  }
+
   async invalidatePublicCaches(hackathonId, slug = null) {
     try {
       const keys = [
@@ -201,6 +248,10 @@ export class HackathonService {
       throw new BadRequestError("At least one phase is required");
     }
 
+    await this.deleteHackathonImage(hackathon, payload);
+
+    await this.deleteRemovedGalleryImages(hackathon, payload);
+
     const updated = await this.hackathonRepository.update(hackathonId, payload);
 
     await this.invalidatePublicCaches(hackathonId, hackathon.slug);
@@ -247,7 +298,7 @@ export class HackathonService {
       throw new BadRequestError("Description is required");
     }
 
-    if (!hackathon.image) {
+    if (!hackathon.image?.url || !hackathon.image?.key) {
       throw new BadRequestError("Hackathon image is required");
     }
 
@@ -394,6 +445,39 @@ export class HackathonService {
       if (!allowedStatuses.includes(hackathon.status)) {
         throw new ForbiddenError(
           "Only draft or rejected hackathons can be deleted"
+        );
+      }
+    }
+
+    if (hackathon.image?.key) {
+      try {
+        await this.mediaServiceClient.deleteFile(hackathon.image.key);
+      } catch (error) {
+        this.logger.error(
+          {
+            err: error,
+            hackathonId,
+          },
+          "Failed to delete hackathon image"
+        );
+      }
+    }
+
+    for (const image of hackathon.gallery || []) {
+      if (!image?.key) {
+        continue;
+      }
+
+      try {
+        await this.mediaServiceClient.deleteFile(image.key);
+      } catch (error) {
+        this.logger.error(
+          {
+            err: error,
+            hackathonId,
+            key: image.key,
+          },
+          "Failed to delete gallery image"
         );
       }
     }

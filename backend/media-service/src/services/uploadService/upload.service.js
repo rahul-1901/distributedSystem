@@ -2,7 +2,19 @@ import path from "path";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 
-const ALLOWED_RESOURCE_TYPES = ["submission", "gallery", "resource", "avatar"];
+const BUCKET = process.env.AWS_S3_BUCKET_NAME;
+const REGION = process.env.AWS_REGION;
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+const ALLOWED_RESOURCE_TYPES = [
+  "submission",
+  "gallery",
+  "resource",
+  "avatar",
+  "profile",
+  "banner",
+];
 
 const ALLOWED_EXTENSIONS = [
   "pdf",
@@ -34,7 +46,15 @@ export class UploadService {
       throw new BadRequestError("Invalid resource type");
     }
 
-    const extension = path.extname(file.originalname).slice(1).toLowerCase();
+    if (file.size > MAX_FILE_SIZE) {
+      throw new BadRequestError("File size exceeds 50MB limit");
+    }
+
+    const fileName = file.originalname
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9.-]/g, "");
+
+    const extension = path.extname(fileName).slice(1).toLowerCase();
 
     if (!ALLOWED_EXTENSIONS.includes(extension)) {
       throw new BadRequestError(`.${extension} files are not supported`);
@@ -47,38 +67,40 @@ export class UploadService {
     let key;
 
     if (hackathonId) {
-      key = `hackathons/${hackathonId}/${resourceType}/${timestamp}-${randomString}-${file.originalname}`;
+      key =
+        `hackathons/${hackathonId}/` +
+        `${resourceType}/` +
+        `${timestamp}-${randomString}-${fileName}`;
     } else {
-      key = `${resourceType}/${timestamp}-${randomString}-${file.originalname}`;
+      key = `${resourceType}/` + `${timestamp}-${randomString}-${fileName}`;
     }
 
     try {
       const command = new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME,
-
+        Bucket: BUCKET,
         Key: key,
-
         Body: file.buffer,
-
         ContentType: file.mimetype,
       });
 
       await this.s3Client.send(command);
 
-      const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+      const url = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 
       this.logger.info(
         {
           key,
           resourceType,
           hackathonId,
+          size: file.size,
         },
         "File uploaded successfully"
       );
 
       return {
         url,
-        public_id: key,
+        key,
+        originalName: file.originalname,
         format: extension,
         mimeType: file.mimetype,
         size: file.size,
@@ -87,7 +109,7 @@ export class UploadService {
     } catch (error) {
       this.logger.error(
         {
-          error,
+          err: error,
           key,
         },
         "S3 upload failed"
@@ -97,23 +119,22 @@ export class UploadService {
     }
   }
 
-  async deleteFile(publicId) {
-    if (!publicId) {
-      throw new BadRequestError("Public id is required");
+  async deleteFile(key) {
+    if (!key) {
+      throw new BadRequestError("File key is required");
     }
 
     try {
       const command = new DeleteObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME,
-
-        Key: publicId,
+        Bucket: BUCKET,
+        Key: key,
       });
 
       await this.s3Client.send(command);
 
       this.logger.info(
         {
-          publicId,
+          key,
         },
         "File deleted successfully"
       );
@@ -122,8 +143,8 @@ export class UploadService {
     } catch (error) {
       this.logger.error(
         {
-          error,
-          publicId,
+          err: error,
+          key,
         },
         "S3 delete failed"
       );

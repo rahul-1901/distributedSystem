@@ -1,8 +1,17 @@
-import { redisClient, connectRedis } from "./src/config/redis.js";
-import { emailWorker } from "./src/workers/email.worker.js";
-import { logger } from "./src/utils/logger.js";
+import { redisClient, connectRedis } from "./config/redis.js";
+import { emailWorker } from "./workers/email.worker.js";
+import { logger } from "./utils/logger.js";
+import notificationRoutes from "./routes/notification.routes.js"
+import express from "express";
 
 await connectRedis();
+
+const app = express();
+
+app.use(
+  "/notifications",
+  notificationRoutes
+);
 
 logger.info(
   {

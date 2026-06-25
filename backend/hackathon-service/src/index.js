@@ -9,7 +9,6 @@ import multer from "multer";
 import { connectDB } from "./config/db.js";
 import { connectRedis, redisClient } from "./config/redis.js";
 import hackathonRoutes from "./routes/hackathon.routes.js";
-import uploadRoutes from "./routes/upload.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import adminAuthRoutes from "./routes/adminAuth.routes.js";
 import discussionRoutes from "./routes/discussion.routes.js";
@@ -66,7 +65,6 @@ app.get("/health", async (req, res) => {
 });
 
 app.use("/", hackathonRoutes);
-app.use("/uploads", uploadRoutes);
 app.use("/api/discussions", discussionRoutes);
 app.use("/platform/admin", adminRoutes);
 app.use("/admin/auth", adminAuthRoutes);

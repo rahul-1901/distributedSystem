@@ -5,7 +5,7 @@ import { SubmissionService } from "./submission.service.js";
 import { cacheService } from "../cacheService/cache.service.instance.js";
 import { TeamRepository } from "../../repositories/team.repository.js";
 import { RegistrationRepository } from "../../repositories/registration.repository.js";
-import { uploadService } from "../uploadService/upload.service.instance.js";
+import { MediaServiceClient } from "../mediaService/media.client.js";
 
 const submissionRepository = new SubmissionRepository();
 
@@ -15,12 +15,14 @@ const teamRepository = new TeamRepository();
 
 const registrationRepository = new RegistrationRepository();
 
+const mediaServiceClient = new MediaServiceClient();
+
 export const submissionService = new SubmissionService(
   submissionRepository,
   hackathonRepository,
   teamRepository,
   registrationRepository,
-  uploadService,
+  mediaServiceClient,
   cacheService,
   logger
 );

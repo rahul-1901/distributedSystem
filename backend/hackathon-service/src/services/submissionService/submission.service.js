@@ -11,7 +11,7 @@ export class SubmissionService {
     hackathonRepository,
     teamRepository,
     registrationRepository,
-    uploadService,
+    mediaServiceClient,
     cacheService,
     logger
   ) {
@@ -19,8 +19,8 @@ export class SubmissionService {
     this.hackathonRepository = hackathonRepository;
     this.teamRepository = teamRepository;
     this.registrationRepository = registrationRepository;
-    this.uploadService = uploadService;
-    this.cacheService = cacheService;
+    (this.mediaServiceClient = mediaServiceClient),
+      (this.cacheService = cacheService);
     this.logger = logger;
   }
 
@@ -315,35 +315,27 @@ export class SubmissionService {
       return;
     }
 
-    for (const key of Object.keys(oldSubmissionData)) {
-      const oldValue = oldSubmissionData[key];
+    for (const field of Object.keys(oldSubmissionData)) {
+      const oldValue = oldSubmissionData[field];
 
-      const newValue = newSubmissionData[key];
+      const newValue = newSubmissionData[field];
 
       if (!oldValue || !newValue) {
         continue;
       }
-
-      // Single file
-      if (
-        oldValue?.public_id &&
-        newValue?.public_id &&
-        oldValue.public_id !== newValue.public_id
-      ) {
-        await this.uploadService.deleteFile(oldValue.public_id);
+      
+      if (oldValue?.key && newValue?.key && oldValue.key !== newValue.key) {
+        await this.mediaServiceClient.deleteFile(oldValue.key);
       }
 
-      // Multiple files
       if (Array.isArray(oldValue) && Array.isArray(newValue)) {
-        const newPublicIds = new Set(
-          newValue
-            .filter((file) => file?.public_id)
-            .map((file) => file.public_id)
+        const newKeys = new Set(
+          newValue.filter((f) => f?.key).map((f) => f.key)
         );
 
         for (const file of oldValue) {
-          if (file?.public_id && !newPublicIds.has(file.public_id)) {
-            await this.uploadService.deleteFile(file.public_id);
+          if (file?.key && !newKeys.has(file.key)) {
+            await this.mediaServiceClient.deleteFile(file.key);
           }
         }
       }

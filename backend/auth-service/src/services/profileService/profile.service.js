@@ -3,8 +3,9 @@ import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 
 export class ProfileService {
-  constructor(profileRepository, logger) {
+  constructor(profileRepository, mediaServiceClient, logger) {
     this.profileRepository = profileRepository;
+    this.mediaServiceClient = mediaServiceClient;
     this.logger = logger;
   }
 
@@ -168,6 +169,30 @@ export class ProfileService {
   }
 
   async updateAvatar(userId, image) {
+    if (!image?.url || !image?.key) {
+      throw new BadRequestError("Invalid image");
+    }
+
+    const existingUser = await this.profileRepository.findById(userId);
+
+    if (!existingUser) {
+      throw new NotFoundError("User not found");
+    }
+
+    if (existingUser.image?.key && existingUser.image.key !== image.key) {
+      try {
+        await this.mediaServiceClient.deleteFile(existingUser.image.key);
+      } catch (error) {
+        this.logger.error(
+          {
+            err: error,
+            userId,
+          },
+          "Failed to delete old avatar"
+        );
+      }
+    }
+
     const user = await this.profileRepository.updateAvatar(userId, image);
 
     return user.image;

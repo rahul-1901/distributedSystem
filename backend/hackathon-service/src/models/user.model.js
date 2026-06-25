@@ -3,8 +3,14 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema(
   {
     image: {
-      type: String,
-      default: "",
+      url: {
+        type: String,
+        default: "",
+      },
+      key: {
+        type: String,
+        default: "",
+      },
     },
     userName: {
       type: String,
@@ -188,7 +194,7 @@ userSchema.virtual("publicProfile").get(function () {
     _id: this._id,
     name: this.name,
     userName: this.userName,
-    image: this.image,
+    image: this.image?.url || "",
     bio: this.bio,
     location: this.location,
     connectedApps: this.connectedApps,
@@ -201,7 +207,7 @@ userSchema.virtual("profileCompletion").get(function () {
   let completed = 0;
   const total = 9;
 
-  if (this.image) completed++;
+  if (this.image?.url) completed++;
   if (this.userName) completed++;
   if (this.bio) completed++;
   if (this.location) completed++;

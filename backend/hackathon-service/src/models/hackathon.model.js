@@ -101,7 +101,14 @@ const phaseSchema = new mongoose.Schema(
 const hackathonSchema = new mongoose.Schema(
   {
     image: {
-      type: String,
+      url: {
+        type: String,
+        default: "",
+      },
+      key: {
+        type: String,
+        default: "",
+      },
     },
     title: {
       type: String,
@@ -134,7 +141,12 @@ const hackathonSchema = new mongoose.Schema(
       default: [],
     },
     gallery: {
-      type: [String],
+      type: [
+        {
+          url: String,
+          key: String,
+        },
+      ],
       default: [],
     },
     difficulty: {

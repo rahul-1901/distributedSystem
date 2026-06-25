@@ -151,7 +151,9 @@ export class ProfileRepository {
     return UserModel.findByIdAndUpdate(
       userId,
       {
-        image,
+        $set: {
+          image,
+        },
       },
       {
         new: true,
