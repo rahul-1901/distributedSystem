@@ -4,7 +4,6 @@ import { ForbiddenError } from "../../errors/ForbiddenError.js";
 export class ResultService {
   constructor(submissionRepository, hackathonRepository) {
     this.submissionRepository = submissionRepository;
-
     this.hackathonRepository = hackathonRepository;
   }
 

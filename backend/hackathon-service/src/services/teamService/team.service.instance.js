@@ -4,6 +4,7 @@ import { RegistrationRepository } from "../../repositories/registration.reposito
 import { UserRepository } from "../../repositories/user.repository.js";
 import { HackathonRepository } from "../../repositories/hackathon.repository.js";
 import { TeamService } from "./team.service.js";
+import { NotificationClient } from "../../clients/notification.client.js";
 
 const teamRepository = new TeamRepository();
 
@@ -13,10 +14,13 @@ const userRepository = new UserRepository();
 
 const hackathonRepository = new HackathonRepository();
 
+const notificationClient = new NotificationClient();
+
 export const teamService = new TeamService(
   teamRepository,
   registrationRepository,
   userRepository,
   hackathonRepository,
+  notificationClient,
   logger
 );

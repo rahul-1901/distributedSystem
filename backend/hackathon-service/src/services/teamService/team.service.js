@@ -10,12 +10,14 @@ export class TeamService {
     registrationRepository,
     userRepository,
     hackathonRepository,
+    notificationClient,
     logger
   ) {
     this.teamRepository = teamRepository;
     this.registrationRepository = registrationRepository;
     this.userRepository = userRepository;
     this.hackathonRepository = hackathonRepository;
+    this.notificationClient = notificationClient,
     this.logger = logger;
   }
 
@@ -234,6 +236,18 @@ export class TeamService {
 
     await this.teamRepository.save(team);
 
+    await this.notificationClient.createNotification({
+      userId: team.leader,
+      title: "New Team Join Request",
+      message: "Someone has requested to join your team.",
+      type: "TEAM",
+      actionUrl: `/teams/${team._id}`,
+      metadata: {
+        teamId: team._id.toString(),
+        requesterId: userId.toString(),
+      },
+    });
+
     this.logger.info(
       {
         userId,
@@ -292,6 +306,17 @@ export class TeamService {
 
     if (action === "reject") {
       await this.teamRepository.save(team);
+
+      await this.notificationClient.createNotification({
+        userId,
+        title: "Team Join Request Rejected",
+        message: `Your request to join ${team.name} was rejected.`,
+        type: "TEAM",
+        actionUrl: `/teams/${team._id}`,
+        metadata: {
+          teamId: team._id.toString(),
+        },
+      });
 
       return {
         success: true,
@@ -354,6 +379,21 @@ export class TeamService {
       );
 
       await session.commitTransaction();
+      await this.notificationClient.createNotification({
+        userId,
+
+        title: "Team Join Request Accepted",
+
+        message: `You have been added to ${team.name}.`,
+
+        type: "TEAM",
+
+        actionUrl: `/teams/${team._id}`,
+
+        metadata: {
+          teamId: team._id.toString(),
+        },
+      });
     } catch (error) {
       await session.abortTransaction();
 
@@ -633,6 +673,17 @@ export class TeamService {
 
       await session.commitTransaction();
 
+      await this.notificationClient.createNotification({
+        userId,
+        title: "Removed From Team",
+        message: `You have been removed from ${team.name}.`,
+        type: "TEAM",
+        actionUrl: `/hackathons/${team.hackathon}`,
+        metadata: {
+          teamId: team._id.toString(),
+        },
+      });
+
       return {
         success: true,
         message: "Member removed successfully",
@@ -772,7 +823,25 @@ export class TeamService {
 
       await this.teamRepository.deleteTeam(teamId, session);
 
+      const membersToNotify = [
+        transactionalTeam.leader,
+        ...transactionalTeam.members,
+      ];
+
       await session.commitTransaction();
+
+      for (const memberId of membersToNotify) {
+        await this.notificationClient.createNotification({
+          userId: memberId,
+          title: "Team Deleted",
+          message: `${transactionalTeam.name} has been deleted.`,
+          type: "TEAM",
+          actionUrl: `/hackathons/${transactionalTeam.hackathon}`,
+          metadata: {
+            teamId: transactionalTeam._id.toString(),
+          },
+        });
+      }
 
       this.logger.info(
         {

@@ -13,14 +13,16 @@ export class SubmissionService {
     registrationRepository,
     mediaServiceClient,
     cacheService,
+    notificationClient,
     logger
   ) {
     this.submissionRepository = submissionRepository;
     this.hackathonRepository = hackathonRepository;
     this.teamRepository = teamRepository;
     this.registrationRepository = registrationRepository;
-    (this.mediaServiceClient = mediaServiceClient),
-      (this.cacheService = cacheService);
+    this.mediaServiceClient = mediaServiceClient,
+    this.cacheService = cacheService;
+    this.notificationClient = notificationClient,
     this.logger = logger;
   }
 
@@ -212,6 +214,31 @@ export class SubmissionService {
         submissionData,
       });
 
+      let usersToNotify = [];
+
+      if (hackathon.participationType === "TEAM") {
+        usersToNotify = [teamDoc.leader, ...teamDoc.members];
+      } else {
+        usersToNotify = [userId];
+      }
+
+      for (const memberId of usersToNotify) {
+        await this.notificationClient.createNotification({
+          userId: memberId,
+          title: "Submission Successful",
+          message:
+            hackathon.participationType === "TEAM"
+              ? `${teamDoc.name} submitted successfully for ${hackathon.title}.`
+              : `Your submission for ${hackathon.title} has been received.`,
+          type: "SUBMISSION",
+          actionUrl: `/submissions/${submission._id}`,
+          metadata: {
+            submissionId: submission._id.toString(),
+            hackathonId: hackathon._id.toString(),
+          },
+        });
+      }
+
       this.logger.info(
         {
           submissionId: submission._id,
@@ -323,7 +350,7 @@ export class SubmissionService {
       if (!oldValue || !newValue) {
         continue;
       }
-      
+
       if (oldValue?.key && newValue?.key && oldValue.key !== newValue.key) {
         await this.mediaServiceClient.deleteFile(oldValue.key);
       }

@@ -8,11 +8,13 @@ export class RegistrationService {
     registrationRepository,
     userRepository,
     hackathonRepository,
+    notificationClient,
     logger
   ) {
     this.registrationRepository = registrationRepository;
     this.userRepository = userRepository;
     this.hackathonRepository = hackathonRepository;
+    this.notificationClient =  notificationClient,
     this.logger = logger;
   }
 
@@ -55,6 +57,7 @@ export class RegistrationService {
       throw new BadRequestError("User already registered for this hackathon");
     }
 
+    const now = getNowUTC();
     const registrationPhase = this.getRegistrationPhase(hackathon, now);
 
     if (!registrationPhase) {
@@ -107,6 +110,24 @@ export class RegistrationService {
       );
 
       await session.commitTransaction();
+
+      await this.notificationClient.createNotification({
+        userId,
+      
+        title: "Registration Successful",
+      
+        message:
+          `You have successfully registered for ${hackathon.title}.`,
+      
+        type: "HACKATHON",
+      
+        actionUrl: `/hackathons/${hackathon.slug}`,
+      
+        metadata: {
+          hackathonId:
+            hackathon._id.toString(),
+        },
+      });
 
       this.logger.info(
         {
@@ -178,6 +199,8 @@ export class RegistrationService {
     if (!hackathon) {
       throw new NotFoundError("Hackathon not found");
     }
+
+    const now = getNowUTC();
 
     const registrationPhase = this.getRegistrationPhase(hackathon, now);
 
