@@ -71,7 +71,7 @@ app.use((error, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || 5003;
 
 const server = app.listen(PORT, () => {
   logger.info(`Media service running on port ${PORT}`);

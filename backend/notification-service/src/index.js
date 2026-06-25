@@ -9,7 +9,7 @@ await connectRedis();
 const app = express();
 
 app.use(
-  "/notifications",
+  "/",
   notificationRoutes
 );
 
