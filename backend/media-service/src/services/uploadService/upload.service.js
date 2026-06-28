@@ -1,6 +1,8 @@
 import path from "path";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { BadRequestError } from "../../errors/BadRequestError.js";
+import dotenv from "dotenv"
+dotenv.config();
 
 const BUCKET = process.env.AWS_S3_BUCKET_NAME;
 const REGION = process.env.AWS_REGION;
@@ -41,6 +43,11 @@ export class UploadService {
     if (!file) {
       throw new BadRequestError("File is required");
     }
+
+    console.log({
+      resourceType,
+      allowed: ALLOWED_RESOURCE_TYPES,
+  });
 
     if (!ALLOWED_RESOURCE_TYPES.includes(resourceType)) {
       throw new BadRequestError("Invalid resource type");

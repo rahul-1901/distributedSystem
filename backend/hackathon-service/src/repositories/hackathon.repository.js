@@ -64,7 +64,7 @@ export class HackathonRepository {
       .lean();
   }
 
-  async incrementParticipants(id, session = null) {
+  async incrementParticipant(id, session = null) {
     return hackathonModel.findByIdAndUpdate(
       id,
       {

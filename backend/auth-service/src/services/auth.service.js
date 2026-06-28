@@ -35,7 +35,7 @@ export class AuthService {
       return {
         statusCode: 409,
         success: false,
-        message: "User already exists, please login",
+        message: "Account already exist",
       };
     }
 
@@ -196,7 +196,7 @@ export class AuthService {
       return {
         statusCode: 200,
         success: false,
-        message: "If an account exists, a reset link has been sent.",
+        message: "A reset link has been sent to requested email",
       };
     }
 

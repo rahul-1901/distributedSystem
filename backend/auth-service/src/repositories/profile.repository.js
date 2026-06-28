@@ -5,6 +5,10 @@ export class ProfileRepository {
     return UserModel.findById(userId);
   }
 
+  async findById(userId) {
+    return UserModel.findById(userId);
+  }
+
   async getPublicProfile(userName) {
     return UserModel.findOne({
       userName,

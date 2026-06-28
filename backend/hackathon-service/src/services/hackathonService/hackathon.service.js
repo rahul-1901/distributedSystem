@@ -139,15 +139,17 @@ export class HackathonService {
     const admin = await this.adminRepository.getById(adminId);
 
     if (!admin) {
-      throw new NotFoundError("Admin not found");
+      throw new NotFoundError(
+        "Seems like there isn't any account associated with this email"
+      );
     }
 
     if (!admin.profileCompleted) {
-      throw new ForbiddenError("Complete profile first");
+      throw new ForbiddenError("Complete your profile to proceed");
     }
 
     if (!admin.isVerified || admin.verificationStatus !== "APPROVED") {
-      throw new ForbiddenError("Organizer verification required");
+      throw new ForbiddenError("Organizer has not been verified yet");
     }
 
     const existingHackathon = await this.hackathonRepository.findByTitle(
@@ -155,7 +157,7 @@ export class HackathonService {
     );
 
     if (existingHackathon) {
-      throw new BadRequestError("Hackathon title already exists");
+      throw new BadRequestError("Hackathon with this title already exist");
     }
 
     if (payload.participationType === "TEAM" && payload.maxTeamSize < 2) {
@@ -166,13 +168,50 @@ export class HackathonService {
       throw new BadRequestError("At least one phase is required");
     }
 
-    const hackathon = await this.hackathonRepository.create({
-      ...payload,
+    const createPayload = {
+      image: payload.image,
+      title: payload.title,
+      subTitle: payload.subTitle,
+      description: payload.description,
+      detailsContent: payload.detailsContent,
+
+      category: payload.category,
+      techStacks: payload.techStacks,
+      gallery: payload.gallery,
+      difficulty: payload.difficulty,
+
+      contacts: payload.contacts,
+      resources: payload.resources,
+      faqs: payload.faqs,
+
+      prizes: payload.prizes,
+
+      votingConfig: payload.votingConfig,
+      judgingConfig: payload.judgingConfig,
+
+      showResult: payload.showResult,
+      publicLeaderboardLimit: payload.publicLeaderboardLimit,
+
+      registrationForm: payload.registrationForm,
+      phases: payload.phases,
+
+      participationType: payload.participationType,
+      maxTeamSize: payload.maxTeamSize,
+
+      tags: payload.tags,
 
       createdBy: adminId,
 
       status: "DRAFT",
+    };
+
+    Object.keys(createPayload).forEach((key) => {
+      if (createPayload[key] === undefined) {
+        delete createPayload[key];
+      }
     });
+
+    const hackathon = await this.hackathonRepository.create(createPayload);
 
     await this.invalidatePublicCaches(hackathon._id.toString());
 
@@ -252,7 +291,49 @@ export class HackathonService {
 
     await this.deleteRemovedGalleryImages(hackathon, payload);
 
-    const updated = await this.hackathonRepository.update(hackathonId, payload);
+    const updatePayload = {
+      image: payload.image,
+      title: payload.title,
+      subTitle: payload.subTitle,
+      description: payload.description,
+      detailsContent: payload.detailsContent,
+
+      category: payload.category,
+      techStacks: payload.techStacks,
+      gallery: payload.gallery,
+      difficulty: payload.difficulty,
+
+      contacts: payload.contacts,
+      resources: payload.resources,
+      faqs: payload.faqs,
+
+      prizes: payload.prizes,
+
+      votingConfig: payload.votingConfig,
+      judgingConfig: payload.judgingConfig,
+
+      showResult: payload.showResult,
+      publicLeaderboardLimit: payload.publicLeaderboardLimit,
+
+      phases: payload.phases,
+      registrationForm: payload.registrationForm,
+
+      participationType: payload.participationType,
+      maxTeamSize: payload.maxTeamSize,
+
+      tags: payload.tags,
+    };
+
+    Object.keys(updatePayload).forEach((key) => {
+      if (updatePayload[key] === undefined) {
+        delete updatePayload[key];
+      }
+    });
+
+    const updated = await this.hackathonRepository.update(
+      hackathonId,
+      updatePayload
+    );
 
     await this.invalidatePublicCaches(hackathonId, hackathon.slug);
 
@@ -284,6 +365,10 @@ export class HackathonService {
 
     if (hackathon.lifecycleStatus === "COMPLETED") {
       throw new ForbiddenError("Completed hackathons cannot be edited");
+    }
+
+    if (hackathon.status !== "APPROVED") {
+      throw new BadRequestError("Hackathon already approved");
     }
 
     /**

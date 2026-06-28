@@ -45,19 +45,14 @@ const adminSchema = new mongoose.Schema(
 
     verificationStatus: {
       type: String,
-      enum: [
-        "NOT_SUBMITTED",
-        "PENDING",
-        "APPROVED",
-        "REJECTED",
-      ],
+      enum: ["NOT_SUBMITTED", "PENDING", "APPROVED", "REJECTED"],
       default: "NOT_SUBMITTED",
     },
 
     profileCompleted: {
-        type: Boolean,
-        default: false,
-      },
+      type: Boolean,
+      default: false,
+    },
 
     organizationName: {
       type: String,
@@ -67,13 +62,7 @@ const adminSchema = new mongoose.Schema(
 
     organizerType: {
       type: String,
-      enum: [
-        "INDIVIDUAL",
-        "COLLEGE",
-        "COMPANY",
-        "COMMUNITY",
-        "STARTUP",
-      ],
+      enum: ["INDIVIDUAL", "COLLEGE", "COMPANY", "COMMUNITY", "STARTUP"],
       default: "INDIVIDUAL",
     },
 
@@ -83,8 +72,7 @@ const adminSchema = new mongoose.Schema(
         validator(v) {
           return !v || /^\+?[0-9]{10,15}$/.test(v);
         },
-        message: (props) =>
-          `${props.value} is not a valid phone number`,
+        message: (props) => `${props.value} is not a valid phone number`,
       },
     },
 
@@ -113,8 +101,14 @@ const adminSchema = new mongoose.Schema(
     },
 
     verificationDocument: {
-      type: String,
-      default: "",
+      url: {
+        type: String,
+        default: "",
+      },
+      key: {
+        type: String,
+        default: "",
+      },
     },
 
     verificationRemarks: {

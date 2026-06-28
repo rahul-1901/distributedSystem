@@ -58,7 +58,6 @@ export const approveVerification = async (req, res, next) => {
   try {
     const admin = await adminService.approveVerification({
       controllerId: req.admin._id,
-
       adminId: req.params.adminId,
     });
 

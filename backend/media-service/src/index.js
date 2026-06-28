@@ -46,7 +46,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/uploads", uploadRoutes);
+app.use("/", uploadRoutes);
 
 app.use(errorHandler);
 

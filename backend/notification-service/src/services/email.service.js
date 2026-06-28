@@ -105,10 +105,11 @@ class EmailService {
     return this.sendMail({
       to: user.email,
       subject: "Verify your HackSprint account",
-      templateName: "verification",
+      templateName: "verify",
       data: {
         name: user.name,
-        verificationUrl: `${env.FRONTEND_URL}/verify-email/${token}`,
+        email: user.email,
+        verifyUrl: `${env.FRONTEND_URL}/verify-email/${token}`,
       },
     });
   }
@@ -117,9 +118,10 @@ class EmailService {
     return this.sendMail({
       to: user.email,
       subject: "Welcome to HackSprint 🚀",
-      templateName: "welcome",
+      templateName: "userWelcome",
       data: {
         name: user.name,
+        email: user.email
       },
     });
   }
@@ -128,9 +130,10 @@ class EmailService {
     return this.sendMail({
       to: user.email,
       subject: "Reset Password",
-      templateName: "reset-password",
+      templateName: "resetPassword",
       data: {
         name: user.name,
+        email: user.email,
         resetUrl: `${env.FRONTEND_URL}/reset-password/${token}`,
       },
     });
@@ -140,9 +143,10 @@ class EmailService {
     return this.sendMail({
       to: user.email,
       subject: "Password Changed Successfully",
-      templateName: "password-reset-success",
+      templateName: "resetPasswordSuccess",
       data: {
         name: user.name,
+        email: user.email
       },
     });
   }

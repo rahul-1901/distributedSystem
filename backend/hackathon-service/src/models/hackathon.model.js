@@ -8,47 +8,38 @@ const submissionFieldSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-
     label: {
       type: String,
       required: true,
       trim: true,
     },
-
     fieldType: {
       type: String,
       enum: [
         "TEXT",
         "TEXTAREA",
-
         "URL",
-
         "DOCUMENT",
         "IMAGE",
         "VIDEO",
-
         "MULTI_DOCUMENT",
         "MULTI_IMAGE",
         "MULTI_VIDEO",
       ],
       required: true,
     },
-
     required: {
       type: Boolean,
       default: false,
     },
-
     editable: {
       type: Boolean,
       default: true,
     },
-
     maxFiles: {
       type: Number,
       default: 1,
     },
-
     maxSizeMB: {
       type: Number,
       default: 50,
@@ -238,7 +229,7 @@ const hackathonSchema = new mongoose.Schema(
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: "admins",
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -386,15 +377,13 @@ hackathonSchema.index({
   tags: 1,
 });
 
-hackathonSchema.pre("save", function (next) {
+hackathonSchema.pre("save", async function () {
   if (this.isModified("title") || !this.slug) {
     this.slug = slugify(`${this.title}-${Date.now()}`, {
       lower: true,
       strict: true,
     });
   }
-
-  next();
 });
 
 const hackathonModel = mongoose.model("hackathons", hackathonSchema);

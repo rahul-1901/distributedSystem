@@ -7,9 +7,11 @@ import compression from "compression";
 import { env } from "./config/env.js";
 import { authProxy } from "./routes/auth.proxy.js";
 import { hackathonProxy } from "./routes/hackathon.proxy.js";
-import { teamProxy } from "./routes/team.proxy.js";
+import { mediaProxy } from "./routes/media.proxy.js";
+import { notificationProxy } from "./routes/notification.proxy.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
+import { authenticate } from "./middlewares/auth.middleware.js";
 
 const app = express();
 
@@ -33,15 +35,7 @@ app.use(
 
 app.use(compression());
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
-/*
-  In a microservices architecture, the API Gateway should only proxy and route requests.
-  Request body parsing is handled by the destination service itself. Using
-  express.json() or express.urlencoded() in the gateway consumes the request
-  body stream before it reaches the target service, preventing the service from
-  reading the request payload correctly. Therefore, body parsers should remain
-  inside individual services (auth-service, hackathon-service, team-service, etc.)
-  and not in the API Gateway.
-*/
+
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -75,7 +69,7 @@ app.get("/", (req, res) => {
 
 app.get("/ping-auth", async (req, res) => {
   try {
-    const response = await fetch("http://localhost:5001/");
+    const response = await fetch(`${env.AUTH_SERVICE_URL}/`);
     const data = await response.json();
     res.json(data);
   } catch (error) {
@@ -83,9 +77,11 @@ app.get("/ping-auth", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 app.use("/api/auth", authProxy);
-app.use("/api/hackathons", hackathonProxy);
-app.use("/api/teams", teamProxy);
+app.use("/api/hackathons", authenticate, hackathonProxy);
+app.use("/api/media", authenticate, mediaProxy);
+app.use("/api/notifications", authenticate, notificationProxy);
 
 app.use(notFound);
 app.use(errorMiddleware);

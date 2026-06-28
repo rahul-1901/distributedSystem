@@ -4,10 +4,8 @@ export const registerParticipants = async (req, res, next) => {
   try {
     const registration = await registrationService.registerParticipant({
       userId: req.user._id,
-
       hackathonId: req.params.hackathonId,
-
-      registrationData: req.body,
+      registrationData: req.body.registrationData,
     });
 
     return res.status(201).json({

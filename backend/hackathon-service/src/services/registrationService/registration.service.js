@@ -14,7 +14,7 @@ export class RegistrationService {
     this.registrationRepository = registrationRepository;
     this.userRepository = userRepository;
     this.hackathonRepository = hackathonRepository;
-    this.notificationClient =  notificationClient,
+    this.notificationClient = notificationClient, 
     this.logger = logger;
   }
 
@@ -104,30 +104,27 @@ export class RegistrationService {
         session
       );
 
-      await this.hackathonRepository.incrementParticipant(
-        hackathonId,
-        session
-      );
+      await this.hackathonRepository.incrementParticipant(hackathonId, session);
 
       await session.commitTransaction();
 
-      await this.notificationClient.createNotification({
-        userId,
-      
-        title: "Registration Successful",
-      
-        message:
-          `You have successfully registered for ${hackathon.title}.`,
-      
-        type: "HACKATHON",
-      
-        actionUrl: `/hackathons/${hackathon.slug}`,
-      
-        metadata: {
-          hackathonId:
-            hackathon._id.toString(),
-        },
-      });
+      try {
+        await this.notificationClient.createNotification({
+          userId,
+          title: "Registration Successful",
+          message: `You have successfully registered for ${hackathon.title}.`,
+          type: "HACKATHON",
+          actionUrl: `/hackathons/${hackathon.slug}`,
+          metadata: {
+            hackathonId: hackathon._id.toString(),
+          },
+        });
+      } catch (error) {
+        this.logger.error(
+          { err: error, userId, hackathonId },
+          "Failed to create registration notification"
+        );
+      }
 
       this.logger.info(
         {
@@ -139,7 +136,9 @@ export class RegistrationService {
 
       return registration;
     } catch (error) {
-      await session.abortTransaction();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
 
       throw error;
     } finally {
@@ -243,6 +242,10 @@ export class RegistrationService {
       ...sanitizedUpdate,
     };
 
+    console.log("Allowed:", allowedFields);
+    console.log("Incoming:", updateData);
+    console.log("Sanitized:", sanitizedUpdate);
+    console.log("Final:", updatedFormData);
     return this.registrationRepository.updateRegistration(
       registration._id,
       updatedFormData

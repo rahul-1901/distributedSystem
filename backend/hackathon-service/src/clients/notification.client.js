@@ -16,7 +16,7 @@ export class NotificationClient {
   }) {
     try {
       await axios.post(
-        `${this.baseUrl}/notifications/internal`,
+        `${this.baseUrl}/internal`,
         {
           userId,
           title,
@@ -34,6 +34,9 @@ export class NotificationClient {
         }
       );
     } catch (error) {
+      console.log("Notification Error:");
+      console.log(error);
+
       this.logger.error(
         {
           err: error,
