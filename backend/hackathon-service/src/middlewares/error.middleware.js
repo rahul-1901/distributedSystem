@@ -12,6 +12,7 @@ export const errorHandler = (
       err,
       method: req.method,
       url: req.originalUrl,
+      requestId: req.requestId
     },
     "Unhandled error"
   );

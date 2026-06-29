@@ -15,6 +15,7 @@ import discussionRoutes from "./routes/discussion.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
+import { metricsMiddleware, metricsHandler } from "./metrics/metrics.js";
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use(
 app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
+app.use(metricsMiddleware);
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use(requestIdMiddleware);
@@ -51,6 +53,7 @@ app.get("/", (req, res) => {
     message: "Hackathon Service running",
   });
 });
+app.get("/metrics", metricsHandler);
 app.get("/health", async (req, res) => {
   const mongo = mongoose.connection.readyState === 1;
 
