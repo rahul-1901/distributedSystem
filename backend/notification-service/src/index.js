@@ -5,15 +5,15 @@ import { connectRedis, redisClient } from "./config/redis.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import { emailWorker } from "./workers/email.worker.js";
 import { logger } from "./utils/logger.js";
+import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 
 dotenv.config();
-
 const PORT = process.env.PORT || 5005;
-
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestIdMiddleware);
 
 app.get("/health", (req, res) => {
   return res.status(200).json({
@@ -56,9 +56,6 @@ const startServer = async () => {
 
 await startServer();
 
-/**
- * Graceful Shutdown
- */
 const shutdown = async (signal) => {
   logger.info({ signal }, "Starting graceful shutdown");
 
@@ -83,17 +80,13 @@ const shutdown = async (signal) => {
 };
 
 process.on("SIGINT", () => shutdown("SIGINT"));
-
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-
 process.on("uncaughtException", (error) => {
   logger.fatal({ err: error }, "Uncaught Exception");
-
   shutdown("UNCAUGHT_EXCEPTION");
 });
 
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ reason }, "Unhandled Rejection");
-
   shutdown("UNHANDLED_REJECTION");
 });

@@ -18,6 +18,5 @@ export const hackathonProxy = createProxyMiddleware({
         message: "Hackathon Service is unavailable",
       });
     },
-  },
-  
+  }
 });

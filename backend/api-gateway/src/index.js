@@ -11,7 +11,7 @@ import { mediaProxy } from "./routes/media.proxy.js";
 import { notificationProxy } from "./routes/notification.proxy.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
-import { authenticate } from "./middlewares/auth.middleware.js";
+import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 
 const app = express();
 
@@ -34,6 +34,7 @@ app.use(
 );
 
 app.use(compression());
+app.use(requestIdMiddleware);
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
 app.use(
@@ -79,9 +80,9 @@ app.get("/ping-auth", async (req, res) => {
 });
 
 app.use("/api/auth", authProxy);
-app.use("/api/hackathons", authenticate, hackathonProxy);
-app.use("/api/media", authenticate, mediaProxy);
-app.use("/api/notifications", authenticate, notificationProxy);
+app.use("/api/hackathons", hackathonProxy);
+app.use("/api/media", mediaProxy);
+app.use("/api/notifications", notificationProxy);
 
 app.use(notFound);
 app.use(errorMiddleware);

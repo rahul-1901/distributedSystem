@@ -14,6 +14,7 @@ import adminAuthRoutes from "./routes/adminAuth.routes.js";
 import discussionRoutes from "./routes/discussion.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { logger } from "./utils/logger.js";
+import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
+app.use(requestIdMiddleware);
 
 app.get("/", (req, res) => {
   res.status(200).json({

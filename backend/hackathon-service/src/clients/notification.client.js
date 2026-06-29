@@ -41,7 +41,7 @@ export class NotificationClient {
         {
           err: error,
           userId,
-          title,
+          title
         },
         "Failed to create notification"
       );

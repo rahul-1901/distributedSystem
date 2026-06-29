@@ -23,8 +23,8 @@ services:
     container_name: auth-service
     env_file:
       - ./auth-service/.env
-    ports:
-      - "5001:5001"
+    expose:
+      - "5001"
     depends_on:
       - mongodb
       - redis
@@ -35,8 +35,8 @@ services:
     container_name: hackathon-service
     env_file:
       - ./hackathon-service/.env
-    ports:
-      - "5002:5002"
+    expose:
+      - "5002"
     depends_on:
       - mongodb
       - redis
@@ -47,8 +47,8 @@ services:
     container_name: media-service
     env_file:
       - ./media-service/.env
-    ports:
-      - "5003:5003"
+    expose: 
+      - "5003"
     depends_on:
       - mongodb
 
@@ -58,11 +58,19 @@ services:
     container_name: notification-service
     env_file:
       - ./notification-service/.env
-    ports:
-      - "5005:5005"
+    expose:
+      - "5004"
     depends_on:
       - mongodb
       - redis
+
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    ports:
+    - "80:80"
+    depends_on:
+    - api-gateway
 
 volumes:
   mongo_data:

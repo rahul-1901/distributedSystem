@@ -11,13 +11,12 @@ export const mediaProxy = createProxyMiddleware({
   proxyTimeout: 30000,
   on: {
     error(err, req, res) {
-      console.error("Hackathon Service Error:", err.message);
+      console.error("Media Service Error:", err.message);
 
       res.status(503).json({
         success: false,
-        message: "Hackathon Service is unavailable",
+        message: "Media Service is unavailable",
       });
     },
-  },
-  
+  }
 });

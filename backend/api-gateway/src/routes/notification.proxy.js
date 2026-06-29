@@ -11,13 +11,12 @@ export const notificationProxy = createProxyMiddleware({
   proxyTimeout: 30000,
   on: {
     error(err, req, res) {
-      console.error("Hackathon Service Error:", err.message);
+      console.error("Notification Service Error:", err.message);
 
       res.status(503).json({
         success: false,
-        message: "Hackathon Service is unavailable",
+        message: "Notification Service is unavailable",
       });
     },
-  },
-  
+  }
 });

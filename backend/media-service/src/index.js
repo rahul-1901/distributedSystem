@@ -6,6 +6,7 @@ import multer from "multer";
 import uploadRoutes from "./routes/upload.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { logger } from "./utils/logger.js";
+import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestIdMiddleware);
 
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
@@ -57,14 +59,12 @@ app.use((error, req, res, next) => {
       message: error.message,
     });
   }
-
   logger.error(
     {
       err: error,
     },
     "Unhandled error"
   );
-
   return res.status(500).json({
     success: false,
     message: "Internal Server Error",
@@ -79,12 +79,10 @@ const server = app.listen(PORT, () => {
 
 const shutdown = async (signal) => {
   logger.info(`${signal} received. Starting graceful shutdown`);
-
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);
   });
-
   setTimeout(() => {
     logger.error("Force shutting down server");
     process.exit(1);
@@ -92,9 +90,7 @@ const shutdown = async (signal) => {
 };
 
 process.on("SIGINT", () => shutdown("SIGINT"));
-
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-
 process.on("uncaughtException", (error) => {
   logger.fatal(
     {
@@ -102,10 +98,8 @@ process.on("uncaughtException", (error) => {
     },
     "Uncaught Exception"
   );
-
   process.exit(1);
 });
-
 process.on("unhandledRejection", (reason) => {
   logger.fatal(
     {
@@ -113,6 +107,5 @@ process.on("unhandledRejection", (reason) => {
     },
     "Unhandled Rejection"
   );
-
   process.exit(1);
 });
