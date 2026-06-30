@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "api-gateway"
+    static_configs:
+      - targets:
+          - api-gateway:5000
+
+  - job_name: "auth-service"
+    static_configs:
+      - targets:
+          - auth-service:5001
+
+  - job_name: "hackathon-service"
+    static_configs:
+      - targets:
+          - hackathon-service:5002
+
+  - job_name: "media-service"
+    static_configs:
+      - targets:
+          - media-service:5003
+
+  - job_name: "notification-service"
+    static_configs:
+      - targets:
+          - notification-service:5004

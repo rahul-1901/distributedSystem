@@ -4,8 +4,6 @@ services:
   mongodb:
     image: mongo:8
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
@@ -18,8 +16,7 @@ services:
       context: ./auth-service
     env_file:
       - ./auth-service/.env.docker
-    expose:
-      - "5001"
+    restart: unless-stopped
     depends_on:
       - mongodb
       - redis
@@ -29,8 +26,7 @@ services:
       context: ./hackathon-service
     env_file:
       - ./hackathon-service/.env.docker
-    expose:
-      - "5002"
+    restart: unless-stopped
     depends_on:
       - mongodb
       - redis
@@ -40,8 +36,7 @@ services:
       context: ./media-service
     env_file:
       - ./media-service/.env.docker
-    expose:
-      - "5003"
+    restart: unless-stopped
     depends_on:
       - mongodb
 
@@ -50,8 +45,7 @@ services:
       context: ./notification-service
     env_file:
       - ./notification-service/.env.docker
-    expose:
-      - "5004"
+    restart: unless-stopped
     depends_on:
       - mongodb
       - redis
@@ -61,45 +55,34 @@ services:
       context: ./api-gateway
     env_file:
       - ./api-gateway/.env.docker
-    ports:
-      - "5000:5000"
+    restart: unless-stopped
     depends_on:
       - auth-service
       - hackathon-service
       - media-service
       - notification-service
-
-  prometheus:
-    image: prom/prometheus:latest
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    depends_on:
-      - api-gateway
-      - auth-service
-      - hackathon-service
-      - media-service
-      - notification-service
-
-  grafana:
-    image: grafana/grafana-oss:latest
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
 
   nginx:
-    build: ./nginx
+    build:
+      context: ./nginx
+    restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
       - api-gateway
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
 
 volumes:
   mongo_data:

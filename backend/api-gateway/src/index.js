@@ -12,6 +12,9 @@ import { notificationProxy } from "./routes/notification.proxy.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
+import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
+import dotenv from "dotenv"
+dotenv.config();
 
 const app = express();
 
@@ -34,6 +37,7 @@ app.use(
 );
 
 app.use(compression());
+app.use(metricsMiddleware);
 app.use(requestIdMiddleware);
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
@@ -49,7 +53,7 @@ app.use(
     },
   })
 );
-
+app.get("/metrics", metricsHandler);
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -59,7 +63,6 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -67,7 +70,6 @@ app.get("/", (req, res) => {
     message: "HackSprint API Gateway running",
   });
 });
-
 app.get("/ping-auth", async (req, res) => {
   try {
     const response = await fetch(`${env.AUTH_SERVICE_URL}/`);

@@ -21,8 +21,8 @@ export const env = {
 
   PORT: process.env.PORT || 5001,
   MONGO_URL: process.env.MONGO_URL,
-  REDIS_URL: process.env.REDIS_URL || "redis://redis:6379",
-  REDIS_HOST: process.env.REDIS_HOST || "localhost",
+  REDIS_URL: process.env.REDIS_URL,
+  REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: process.env.REDIS_PORT || 6379,
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

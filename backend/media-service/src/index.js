@@ -7,7 +7,7 @@ import uploadRoutes from "./routes/upload.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
-
+import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
 dotenv.config();
 
 if (
@@ -33,13 +33,12 @@ app.use(
 );
 
 app.use(express.json());
+app.use(metricsMiddleware);
 app.use(express.urlencoded({ extended: true }));
 app.use(requestIdMiddleware);
-
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
-
 app.get("/", (req, res) => {
   return res.status(200).json({
     success: true,
@@ -47,6 +46,7 @@ app.get("/", (req, res) => {
     message: "Media Service running",
   });
 });
+app.get("/metrics", metricsHandler);
 
 app.use("/", uploadRoutes);
 

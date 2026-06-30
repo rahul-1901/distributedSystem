@@ -6,7 +6,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 import { emailWorker } from "./workers/email.worker.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
-
+import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
 dotenv.config();
 const PORT = process.env.PORT || 5005;
 const app = express();
@@ -14,7 +14,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestIdMiddleware);
+app.use(metricsMiddleware);
 
+app.get("/metrics", metricsHandler);
 app.get("/health", (req, res) => {
   return res.status(200).json({
     success: true,
