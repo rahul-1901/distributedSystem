@@ -1,4 +1,5 @@
 .env
 .env.local
 .env.docker
+docker-compose.yml
 node_modules
