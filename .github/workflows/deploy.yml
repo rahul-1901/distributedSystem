@@ -21,9 +21,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/distributedSystem
-
-            git pull origin main
-
+            git fetch origin
+            git reset --hard origin/main
             cd backend
-
             docker compose -f docker-compose.prod.yml up -d --build
