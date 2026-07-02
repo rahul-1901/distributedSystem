@@ -39,7 +39,7 @@ app.use(requestIdMiddleware);
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
   return res.status(200).json({
     success: true,
     service: "media-service",

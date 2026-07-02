@@ -46,13 +46,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use(requestIdMiddleware);
 
-app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    service: "hackathon-service",
-    message: "Hackathon Service running",
-  });
-});
 app.get("/metrics", metricsHandler);
 app.get("/health", async (req, res) => {
   const mongo = mongoose.connection.readyState === 1;

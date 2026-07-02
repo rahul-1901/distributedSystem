@@ -48,7 +48,7 @@ app.use((req, res, next) => {
   next();
 });
 app.get("/metrics", metricsHandler);
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
   return res.json({
     success: true,
     service: "auth-service",
