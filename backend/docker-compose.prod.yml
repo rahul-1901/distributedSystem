@@ -61,15 +61,17 @@ services:
       - hackathon-service
       - media-service
       - notification-service
-
+      
   nginx:
-    build:
-      context: ./nginx
+    build: ./nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+    - "80:80"
     depends_on:
-      - api-gateway
+    - api-gateway
+    volumes:
+    - ./certbot/conf:/etc/letsencrypt
+    - ./certbot/www:/var/www/certbot
 
   prometheus:
     image: prom/prometheus:latest
