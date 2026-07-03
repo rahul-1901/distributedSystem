@@ -5,7 +5,7 @@ const submissionVoteSchema = new mongoose.Schema(
     submission: {
       type: mongoose.Schema.Types.ObjectId,
 
-      ref: "Submission",
+      ref: "submissions",
 
       required: true,
     },
@@ -13,7 +13,7 @@ const submissionVoteSchema = new mongoose.Schema(
     hackathon: {
       type: mongoose.Schema.Types.ObjectId,
 
-      ref: "Hackathon",
+      ref: "hackathons",
 
       required: true,
     },
@@ -21,7 +21,7 @@ const submissionVoteSchema = new mongoose.Schema(
     voter: {
       type: mongoose.Schema.Types.ObjectId,
 
-      ref: "User",
+      ref: "users",
 
       required: true,
     },
