@@ -8,19 +8,20 @@ function AuthProvider({ children }) {
   const finishLoading = useAuthStore((state) => state.finishLoading);
 
   useEffect(() => {
-    async function loadUser() {
+    const bootstrap = async () => {
       try {
         const { data } = await ProfileAPI.getMyProfile();
-        login(data.user);
-      } catch {
+
+        login(data.user, data.user?.role || "student");
+      } catch (err) {
         logout();
       } finally {
         finishLoading();
       }
-    }
+    };
 
-    loadUser();
-  }, []);
+    bootstrap();
+  }, [login, logout, finishLoading]);
 
   return children;
 }

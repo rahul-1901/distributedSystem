@@ -1,23 +1,37 @@
 import { Routes, Route } from "react-router-dom";
-
-import ProtectedRoute from "./ProtectedRoute";
 import GuestRoute from "./GuestRoute";
+import ProtectedRoute from "./ProtectedRoute";
 import AdminRoute from "./AdminRoute";
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<div>Home</div>} />
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/hackathons" element={<Hackathons />} />
+        <Route path="/hackathons/:slug" element={<HackathonDetails />} />
+      </Route>
+
       <Route element={<GuestRoute />}>
         <Route path="/login" element={<div>Login</div>} />
         <Route path="/signup" element={<div>Signup</div>} />
       </Route>
+
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<div>Dashboard</div>} />
+        <Route element={<StudentLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
       </Route>
+
       <Route element={<AdminRoute />}>
-        <Route path="/admin/dashboard" element={<div>Admin Dashboard</div>} />
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
+        </Route>
       </Route>
+
+      <Route path="*" element={<div>404</div>} />
     </Routes>
   );
 }

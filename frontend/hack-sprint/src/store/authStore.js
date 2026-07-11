@@ -2,35 +2,28 @@ import { create } from "zustand";
 
 export const useAuthStore = create((set) => ({
   user: null,
-  admin: null,
-  isAuthenticated: false,
+  role: null,
   loading: true,
+  isAuthenticated: false,
 
-  login(user) {
+  login: (user, role = "student") =>
     set({
       user,
+      role,
       isAuthenticated: true,
       loading: false,
-    });
-  },
-  loginAdmin(admin) {
-    set({
-      admin,
-      loading: false,
-    });
-  },
-  logout() {
+    }),
+
+  logout: () =>
     set({
       user: null,
-      admin: null,
+      role: null,
       isAuthenticated: false,
       loading: false,
-    });
-  },
+    }),
 
-  finishLoading() {
+  finishLoading: () =>
     set({
       loading: false,
-    });
-  },
+    }),
 }));
