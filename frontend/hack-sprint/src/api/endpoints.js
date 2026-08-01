@@ -7,6 +7,7 @@ export const API = {
   TEAM: "/api/hackathons/teams",
   SUBMISSION: "/api/hackathons",
   VOTING: "/api/hackathons",
+  DISCUSSION: "/api/hackathons/api/discussions",
   ADMIN: "/api/admin",
   JUDGE: "/api/admin",
   MEDIA: "/api/media",

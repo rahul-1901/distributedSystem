@@ -1,6 +1,7 @@
 import React from "react";
+import { Trash2 } from "lucide-react";
 
-const MessageBubble = ({ message, isMe }) => {
+const MessageBubble = ({ message, isMe, onDelete }) => {
   const d = new Date(message.createdAt);
   const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const date = d.toLocaleDateString([], {
@@ -50,7 +51,16 @@ const MessageBubble = ({ message, isMe }) => {
             {message.content}
           </p>
 
-          <div className="flex justify-end mt-1.5">
+          <div className="flex items-center justify-end gap-2 mt-1.5">
+            {isMe && !message.isDeleted && onDelete && (
+              <button
+                onClick={() => onDelete(message._id)}
+                title="Delete message"
+                className="text-[rgba(255,120,120,0.4)] hover:text-[rgba(255,120,120,0.75)] transition-colors cursor-pointer"
+              >
+                <Trash2 size={10} />
+              </button>
+            )}
             <span
               className="font-[family-name:'JetBrains_Mono',monospace] text-[0.52rem] tracking-[0.06em] text-[rgba(95,255,96,0.3)] hover:text-[rgba(95,255,96,0.55)] transition-colors cursor-help"
               title={`${date} at ${time}`}

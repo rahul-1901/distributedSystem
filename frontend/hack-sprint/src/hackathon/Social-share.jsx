@@ -14,17 +14,14 @@ import {
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
-import { useParams } from "react-router-dom";
 import { HackathonAPI } from "../api/hackathon.api.js";
 
-export const SocialShare = () => {
+export const SocialShare = ({ hackathonId: id }) => {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const [isCheckingLike, setIsCheckingLike] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  const { id } = useParams();
 
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
 

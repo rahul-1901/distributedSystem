@@ -113,13 +113,13 @@ const Navbar = () => {
                     onClick={() => handleNavigate("/studenthome")}
                     className="relative nb-root inline-flex items-center gap-[0.35rem] text-[0.65rem] tracking-[0.08em] uppercase px-[0.75rem] py-[0.45rem] rounded-[3px] cursor-pointer transition-all duration-150 text-[rgba(180,220,180,0.55)] border border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
                   >
-                    Student <ArrowRight size={11} />
+                    Student
                   </button>
                   <button
                     onClick={() => handleNavigate("/adminhome")}
                     className="relative nb-root inline-flex items-center gap-[0.35rem] text-[0.65rem] tracking-[0.08em] uppercase px-[0.75rem] py-[0.45rem] rounded-[3px] cursor-pointer transition-all duration-150 text-[rgba(180,220,180,0.55)] border border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
                   >
-                    Admin <ArrowRight size={11} />
+                    Admin 
                   </button>
                 </>
               )}
@@ -133,7 +133,6 @@ const Navbar = () => {
                 </button>
               )}
 
-              {/* icon group */}
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[rgba(95,255,96,0.1)]">
                 <button
                   onClick={() => window.open("https://github.com/devlup-labs/HackSprint", "_blank")}
@@ -151,7 +150,6 @@ const Navbar = () => {
                 </button>
               </div>
 
-              {/* profile button */}
               <div className="relative ml-1" ref={profileMenuRef}>
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -162,16 +160,13 @@ const Navbar = () => {
                     : <User size={14} className="text-[#5fff60]" />}
                 </button>
 
-                {/* ── Profile dropdown ── */}
                 {showProfileMenu && (
                   <div className="nb-dropdown absolute right-0 mt-2 w-60 bg-[rgba(8,10,8,0.98)] border border-[rgba(95,255,96,0.15)] rounded-[4px] shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden">
-                    {/* corner brackets */}
                     <span className="absolute top-[-1px] left-[-1px] w-[8px] h-[8px] border-t-2 border-l-2 border-[rgba(95,255,96,0.45)]" />
                     <span className="absolute bottom-[-1px] right-[-1px] w-[8px] h-[8px] border-b-2 border-r-2 border-[rgba(95,255,96,0.45)]" />
 
                     {isLoggedIn ? (
                       <>
-                        {/* user header */}
                         <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(95,255,96,0.08)] bg-[rgba(95,255,96,0.04)]">
                           <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
                             <span className="nb-syne font-extrabold text-[#5fff60] text-[0.85rem]">
@@ -184,7 +179,6 @@ const Navbar = () => {
                           </div>
                         </div>
 
-                        {/* profile action */}
                         <div className="p-3">
                           <button
                             onClick={() => handleNavigate("/dashboard")}
@@ -195,7 +189,6 @@ const Navbar = () => {
                           </button>
                         </div>
 
-                        {/* logout */}
                         <div className="px-3 pb-3 border-t border-[rgba(95,255,96,0.08)] pt-2">
                           <button
                             onClick={handleLogout}
@@ -220,7 +213,6 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* ── Mobile hamburger ── */}
             <button
               className="md:hidden flex items-center justify-center p-1.5 rounded-[3px] border border-[rgba(95,255,96,0.12)] text-[rgba(95,255,96,0.55)] hover:border-[rgba(95,255,96,0.35)] hover:text-[#5fff60] transition-all cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
@@ -230,7 +222,6 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* ── Mobile menu ── */}
         {isOpen && (
           <div className="nb-mobile md:hidden bg-[rgba(8,10,8,0.98)] border-t border-[rgba(95,255,96,0.08)]">
             <div className="max-w-[1200px] mx-auto px-5 py-4 flex flex-col gap-1">
@@ -256,14 +247,12 @@ const Navbar = () => {
                     className="nb-root w-full inline-flex items-center justify-between text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border cursor-pointer transition-all text-[rgba(180,220,180,0.55)] border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
                   >
                     <span>Student</span>
-                    <ArrowRight size={12} />
                   </button>
                   <button
                     onClick={() => handleNavigate("/adminhome")}
                     className="nb-root w-full inline-flex items-center justify-between text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border cursor-pointer transition-all text-[rgba(180,220,180,0.55)] border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
                   >
                     <span>Admin</span>
-                    <ArrowRight size={12} />
                   </button>
                 </>
               )}
@@ -278,12 +267,10 @@ const Navbar = () => {
                 </button>
               )}
 
-              {/* divider */}
               <div className="h-px bg-gradient-to-r from-transparent via-[rgba(95,255,96,0.1)] to-transparent my-2" />
 
               {isLoggedIn ? (
                 <>
-                  {/* user row */}
                   <div className="nb-root flex items-center gap-3 px-4 py-3 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
                     <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
                       <span className="nb-syne font-extrabold text-[#5fff60] text-[0.85rem]">
@@ -323,7 +310,6 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* spacer */}
       <div className="h-14" />
     </>
   );

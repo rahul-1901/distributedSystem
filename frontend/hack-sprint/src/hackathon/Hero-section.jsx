@@ -5,10 +5,6 @@ import { ProfileAPI } from "../api/profile.api.js";
 import { HackathonAPI } from "../api/hackathon.api.js";
 import SubmissionForm from "./SubmissionForm";
 
-const FontStyle = () => (
-  <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');`}</style>
-);
-
 export const HeroSection = ({
   title,
   subTitle,
@@ -19,7 +15,6 @@ export const HeroSection = ({
   hackathonId,
   slug,
   phases = [],
-  onSectionChange,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,10 +59,12 @@ export const HeroSection = ({
     const load = async () => {
       setLoading(true);
       try {
-        const profileRes = await ProfileAPI.getMyProfile();
+        const [profileRes, statusRes] = await Promise.all([
+          ProfileAPI.getMyProfile(),
+          HackathonAPI.getRegistrationStatus(hackathonId),
+        ]);
         const myUserId = profileRes.data.profile._id;
 
-        const statusRes = await HackathonAPI.getRegistrationStatus(hackathonId);
         const isRegistered = !!statusRes.data.isRegistered;
         setRegistered(isRegistered);
 
@@ -292,8 +289,6 @@ export const HeroSection = ({
 
   return (
     <>
-      <FontStyle />
-
       <div className="border-b border-[rgba(95,255,96,0.1)] bg-[#0a0a0a] font-[family-name:'JetBrains_Mono',monospace] overflow-hidden">
         <div className="relative w-full h-[60vh] md:h-[60vh] lg:h-[75vh] overflow-hidden">
           <img

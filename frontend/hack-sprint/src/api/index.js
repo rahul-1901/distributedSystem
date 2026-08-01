@@ -10,6 +10,7 @@ export { RegistrationAPI } from "./registration.api";
 export { TeamAPI } from "./team.api";
 export { SubmissionAPI } from "./submission.api";
 export { VotingAPI } from "./voting.api";
+export { DiscussionAPI } from "./discussion.api";
 
 export { AdminAPI } from "./admin.api";
 export { JudgeAPI } from "./judge.api";

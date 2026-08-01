@@ -12,11 +12,10 @@ import DOMPurify from "dompurify";
 import ChatInterface from "../components/Chat/ChatInterface";
 import Upvote from "./Upvote";
 import Gallery from "./Gallery";
+import { HackathonAPI } from "../api/hackathon.api.js";
 
 const FontStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');
-
     .hk-details h1,
     .hk-details h2,
     .hk-details h3,
@@ -197,6 +196,200 @@ const fmtDate = (d) =>
 
 const fmtDateRange = (start, end) =>
   `${fmtDate(start)} → ${fmtDate(end)}`;
+
+const ResultsSection = ({ hackathonId }) => {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    HackathonAPI.getResults(hackathonId)
+      .then((res) => setResults(res.data || []))
+      .catch(() => setError("Results not announced yet or failed to load."))
+      .finally(() => setLoading(false));
+  }, [hackathonId]);
+
+  if (loading)
+    return (
+      <div className="flex flex-col gap-3">
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="h-16 rounded-[4px] bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.08)] overflow-hidden relative animate-pulse"
+          />
+        ))}
+      </div>
+    );
+
+  if (error || results.length === 0)
+    return (
+      <Card>
+        <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <div className="w-12 h-12 rounded-[3px] bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.1)] flex items-center justify-center">
+            <Trophy size={20} className="text-[rgba(95,255,96,0.2)]" />
+          </div>
+          <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.35)] tracking-[0.06em] uppercase">
+            {error || "No results announced yet."}
+          </p>
+          <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(180,220,180,0.22)]">
+            Check back once judging is complete.
+          </p>
+        </div>
+      </Card>
+    );
+
+  const podium = [
+    {
+      label: "1st Place",
+      emoji: "🥇",
+      border: "border-[rgba(255,196,0,0.3)]",
+      bg: "bg-[rgba(255,196,0,0.07)]",
+      pt: "text-[#ffd700]",
+      badgeCls:
+        "bg-[rgba(255,196,0,0.1)] text-[rgba(255,196,0,0.8)] border-[rgba(255,196,0,0.3)]",
+      bar: "bg-[#ffd700]",
+    },
+    {
+      label: "2nd Place",
+      emoji: "🥈",
+      border: "border-[rgba(192,192,192,0.25)]",
+      bg: "bg-[rgba(192,192,192,0.06)]",
+      pt: "text-[#c0c0c0]",
+      badgeCls:
+        "bg-[rgba(192,192,192,0.08)] text-[rgba(192,192,192,0.7)] border-[rgba(192,192,192,0.25)]",
+      bar: "bg-[#c0c0c0]",
+    },
+    {
+      label: "3rd Place",
+      emoji: "🥉",
+      border: "border-[rgba(205,127,50,0.25)]",
+      bg: "bg-[rgba(205,127,50,0.06)]",
+      pt: "text-[#cd7f32]",
+      badgeCls:
+        "bg-[rgba(205,127,50,0.08)] text-[rgba(205,127,50,0.7)] border-[rgba(205,127,50,0.25)]",
+      bar: "bg-[#cd7f32]",
+    },
+  ];
+  const maxPts = Math.max(...results.map((r) => r.finalScore || 0), 1);
+
+  return (
+    <div>
+      <SectionHead>Hackathon Results</SectionHead>
+
+      {results.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          {results.slice(0, 3).map((sub, i) => {
+            const p = podium[i];
+            const name = sub.team
+              ? sub.team.name
+              : sub.participant?.name || "Unknown";
+            const pct = ((sub.finalScore / maxPts) * 100).toFixed(1);
+            return (
+              <div
+                key={sub._id}
+                className={`relative rounded-[4px] border ${p.border} ${p.bg} p-4 flex flex-col gap-3 hover:-translate-y-0.5 transition-all`}
+              >
+                <span className="absolute top-[-1px] left-[-1px] w-2 h-2 border-t-2 border-l-2 border-[rgba(95,255,96,0.25)]" />
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] tracking-[0.12em] uppercase px-2 py-[3px] rounded-[2px] border ${p.badgeCls}`}
+                  >
+                    {p.label}
+                  </span>
+                  <span className="text-xl">{p.emoji}</span>
+                </div>
+                <div>
+                  <h4 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-sm tracking-tight">
+                    {name}
+                  </h4>
+                  <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.3)] mt-0.5">
+                    {sub.team ? "Team" : "Individual"}
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-end justify-between mb-1">
+                    <span
+                      className={`font-[family-name:'Syne',sans-serif] font-extrabold text-xl ${p.pt}`}
+                    >
+                      {sub.finalScore?.toFixed?.(1) ?? sub.finalScore}
+                    </span>
+                    <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] text-[rgba(180,220,180,0.28)] uppercase tracking-[0.1em]">
+                      pts
+                    </span>
+                  </div>
+                  <div className="h-1 w-full rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${p.bar} transition-all duration-700`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {results.length > 3 && (
+        <div className="bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] overflow-hidden">
+          <div className="grid grid-cols-[2rem_1fr_auto] gap-4 px-5 py-3 border-b border-[rgba(95,255,96,0.07)]">
+            {["#", "Participant", "Score"].map((h) => (
+              <span
+                key={h}
+                className="font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] tracking-[0.16em] uppercase text-[rgba(95,255,96,0.3)]"
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+          {results.slice(3).map((sub, i) => {
+            const rank = i + 4;
+            const name = sub.team
+              ? sub.team.name
+              : sub.participant?.name || "Unknown";
+            return (
+              <div
+                key={sub._id}
+                className="grid grid-cols-[2rem_1fr_auto] gap-4 items-center px-5 py-3 border-b border-[rgba(95,255,96,0.05)] last:border-b-0 hover:bg-[rgba(95,255,96,0.03)] transition-colors"
+              >
+                <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] text-[rgba(95,255,96,0.3)]">
+                  {String(rank).padStart(2, "0")}
+                </span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-[2px] bg-[rgba(95,255,96,0.06)] border border-[rgba(95,255,96,0.12)] flex items-center justify-center flex-shrink-0">
+                    <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[0.65rem] text-[rgba(95,255,96,0.5)]">
+                      {name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-sm truncate">
+                      {name}
+                    </p>
+                    <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.28)]">
+                      {sub.team ? "Team" : "Individual"}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[#5fff60] text-sm">
+                    {sub.finalScore?.toFixed?.(1) ?? sub.finalScore}
+                  </span>
+                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] text-[rgba(95,255,96,0.3)] ml-1">
+                    pts
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="font-[family-name:'JetBrains_Mono',monospace] text-center text-[0.52rem] tracking-[0.12em] uppercase text-[rgba(95,255,96,0.2)] mt-4">
+        Final standings · Ranked by judge score
+      </p>
+    </div>
+  );
+};
 
 export const ContentSection = ({ activeSection, hackathon }) => {
   const [expandedFAQ, setExpandedFAQ] = useState(null);
@@ -515,13 +708,13 @@ export const ContentSection = ({ activeSection, hackathon }) => {
       }
 
       case "upvote":
-        return <Upvote />;
+        return <Upvote hackathonId={hackathon._id} />;
 
       case "gallery":
         return (
           <div>
             <SectionHead>Event Gallery</SectionHead>
-            <Gallery />
+            <Gallery hackathonId={hackathon._id} />
           </div>
         );
 
@@ -537,208 +730,6 @@ export const ContentSection = ({ activeSection, hackathon }) => {
           </div>
         );
     }
-  };
-
-  const ResultsSection = ({ hackathonId }) => {
-    const [results, setResults] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-      fetch(
-        `${
-          import.meta.env.VITE_API_BASE_URL
-        }/api/hackathons/${hackathonId}/results`
-      )
-        .then((r) => {
-          if (!r.ok) throw new Error();
-          return r.json();
-        })
-        .then(setResults)
-        .catch(() => setError("Results not announced yet or failed to load."))
-        .finally(() => setLoading(false));
-    }, [hackathonId]);
-
-    if (loading)
-      return (
-        <div className="flex flex-col gap-3">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-16 rounded-[4px] bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.08)] overflow-hidden relative animate-pulse"
-            />
-          ))}
-        </div>
-      );
-
-    if (error || results.length === 0)
-      return (
-        <Card>
-          <div className="flex flex-col items-center justify-center py-10 gap-3">
-            <div className="w-12 h-12 rounded-[3px] bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.1)] flex items-center justify-center">
-              <Trophy size={20} className="text-[rgba(95,255,96,0.2)]" />
-            </div>
-            <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.35)] tracking-[0.06em] uppercase">
-              {error || "No results announced yet."}
-            </p>
-            <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(180,220,180,0.22)]">
-              Check back once judging is complete.
-            </p>
-          </div>
-        </Card>
-      );
-
-    const podium = [
-      {
-        label: "1st Place",
-        emoji: "🥇",
-        border: "border-[rgba(255,196,0,0.3)]",
-        bg: "bg-[rgba(255,196,0,0.07)]",
-        pt: "text-[#ffd700]",
-        badgeCls:
-          "bg-[rgba(255,196,0,0.1)] text-[rgba(255,196,0,0.8)] border-[rgba(255,196,0,0.3)]",
-        bar: "bg-[#ffd700]",
-      },
-      {
-        label: "2nd Place",
-        emoji: "🥈",
-        border: "border-[rgba(192,192,192,0.25)]",
-        bg: "bg-[rgba(192,192,192,0.06)]",
-        pt: "text-[#c0c0c0]",
-        badgeCls:
-          "bg-[rgba(192,192,192,0.08)] text-[rgba(192,192,192,0.7)] border-[rgba(192,192,192,0.25)]",
-        bar: "bg-[#c0c0c0]",
-      },
-      {
-        label: "3rd Place",
-        emoji: "🥉",
-        border: "border-[rgba(205,127,50,0.25)]",
-        bg: "bg-[rgba(205,127,50,0.06)]",
-        pt: "text-[#cd7f32]",
-        badgeCls:
-          "bg-[rgba(205,127,50,0.08)] text-[rgba(205,127,50,0.7)] border-[rgba(205,127,50,0.25)]",
-        bar: "bg-[#cd7f32]",
-      },
-    ];
-    const maxPts = Math.max(...results.map((r) => r.hackathonPoints || 0), 1);
-
-    return (
-      <div>
-        <SectionHead>Hackathon Results</SectionHead>
-
-        {results.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-            {results.slice(0, 3).map((sub, i) => {
-              const p = podium[i];
-              const name = sub.team
-                ? sub.team.name
-                : sub.participant?.name || "Unknown";
-              const pct = ((sub.hackathonPoints / maxPts) * 100).toFixed(1);
-              return (
-                <div
-                  key={sub._id}
-                  className={`relative rounded-[4px] border ${p.border} ${p.bg} p-4 flex flex-col gap-3 hover:-translate-y-0.5 transition-all`}
-                >
-                  <span className="absolute top-[-1px] left-[-1px] w-2 h-2 border-t-2 border-l-2 border-[rgba(95,255,96,0.25)]" />
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] tracking-[0.12em] uppercase px-2 py-[3px] rounded-[2px] border ${p.badgeCls}`}
-                    >
-                      {p.label}
-                    </span>
-                    <span className="text-xl">{p.emoji}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-sm tracking-tight">
-                      {name}
-                    </h4>
-                    <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.3)] mt-0.5">
-                      {sub.team ? "Team" : "Individual"}
-                    </p>
-                  </div>
-                  <div>
-                    <div className="flex items-end justify-between mb-1">
-                      <span
-                        className={`font-[family-name:'Syne',sans-serif] font-extrabold text-xl ${p.pt}`}
-                      >
-                        {sub.hackathonPoints}
-                      </span>
-                      <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] text-[rgba(180,220,180,0.28)] uppercase tracking-[0.1em]">
-                        pts
-                      </span>
-                    </div>
-                    <div className="h-1 w-full rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${p.bar} transition-all duration-700`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {results.length > 3 && (
-          <div className="bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] overflow-hidden">
-            <div className="grid grid-cols-[2rem_1fr_auto] gap-4 px-5 py-3 border-b border-[rgba(95,255,96,0.07)]">
-              {["#", "Participant", "Score"].map((h) => (
-                <span
-                  key={h}
-                  className="font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] tracking-[0.16em] uppercase text-[rgba(95,255,96,0.3)]"
-                >
-                  {h}
-                </span>
-              ))}
-            </div>
-            {results.slice(3).map((sub, i) => {
-              const rank = i + 4;
-              const name = sub.team
-                ? sub.team.name
-                : sub.participant?.name || "Unknown";
-              return (
-                <div
-                  key={sub._id}
-                  className="grid grid-cols-[2rem_1fr_auto] gap-4 items-center px-5 py-3 border-b border-[rgba(95,255,96,0.05)] last:border-b-0 hover:bg-[rgba(95,255,96,0.03)] transition-colors"
-                >
-                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] text-[rgba(95,255,96,0.3)]">
-                    {String(rank).padStart(2, "0")}
-                  </span>
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-[2px] bg-[rgba(95,255,96,0.06)] border border-[rgba(95,255,96,0.12)] flex items-center justify-center flex-shrink-0">
-                      <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[0.65rem] text-[rgba(95,255,96,0.5)]">
-                        {name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-sm truncate">
-                        {name}
-                      </p>
-                      <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.28)]">
-                        {sub.team ? "Team" : "Individual"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[#5fff60] text-sm">
-                      {sub.hackathonPoints}
-                    </span>
-                    <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] text-[rgba(95,255,96,0.3)] ml-1">
-                      pts
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <p className="font-[family-name:'JetBrains_Mono',monospace] text-center text-[0.52rem] tracking-[0.12em] uppercase text-[rgba(95,255,96,0.2)] mt-4">
-          Final standings · Ranked by judge score
-        </p>
-      </div>
-    );
   };
 
   return (

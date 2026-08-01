@@ -6,7 +6,6 @@ import {
   Image as ImageIcon,
   Play,
 } from "lucide-react";
-import { useParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { HackathonAPI } from "../api/hackathon.api.js";
 
@@ -21,8 +20,7 @@ const NavBtn = ({ onClick, children, className = "" }) => (
   </button>
 );
 
-const Gallery = () => {
-  const { id: hackathonId } = useParams();
+const Gallery = ({ hackathonId }) => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);

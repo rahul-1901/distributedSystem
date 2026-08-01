@@ -39,7 +39,6 @@ export default function HackathonDetails() {
       setError("");
       try {
         const res = await HackathonAPI.getHackathonBySlug(slug);
-        console.log("Hackathon data:", res.data);
         if (!res.data) {
           setError("Hackathon not found");
           setHackathon(null);
@@ -87,7 +86,6 @@ export default function HackathonDetails() {
           hackathonId={hackathon._id}
           slug={hackathon.slug}
           phases={hackathon.phases}
-          onSectionChange={setActiveSection}
         />
 
         <div className="flex flex-col lg:flex-row max-w-screen-2xl mx-auto">
@@ -96,12 +94,16 @@ export default function HackathonDetails() {
             onSectionChange={setActiveSection}
             showVoting={hackathon.votingConfig?.enabled}
             showResult={hackathon.showResult}
+            showJudging={
+              hackathon.judgingConfig?.minScore != null ||
+              hackathon.judgingConfig?.maxScore != null
+            }
           />
 
           <ContentSection activeSection={activeSection} hackathon={hackathon} />
 
           <div className="hidden lg:block">
-            <SocialShare />
+            <SocialShare hackathonId={hackathon._id} />
           </div>
         </div>
       </div>

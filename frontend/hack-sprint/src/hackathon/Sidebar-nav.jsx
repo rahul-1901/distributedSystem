@@ -16,11 +16,13 @@ export const SidebarNav = ({
   onSectionChange,
   showVoting,
   showResult,
+  showJudging,
 }) => {
   const allSections = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "details", label: "Details", icon: FileText },
     { id: "prizes", label: "Prizes", icon: Award },
+    { id: "judging", label: "Judging", icon: Scale, requiresJudging: true },
     { id: "resources", label: "Resources", icon: FileText },
     { id: "results", label: "Results", icon: Award, requiresResult: true },
     { id: "upvote", label: "Voting", icon: ThumbsUp, requiresVoting: true },
@@ -33,13 +35,12 @@ export const SidebarNav = ({
   const sections = allSections.filter((s) => {
     if (s.requiresVoting && !showVoting) return false;
     if (s.requiresResult && !showResult) return false;
+    if (s.requiresJudging && !showJudging) return false;
     return true;
   });
 
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');`}</style>
-
       <aside className="w-full lg:w-56 lg:min-h-[calc(100vh-88px)] lg:sticky top-[88px] shrink-0">
         <div
           className="
