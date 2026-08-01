@@ -4,9 +4,6 @@ import { env } from "../config/env.js";
 export const notificationProxy = createProxyMiddleware({
   target: env.NOTIFICATION_SERVICE_URL,
   changeOrigin: true,
-  pathRewrite: {
-    "^/api/notifications": "/api/notifications",
-  },
   timeout: 30000,
   proxyTimeout: 30000,
   on: {

@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "./Button";
-import { Badge } from "./Badge";
-import { Link } from "react-router-dom";
-import {
-  Calendar,
-  Users,
-  Trophy,
-  Clock,
-  ChevronRight,
-  ThumbsUp,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { getDashboard } from "../backendApis/api";
+import { Link, useNavigate } from "react-router-dom";
+import { Calendar, Users, Trophy, Clock, ChevronRight } from "lucide-react";
+import { ProfileAPI } from "../api/profile.api.js";
+import { HackathonAPI } from "../api/hackathon.api.js";
 import SubmissionForm from "./SubmissionForm";
-import { API } from "../backendApis/api";
 
 const FontStyle = () => (
   <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');`}</style>
@@ -23,141 +13,108 @@ export const HeroSection = ({
   title,
   subTitle,
   isActive,
-  startDate,
-  endDate,
   participantCount = 0,
-  rewards = [],
-  prizeMoney1 = 0,
-  prizeMoney2 = 0,
-  prizeMoney3 = 0,
+  prizes = [],
   imageUrl = "/assets/hackathon-banner.png",
   hackathonId,
-  submissionStartDate,
-  submissionEndDate,
+  slug,
+  phases = [],
   onSectionChange,
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [userData, setUserData] = useState(null);
-  const [isVerified, setIsVerified] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const [registrationInfo, setRegistrationInfo] = useState(false);
-  const [leaderButton, setLeaderButton] = useState(false);
-  const [leaderValue, setLeaderValue] = useState("");
+  const [registered, setRegistered] = useState(false);
   const [isLeader, setIsLeader] = useState(false);
   const [isTeamMember, setIsTeamMember] = useState(false);
-  const [teamData, setTeamData] = useState(null);
+  const [teamCode, setTeamCode] = useState("");
   const navigate = useNavigate();
 
-  const isWithinRegistrationPeriod = () => {
+  const registrationPhase = phases.find(
+    (p) => p.phaseType === "REGISTRATION" && p.isActive
+  );
+  const submissionPhases = phases.filter((p) => p.phaseType === "SUBMISSION");
+  const activeSubmissionPhase = submissionPhases.find((p) => {
     const now = new Date();
     return (
-      startDate &&
-      endDate &&
-      now >= new Date(startDate) &&
-      now <= new Date(endDate)
+      p.isActive && now >= new Date(p.startDate) && now <= new Date(p.endDate)
+    );
+  });
+
+  const isWithinRegistrationPeriod = () => {
+    if (!registrationPhase) return false;
+    const now = new Date();
+    return (
+      now >= new Date(registrationPhase.startDate) &&
+      now <= new Date(registrationPhase.endDate)
     );
   };
 
-  const isWithinSubmissionPeriod = () => {
-    const now = new Date();
-    return (
-      submissionStartDate &&
-      submissionEndDate &&
-      now >= new Date(submissionStartDate) &&
-      now <= new Date(submissionEndDate)
-    );
-  };
+  const isWithinSubmissionPeriod = () => !!activeSubmissionPhase;
 
   useEffect(() => {
-    const fetchTeamData = async (teamId, currentUserId) => {
-      try {
-        if (!teamId) return;
-  
-        const res = await API.get(`/api/team/${teamId}`);
-        const team = res.data.team;
-  
-        setTeamData(team);
-  
-        setIsTeamMember(
-          team.members?.some(
-            (m) => String(m._id) === String(currentUserId)
-          ) || false
-        );
-  
-      } catch (err) {
-        setIsTeamMember(false);
-      }
-    };
-  
-    const fetchUserData = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    setIsAuthenticated(true);
+
+    const load = async () => {
       setLoading(true);
       try {
-        const res = await getDashboard();
-        const u = res.data.userData;
-  
-        setUserData(u);
-        setIsVerified(u?.isVerified || false);
-  
-        const registered = Array.isArray(u.registeredHackathons)
-          ? u.registeredHackathons.some(
-              (o) => String(o?._id) === String(hackathonId)
-            )
-          : false;
-  
-        setRegistrationInfo(registered);
-  
-        const leader = u.leaderOfHackathons?.some(
-          (o) => String(o?._id) === String(hackathonId)
-        );
-  
-        setIsLeader(!!leader);
-        setLeaderButton(!!leader);
-  
-        // ✅ CORRECT TEAM FETCH
-        const teamEntry = u?.teams?.find(
-          (t) => String(t.hackathon) === String(hackathonId)
-        );
-  
-        if (teamEntry?.team) {
-          await fetchTeamData(teamEntry.team, u._id);
-        } else {
+        const profileRes = await ProfileAPI.getMyProfile();
+        const myUserId = profileRes.data.profile._id;
+
+        const statusRes = await HackathonAPI.getRegistrationStatus(hackathonId);
+        const isRegistered = !!statusRes.data.isRegistered;
+        setRegistered(isRegistered);
+
+        if (!isRegistered) {
+          setIsLeader(false);
           setIsTeamMember(false);
-          setTeamData(null); // 🔥 important
+          return;
         }
-  
+
+        const regRes = await HackathonAPI.getMyRegistration(hackathonId);
+        const teamId = regRes.data.registration?.team;
+
+        if (!teamId) {
+          setIsLeader(false);
+          setIsTeamMember(false);
+          return;
+        }
+
+        const teamRes = await HackathonAPI.getTeamById(teamId);
+        const team = teamRes.data.team;
+
+        const leaderId = team.leader?._id || team.leader;
+        const amLeader = String(leaderId) === String(myUserId);
+        setIsLeader(amLeader);
+
+        const memberIds = (team.members || []).map((m) => String(m._id || m));
+        setIsTeamMember(memberIds.includes(String(myUserId)));
+        setTeamCode(team.secretCode || "");
       } catch (err) {
-        setUserData(null);
-        setIsVerified(false);
-        setRegistrationInfo(false);
+        setRegistered(false);
         setIsLeader(false);
         setIsTeamMember(false);
-        setTeamData(null);
       } finally {
         setLoading(false);
       }
     };
-  
-    fetchUserData();
-  
+
+    load();
   }, [hackathonId]);
-  
-  useEffect(() => {
-    if (teamData?.code) {
-      setLeaderValue(teamData.code);
-    } else {
-      setLeaderValue("");
-    }
-  }, [teamData]);
 
   const handleRegister = () => {
-    if (isVerified) navigate(`/hackathon/RegistrationForm/${hackathonId}`);
-    else navigate("/account/login");
+    navigate(`/hackathon/RegistrationForm/${slug}`);
   };
 
-  const handleLeader = () => {
-    if (!leaderValue) return;
-    navigate(`/hackathon/${hackathonId}/team/${leaderValue}`);
+  const handleLeaderDashboard = () => {
+    if (!teamCode) return;
+    navigate(`/hackathon/${slug}/team/${teamCode}`);
   };
 
   const handleSubmit = () => {
@@ -165,6 +122,7 @@ export const HeroSection = ({
   };
 
   const formatDateRange = (start, end) => {
+    if (!start || !end) return "TBD";
     const s = new Date(start),
       e = new Date(end),
       opt = { month: "long", day: "numeric" };
@@ -180,7 +138,8 @@ export const HeroSection = ({
   };
 
   const getDaysRemaining = () => {
-    const diff = new Date(submissionEndDate) - new Date();
+    if (!activeSubmissionPhase) return 0;
+    const diff = new Date(activeSubmissionPhase.endDate) - new Date();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     return days > 0 ? days : 0;
   };
@@ -195,7 +154,9 @@ export const HeroSection = ({
   ].join(" ");
 
   const renderActionButton = () => {
-    if (loading || !userData)
+    if (loading) return null;
+
+    if (!isAuthenticated)
       return (
         <Link to="/account/login">
           <button
@@ -205,8 +166,10 @@ export const HeroSection = ({
           </button>
         </Link>
       );
+
     if (!isActive) return null;
-    if (!registrationInfo) {
+
+    if (!registered) {
       if (isWithinRegistrationPeriod())
         return (
           <button
@@ -225,34 +188,8 @@ export const HeroSection = ({
         </button>
       );
     }
-    if (isLeader)
-      return (
-        <div className="relative group inline-block">
-          <button
-            onClick={handleSubmit}
-            disabled={!isWithinSubmissionPeriod()}
-            className={`${actionCls} ${
-              isWithinSubmissionPeriod()
-                ? "bg-[#5fff60] border-[#5fff60] text-[#050905] hover:bg-[#7fff80]"
-                : "bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            Submit <ChevronRight size={14} />
-          </button>
 
-          {!isWithinSubmissionPeriod() && (
-            <div
-              className="absolute left-full top-1/2 -translate-y-1/2 ml-3 
-                    whitespace-nowrap text-xs bg-[#111] text-[#5fff60] 
-                    px-3 py-1 rounded opacity-0 group-hover:opacity-100 
-                    transition-opacity duration-200 shadow-lg"
-            >
-              Submission Not Open
-            </div>
-          )}
-        </div>
-      );
-    if (isTeamMember)
+    if (isTeamMember && !isLeader)
       return (
         <button
           disabled
@@ -261,6 +198,7 @@ export const HeroSection = ({
           Submit (Leader Only)
         </button>
       );
+
     return (
       <div className="relative group inline-block">
         <button
@@ -272,16 +210,10 @@ export const HeroSection = ({
               : "bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed"
           }`}
         >
-          Submit <ChevronRight size={14} />
+          Submit Project <ChevronRight size={14} />
         </button>
-
         {!isWithinSubmissionPeriod() && (
-          <div
-            className="absolute left-full top-1/2 -translate-y-1/2 ml-3 
-                whitespace-nowrap text-xs bg-[#111] text-[#5fff60] 
-                px-3 py-1 rounded opacity-0 group-hover:opacity-100 
-                transition-opacity duration-200 shadow-lg"
-          >
+          <div className="absolute -bottom-6 left-0 text-[0.55rem] text-[rgba(180,220,180,0.4)] whitespace-nowrap">
             Submission Not Open
           </div>
         )}
@@ -309,16 +241,8 @@ export const HeroSection = ({
     </div>
   );
 
-  const PrizeStatCard = ({ rewards, prize1, prize2, prize3, icon: Icon }) => {
-    const dr =
-      rewards?.length > 0
-        ? rewards
-        : [
-            prize1 > 0 ? { description: "1st", amount: prize1 } : null,
-            prize2 > 0 ? { description: "2nd", amount: prize2 } : null,
-            prize3 > 0 ? { description: "3rd", amount: prize3 } : null,
-          ].filter(Boolean);
-    const total = dr.reduce((s, r) => s + r.amount, 0);
+  const PrizeStatCard = ({ prizes, icon: Icon }) => {
+    const total = prizes.reduce((s, p) => s + (p.amount || 0), 0);
     return (
       <div className="relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.12)] rounded-[4px] p-4 backdrop-blur-sm hover:border-[rgba(95,255,96,0.28)] transition-all">
         <span className="absolute top-[-1px] left-[-1px] w-2 h-2 border-t-2 border-l-2 border-[rgba(95,255,96,0.4)]" />
@@ -332,22 +256,22 @@ export const HeroSection = ({
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          {dr.slice(0, 4).map((r, i) => (
+          {prizes.slice(0, 4).map((p, i) => (
             <div key={i} className="flex justify-between items-center">
               <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.62rem] text-[rgba(180,220,180,0.45)]">
-                {r.description}
+                {p.title}
               </span>
               <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[#5fff60] font-semibold">
-                ₹{r.amount.toLocaleString("en-IN")}
+                ₹{(p.amount || 0).toLocaleString("en-IN")}
               </span>
             </div>
           ))}
-          {dr.length > 4 && (
+          {prizes.length > 4 && (
             <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.28)]">
-              +{dr.length - 4} more
+              +{prizes.length - 4} more
             </p>
           )}
-          {total > 0 && dr.length > 1 && (
+          {total > 0 && prizes.length > 1 && (
             <div className="flex justify-between items-center pt-2 mt-1 border-t border-[rgba(95,255,96,0.08)]">
               <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] tracking-[0.08em] uppercase text-[rgba(180,220,180,0.55)]">
                 Total
@@ -378,7 +302,6 @@ export const HeroSection = ({
             className="w-full h-full object-fill sm:object-fill"
             onError={() => setImageError(true)}
           />
-
           <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,10,10,0.88)] via-[rgba(10,10,10,0.15)] to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(95,255,96,0.22)] to-transparent" />
         </div>
@@ -399,20 +322,36 @@ export const HeroSection = ({
             </span>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5">
-              {[
-                ["Registration", startDate, endDate],
-                ["Submission", submissionStartDate, submissionEndDate],
-              ].map(([label, s, e]) => (
+              {registrationPhase && (
+                <div className="flex flex-wrap items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.5)]">
+                  <Calendar
+                    size={11}
+                    className="text-[rgba(95,255,96,0.5)] flex-shrink-0"
+                  />
+                  <span className="text-[rgba(180,220,180,0.7)]">
+                    Registration:
+                  </span>
+                  <span>
+                    {formatDateRange(
+                      registrationPhase.startDate,
+                      registrationPhase.endDate
+                    )}
+                  </span>
+                </div>
+              )}
+              {submissionPhases.map((p) => (
                 <div
-                  key={label}
+                  key={p._id}
                   className="flex flex-wrap items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.5)]"
                 >
                   <Calendar
                     size={11}
                     className="text-[rgba(95,255,96,0.5)] flex-shrink-0"
                   />
-                  <span className="text-[rgba(180,220,180,0.7)]">{label}:</span>
-                  <span>{formatDateRange(s, e)}</span>
+                  <span className="text-[rgba(180,220,180,0.7)]">
+                    {p.phaseName}:
+                  </span>
+                  <span>{formatDateRange(p.startDate, p.endDate)}</span>
                 </div>
               ))}
             </div>
@@ -428,7 +367,7 @@ export const HeroSection = ({
                   {subTitle}
                 </p>
               )}
-              {userData && registrationInfo && (
+              {registered && (
                 <div className="mt-2 inline-flex items-center gap-1.5">
                   <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.56rem] tracking-[0.1em] uppercase text-[rgba(95,255,96,0.38)]">
                     Role:
@@ -438,39 +377,21 @@ export const HeroSection = ({
                       ? "Leader"
                       : isTeamMember
                       ? "Team Member"
-                      : "Individual"}
+                      : "Registered"}
                   </span>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
-              {leaderButton && (
+              {isLeader && teamCode && (
                 <button
-                  onClick={handleLeader}
+                  onClick={handleLeaderDashboard}
                   className={`${actionCls} bg-[rgba(95,255,96,0.1)] border-[rgba(95,255,96,0.3)] text-[#5fff60] hover:bg-[rgba(95,255,96,0.18)]`}
                 >
                   Leader Dashboard <ChevronRight size={13} />
                 </button>
               )}
-              {/* {onSectionChange && (
-                <button
-                  onClick={() => {
-                    onSectionChange("upvote");
-                    setTimeout(() => {
-                      document
-                        .getElementById("content-section")
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        });
-                    }, 100);
-                  }}
-                  className={`${actionCls} bg-[rgba(95,255,96,0.1)] border-[rgba(95,255,96,0.3)] text-[#5fff60] hover:bg-[rgba(95,255,96,0.18)]`}
-                >
-                  View Voting <ThumbsUp size={13} />
-                </button>
-              )} */}
               {renderActionButton()}
             </div>
           </div>
@@ -481,13 +402,7 @@ export const HeroSection = ({
               label="Participants"
               icon={Users}
             />
-            <PrizeStatCard
-              rewards={rewards}
-              prize1={prizeMoney1}
-              prize2={prizeMoney2}
-              prize3={prizeMoney3}
-              icon={Trophy}
-            />
+            <PrizeStatCard prizes={prizes} icon={Trophy} />
             <StatCard
               value={isActive ? `${getDaysRemaining()} Days` : "Ended"}
               label="Time Left"
@@ -501,6 +416,8 @@ export const HeroSection = ({
         <SubmissionForm
           isOpen={showSubmissionModal}
           onClose={() => setShowSubmissionModal(false)}
+          hackathonId={hackathonId}
+          activeSubmissionPhase={activeSubmissionPhase}
         />
       )}
     </>

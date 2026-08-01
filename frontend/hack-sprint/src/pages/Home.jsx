@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   Users,
   ArrowRight,
@@ -58,124 +59,6 @@ const useScrollReveal = (selector = ".hm-fade", threshold = 0.12) => {
     document.querySelectorAll(selector).forEach((el) => obs.observe(el));
     return () => obs.disconnect();
   }, [selector, threshold]);
-};
-
-const Navbar = ({ navigate, userType }) => {
-  const [open, setOpen] = useState(false);
-
-  const NavBtn = ({ onClick, children }) => (
-    <button
-      onClick={onClick}
-      className="font-jb inline-flex items-center gap-[0.4rem] text-[0.65rem] tracking-[0.1em] uppercase px-[0.9rem] py-[0.45rem] rounded-[3px] border cursor-pointer transition-all duration-150 bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60] hover:bg-[rgba(95,255,96,0.16)] hover:border-[rgba(95,255,96,0.5)] hover:shadow-[0_0_12px_rgba(95,255,96,0.14)]"
-    >
-      {children}
-    </button>
-  );
-
-  return (
-    <header className="hm-nav relative z-50 sticky top-0 p-1 font-jb bg-[rgba(8,10,8,0.93)] border-b border-[rgba(95,255,96,0.1)] backdrop-blur-xl">
-      <div className="max-w-[1200px] mx-auto px-5 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-[0.6rem] bg-transparent border-none cursor-pointer"
-        >
-          <img
-            src="hackSprint.webp"
-            alt="HackSprint"
-            className="w-7 h-7 object-contain"
-          />
-          <span className="font-syne font-extrabold text-[1.1rem] tracking-tight text-white">
-            Hack<span className="text-[#5fff60]">Sprint</span>
-          </span>
-        </button>
-
-        <nav className="hidden md:flex items-center gap-2">
-          {userType === "none" && (
-            <>
-              <NavBtn onClick={() => navigate("/studenthome")}>
-                Student <ArrowRight size={11} />
-              </NavBtn>
-              <NavBtn onClick={() => navigate("/adminhome")}>
-                Admin <ArrowRight size={11} />
-              </NavBtn>
-            </>
-          )}
-          {userType === "student" && (
-            <NavBtn onClick={() => navigate("/dashboard")}>
-              My Dashboard <ArrowRight size={11} />
-            </NavBtn>
-          )}
-          {userType === "admin" && (
-            <NavBtn onClick={() => navigate("/admin")}>
-              Admin Panel <ArrowRight size={11} />
-            </NavBtn>
-          )}
-        </nav>
-
-        <button
-          className="md:hidden flex items-center justify-center p-1.5 rounded-[3px] border border-[rgba(95,255,96,0.12)] text-[rgba(95,255,96,0.55)] hover:border-[rgba(95,255,96,0.35)] hover:text-[#5fff60] transition-all cursor-pointer"
-          onClick={() => setOpen(!open)}
-        >
-          <span className="font-jb text-[0.65rem] tracking-[0.1em]">
-            {open ? "✕" : "☰"}
-          </span>
-        </button>
-      </div>
-
-      {open && (
-        <div className="md:hidden flex flex-col gap-2 px-5 py-4 border-t border-[rgba(95,255,96,0.08)] bg-[rgba(8,10,8,0.97)]">
-          {userType === "none" && (
-            <>
-              <button
-                onClick={() => {
-                  navigate("/studenthome");
-                  setOpen(false);
-                }}
-                className="font-jb w-full flex items-center justify-between text-[0.65rem] tracking-[0.1em] uppercase px-4 py-2.5 rounded-[3px] border bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60] cursor-pointer transition-all hover:bg-[rgba(95,255,96,0.16)]"
-              >
-                <span>Student</span>
-                <ArrowRight size={12} />
-              </button>
-              <button
-                onClick={() => {
-                  navigate("/adminhome");
-                  setOpen(false);
-                }}
-                className="font-jb w-full flex items-center justify-between text-[0.65rem] tracking-[0.1em] uppercase px-4 py-2.5 rounded-[3px] border bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60] cursor-pointer transition-all hover:bg-[rgba(95,255,96,0.16)]"
-              >
-                <span>Admin</span>
-                <ArrowRight size={12} />
-              </button>
-            </>
-          )}
-          {userType === "student" && (
-            <button
-              onClick={() => {
-                navigate("/studenthome");
-                setOpen(false);
-              }}
-              className="font-jb w-full flex items-center justify-between text-[0.65rem] tracking-[0.1em] uppercase px-4 py-2.5 rounded-[3px] border bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60] cursor-pointer transition-all"
-            >
-              <span>My Dashboard</span>
-              <ArrowRight size={12} />
-            </button>
-          )}
-          {userType === "admin" && (
-            <button
-              onClick={() => {
-                navigate("/adminhome");
-                setOpen(false);
-              }}
-              className="font-jb w-full flex items-center justify-between text-[0.65rem] tracking-[0.1em] uppercase px-4 py-2.5 rounded-[3px] border bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60] cursor-pointer transition-all"
-            >
-              <span>Admin Panel</span>
-              <ArrowRight size={12} />
-            </button>
-          )}
-        </div>
-      )}
-    </header>
-  );
 };
 
 const QuoteBox = ({ icon: Icon, quote, floatClass, style }) => (
@@ -549,6 +432,7 @@ const Testimonials = () => {
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userType, setUserType] = useState("none");
 
   useEffect(() => {
@@ -556,6 +440,20 @@ const Home = () => {
     const a = localStorage.getItem("adminToken");
     setUserType(s ? "student" : a ? "admin" : "none");
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const verified = params.get("verified");
+    if (verified === "success") {
+      toast.success("Email verified successfully! You can now log in.");
+      navigate("/account/login", { replace: true });
+    } else if (verified === "failed") {
+      toast.error(
+        "Verification link invalid or expired. Please sign up again or request a new link."
+      );
+      navigate("/", { replace: true });
+    }
+  }, [location.search, navigate]);
 
   useScrollReveal(".hm-fade");
 
@@ -599,9 +497,6 @@ const Home = () => {
     <div className="hm-root overflow-hidden">
       {/* bg grid */}
       <div className="hm-bg" />
-
-      {/* Navbar */}
-      <Navbar navigate={navigate} userType={userType} />
 
       {/* ── Hero ── */}
       <section className="relative z-10 min-h-[calc(100vh-56px)] flex flex-col items-center justify-center py-20 text-center overflow-hidden">

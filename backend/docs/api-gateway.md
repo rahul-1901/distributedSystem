@@ -25,9 +25,9 @@ The gateway is intentionally lightweight. It contains no business logic, and it 
 
 ## 2. Current Responsibilities
 
-The gateway currently performs routing, CORS handling, security headers via Helmet, response compression, request logging via Morgan, request ID generation, Prometheus metrics exposure, reverse proxying via `http-proxy-middleware`, and a health endpoint.
+The gateway currently performs routing, CORS handling, security headers via Helmet, response compression, request logging via Morgan, request ID generation, Prometheus metrics exposure, reverse proxying via `http-proxy-middleware`, in-memory per-IP rate limiting via `express-rate-limit`, and a health endpoint.
 
-It is equally important to be explicit about what the gateway does *not* do today. It does not validate JWTs, does not perform role-based access control, does not query MongoDB, contains no business logic, stores no data, and implements no rate limiting or caching, and it does not call Redis. Those responsibilities either live in downstream services already or are captured as planned work in Section 12. Anyone integrating with the gateway should treat this list as authoritative for what it does and does not guarantee today.
+It is equally important to be explicit about what the gateway does *not* do today. It does not validate JWTs, does not perform role-based access control, does not query MongoDB, contains no business logic, stores no data, does not call Redis, and its rate limiting is in-memory (not Redis-backed, so limits are not shared or persisted across gateway restarts/instances) and does not do response caching. Those remaining responsibilities either live in downstream services already or are captured as planned work in Section 12. Anyone integrating with the gateway should treat this list as authoritative for what it does and does not guarantee today.
 
 ---
 
@@ -135,7 +135,7 @@ The gateway uses a single Express global error middleware, positioned as the las
 
 ## 10. Current Limitations
 
-Stated plainly: the gateway currently performs only routing and the cross-cutting concerns listed in Section 2. Authentication and authorization remain entirely inside downstream services — the gateway does not inspect or validate tokens. Rate limiting has not been implemented. The gateway itself is stateless, holding no session or request state between calls. All communication, both from Nginx to the gateway and from the gateway to downstream services, is synchronous HTTP.
+Stated plainly: the gateway currently performs only routing and the cross-cutting concerns listed in Section 2. Authentication and authorization remain entirely inside downstream services — the gateway does not inspect or validate tokens. Rate limiting is implemented, but only as in-memory per-IP limiting — it is not Redis-backed, so it doesn't share state across gateway restarts or multiple instances. Aside from that in-memory limiter, the gateway itself is stateless, holding no session or request state between calls. All communication, both from Nginx to the gateway and from the gateway to downstream services, is synchronous HTTP.
 
 ---
 

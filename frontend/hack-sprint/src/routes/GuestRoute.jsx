@@ -1,10 +1,13 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
+import React from "react";
+import { useAuth } from "../hooks/useAuth";
 
 function GuestRoute() {
-    const { isAuthenticated, loading } = useAuthStore();
-    if (loading) return null;
-    return !isAuthenticated ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) return null;
+
+  return !isAuthenticated ? <Outlet /> : <Navigate to="/dashboard" replace />;
 }
 
 export default GuestRoute;

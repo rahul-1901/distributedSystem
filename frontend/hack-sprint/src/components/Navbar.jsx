@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getDashboard } from "../backendApis/api";
+import { ProfileAPI } from "../api/profile.api.js";
 import {
-  Menu, X, User, Trophy, Terminal, LogOut,
-  Coins, LogIn, Crown, Github, GitBranch,
+  Menu, X, User, Trophy, LogOut,
+  LogIn, Github, GitBranch, ArrowRight,
 } from "lucide-react";
 import "./Navbar.css";
 
@@ -15,44 +15,48 @@ const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [coins, setCoins] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const profileMenuRef = useRef(null);
-  
+
+  const isHome = location.pathname === "/";
+
+  const navItems = [
+    { name: "Hackathons", pageLink: "/hackathons", icon: Trophy },
+  ];
+
+  const handleNavigate = (link) => { navigate(link); setIsOpen(false); setShowProfileMenu(false); };
+  const handleLogout = () => {
+    localStorage.removeItem("token"); localStorage.removeItem("email");
+    setUserInfo(null); setIsLoggedIn(false);
+    navigate("/"); setIsOpen(false); setShowProfileMenu(false);
+  };
+
+  const fetchProfile = async () => {
+    try {
+      const res = await ProfileAPI.getMyProfile();
+      setUserInfo(res.data.profile);
+      setIsLoggedIn(true);
+    } catch {
+      handleLogout();
+    }
+  };
+
+  const isActive = (path) => location.pathname === path;
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { setIsLoggedIn(false); return; }
-    const fetchData = async () => {
-      try {
-        const res = await getDashboard();
-        setUserInfo(res.data.userData);
-        setIsLoggedIn(true);
-      } catch { handleLogout(); }
-    };
-    fetchData();
+    fetchProfile();
+  }, [location]);
+
+  useEffect(() => {
+    setAdminLoggedIn(!!localStorage.getItem("adminToken"));
   }, [location]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const today = new Date().toDateString();
-    const lastVisit = localStorage.getItem("lastVisit");
-    const storedCoins  = parseInt(localStorage.getItem("coins")  || "0", 10);
-    const storedStreak = parseInt(localStorage.getItem("streak") || "0", 10);
-    let newCoins = storedCoins, newStreak = storedStreak;
-    if (lastVisit !== today) {
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      newStreak = lastVisit === yesterday.toDateString() ? storedStreak + 1 : 1;
-      newCoins += 10 + Math.floor(newStreak / 5) * 5;
-      localStorage.setItem("coins", newCoins.toString());
-      localStorage.setItem("streak", newStreak.toString());
-      localStorage.setItem("lastVisit", today);
-    }
-    setCoins(newCoins); setStreak(newStreak);
   }, []);
 
   useEffect(() => {
@@ -64,21 +68,6 @@ const Navbar = () => {
     else document.removeEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showProfileMenu]);
-
-  const navItems = [
-    { name: "Hackathons", pageLink: "/hackathons", icon: Trophy },
-    { name: "Practice",   pageLink: "/quest",       icon: Terminal },
-    { name: "Leaderboard",pageLink: "/leaderboard", icon: Crown },
-  ];
-
-  const handleNavigate = (link) => { navigate(link); setIsOpen(false); setShowProfileMenu(false); };
-  const handleLogout = () => {
-    localStorage.removeItem("token"); localStorage.removeItem("email");
-    setUserInfo(null); setIsLoggedIn(false);
-    navigate("/"); setIsOpen(false); setShowProfileMenu(false);
-  };
-
-  const isActive = (path) => location.pathname === path;
 
   return (
     <>
@@ -117,6 +106,32 @@ const Navbar = () => {
                   <Icon size={13} /> {name}
                 </button>
               ))}
+
+              {isHome && !isLoggedIn && !adminLoggedIn && (
+                <>
+                  <button
+                    onClick={() => handleNavigate("/studenthome")}
+                    className="relative nb-root inline-flex items-center gap-[0.35rem] text-[0.65rem] tracking-[0.08em] uppercase px-[0.75rem] py-[0.45rem] rounded-[3px] cursor-pointer transition-all duration-150 text-[rgba(180,220,180,0.55)] border border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
+                  >
+                    Student <ArrowRight size={11} />
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/adminhome")}
+                    className="relative nb-root inline-flex items-center gap-[0.35rem] text-[0.65rem] tracking-[0.08em] uppercase px-[0.75rem] py-[0.45rem] rounded-[3px] cursor-pointer transition-all duration-150 text-[rgba(180,220,180,0.55)] border border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
+                  >
+                    Admin <ArrowRight size={11} />
+                  </button>
+                </>
+              )}
+
+              {isHome && adminLoggedIn && (
+                <button
+                  onClick={() => handleNavigate("/admin")}
+                  className="relative nb-root inline-flex items-center gap-[0.35rem] text-[0.65rem] tracking-[0.08em] uppercase px-[0.75rem] py-[0.45rem] rounded-[3px] cursor-pointer transition-all duration-150 text-[#5fff60] bg-[rgba(95,255,96,0.08)] border border-[rgba(95,255,96,0.25)]"
+                >
+                  Admin Panel <ArrowRight size={11} />
+                </button>
+              )}
 
               {/* icon group */}
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[rgba(95,255,96,0.1)]">
@@ -169,19 +184,15 @@ const Navbar = () => {
                           </div>
                         </div>
 
-                        {/* stats grid */}
-                        <div className="grid grid-cols-2 gap-2 p-3">
+                        {/* profile action */}
+                        <div className="p-3">
                           <button
                             onClick={() => handleNavigate("/dashboard")}
-                            className="nb-root flex flex-col items-center gap-1 p-2.5 bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.1)] rounded-[3px] text-[rgba(180,220,180,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.28)] hover:bg-[rgba(95,255,96,0.08)] transition-all cursor-pointer"
+                            className="nb-root w-full flex items-center justify-center gap-1.5 p-2.5 bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.1)] rounded-[3px] text-[rgba(180,220,180,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.28)] hover:bg-[rgba(95,255,96,0.08)] transition-all cursor-pointer"
                           >
                             <User size={15} className="text-[#5fff60]" />
-                            <span className="text-[0.58rem] tracking-[0.06em] uppercase">Profile</span>
+                            <span className="text-[0.58rem] tracking-[0.06em] uppercase">My Dashboard</span>
                           </button>
-                          <div className="nb-coin-pulse nb-root flex flex-col items-center gap-1 p-2.5 bg-[rgba(255,184,77,0.06)] border border-[rgba(255,184,77,0.15)] rounded-[3px] select-none">
-                            <Coins size={15} className="text-[#ffb84d]" />
-                            <span className="text-[0.58rem] tracking-[0.06em] uppercase text-[rgba(255,184,77,0.7)]">{coins} Coins</span>
-                          </div>
                         </div>
 
                         {/* logout */}
@@ -238,6 +249,35 @@ const Navbar = () => {
                 </button>
               ))}
 
+              {isHome && !isLoggedIn && !adminLoggedIn && (
+                <>
+                  <button
+                    onClick={() => handleNavigate("/studenthome")}
+                    className="nb-root w-full inline-flex items-center justify-between text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border cursor-pointer transition-all text-[rgba(180,220,180,0.55)] border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
+                  >
+                    <span>Student</span>
+                    <ArrowRight size={12} />
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/adminhome")}
+                    className="nb-root w-full inline-flex items-center justify-between text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border cursor-pointer transition-all text-[rgba(180,220,180,0.55)] border-transparent hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)]"
+                  >
+                    <span>Admin</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </>
+              )}
+
+              {isHome && adminLoggedIn && (
+                <button
+                  onClick={() => handleNavigate("/admin")}
+                  className="nb-root w-full inline-flex items-center justify-between text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border cursor-pointer transition-all text-[#5fff60] bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)]"
+                >
+                  <span>Admin Panel</span>
+                  <ArrowRight size={12} />
+                </button>
+              )}
+
               {/* divider */}
               <div className="h-px bg-gradient-to-r from-transparent via-[rgba(95,255,96,0.1)] to-transparent my-2" />
 
@@ -253,10 +293,6 @@ const Navbar = () => {
                     <div className="flex-1 min-w-0">
                       <p className="nb-root text-[0.72rem] font-semibold text-white truncate">{userInfo?.name || "Guest"}</p>
                       <p className="nb-root text-[0.58rem] text-[rgba(180,220,180,0.4)] truncate">{userInfo?.email || ""}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[#ffb84d]">
-                      <Coins size={13} />
-                      <span className="nb-root text-[0.62rem] font-semibold">{coins || 0}</span>
                     </div>
                   </div>
 

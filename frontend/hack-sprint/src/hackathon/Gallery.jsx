@@ -6,10 +6,9 @@ import {
   Image as ImageIcon,
   Play,
 } from "lucide-react";
-import axios from "axios";
 import { useParams } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { API } from "../backendApis/api";
+import { HackathonAPI } from "../api/hackathon.api.js";
 
 const isVideo = (url) => /\.(mp4|webm|ogg)$/i.test(url);
 
@@ -37,16 +36,17 @@ const Gallery = () => {
   const currentFile = images[lightboxIndex];
 
   useEffect(() => {
-    API
-      .get(
-        `${
-          import.meta.env.VITE_API_BASE_URL
-        }/api/hackathons/${hackathonId}/gallery`
-      )
+    if (!hackathonId) return;
+    HackathonAPI.getGallery(hackathonId)
       .then((r) => {
-        if (r.data.success) setImages(r.data.gallery || []);
+        if (r.data.success) {
+          const urls = (r.data.gallery || []).map((item) =>
+            typeof item === "string" ? item : item.url
+          );
+          setImages(urls);
+        }
       })
-      .catch()
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [hackathonId]);
 

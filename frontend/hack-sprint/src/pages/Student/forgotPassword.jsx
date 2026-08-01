@@ -1,12 +1,9 @@
-import React, { useState, useContext } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { AppContent } from "../context/AppContext";
-import { API } from "../backendApis/api";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { AuthAPI } from "../../api/auth.api.js";
 import { toast } from "react-toastify";
 
 function ForgotPassword() {
-  const { backendUrl } = useContext(AppContent);
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,10 +17,9 @@ function ForgotPassword() {
 
     setLoading(true);
     try {
-      const { data } = await API.post(
-        `${backendUrl}/api/account/send-reset-link`,
-        { email: email.trim().toLowerCase() }
-      );
+      const { data } = await AuthAPI.sendResetLink({
+        email: email.trim().toLowerCase(),
+      });
 
       if (data.success) {
         toast.success("Reset link has been sent to your email");
@@ -114,7 +110,6 @@ function ForgotPassword() {
         .fp-btn:active:not(:disabled) { transform: translateY(0); }
         .fp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* envelope icon animation */
         @keyframes fp-float {
           0%, 100% { transform: translateY(0); }
           50%       { transform: translateY(-4px); }
@@ -124,7 +119,6 @@ function ForgotPassword() {
 
       <div className="fp-root fp-bg min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
         <div className="fp-card relative z-10 w-full max-w-[400px] bg-[rgba(10,12,10,0.93)] border border-[rgba(95,255,96,0.18)] rounded-[4px] p-8 backdrop-blur-xl shadow-[0_0_40px_rgba(95,255,96,0.08)]">
-
           <div className="fp-root inline-block text-[0.58rem] tracking-[0.18em] uppercase text-[#5fff60] border border-[rgba(95,255,96,0.25)] px-[0.65rem] py-[0.18rem] rounded-[2px] mb-4">
             password reset
           </div>
@@ -144,7 +138,9 @@ function ForgotPassword() {
           <form onSubmit={handleSubmit} noValidate>
             <div className="flex flex-col gap-4">
               <div>
-                <label htmlFor="fp-email" className="fp-label">Email address</label>
+                <label htmlFor="fp-email" className="fp-label">
+                  Email address
+                </label>
                 <input
                   id="fp-email"
                   className="fp-input"

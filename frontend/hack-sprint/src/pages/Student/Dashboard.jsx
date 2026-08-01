@@ -1,25 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  getDashboard,
-  addEducation,
-  editEducation as editEdu,
-  deleteEducation,
-  deleteConnectedApp,
-  addConnectedApp,
-  editConnectedApp,
-  addLanguages,
-  deleteLanguages,
-  addSkills,
-  deleteSkills,
-} from "../../backendApis/api";
+import { ProfileAPI } from "../../api/profile.api.js";
+import { HackathonAPI } from "../../api/hackathon.api.js";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAuth } from "../../hooks/useAuth.js";
 import {
-  Eye,
-  CheckCircle,
-  MessageSquare,
-  Star,
-  Coins,
   Heart,
   RefreshCw,
   School,
@@ -30,18 +15,21 @@ import {
   X,
   ExternalLink,
   LogOut,
-  Zap,
   Code,
   Globe,
   BookOpen,
   Pencil,
   Trash2,
+  Trophy,
+  Users,
+  Calendar,
+  AlertCircle,
+  Rocket,
+  Upload,
 } from "lucide-react";
-import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import SubmissionForms from "../../hackathon/DashboardSubmission";
 import "../Styles/Dashboard.css";
-import { API } from "../../backendApis/api";
 
 const inputCls = [
   "w-full bg-[rgba(18,22,18,0.7)] border border-[rgba(95,255,96,0.12)] rounded-[3px]",
@@ -59,12 +47,6 @@ const Card = ({ children, amber, className = "" }) => (
       amber ? " ud-card-amber" : ""
     } relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] backdrop-blur-sm p-5 ${className}`}
   >
-    {children}
-  </div>
-);
-
-const SectionLabel = ({ children }) => (
-  <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] tracking-[0.18em] uppercase text-[rgba(95,255,96,0.45)] mb-3">
     {children}
   </div>
 );
@@ -109,6 +91,8 @@ const Tag = ({ children, onDelete, color = "green" }) => {
   const c =
     color === "blue"
       ? "bg-[rgba(96,200,255,0.07)] border-[rgba(96,200,255,0.2)] text-[rgba(96,200,255,0.75)]"
+      : color === "amber"
+      ? "bg-[rgba(255,184,77,0.07)] border-[rgba(255,184,77,0.2)] text-[rgba(255,184,77,0.8)]"
       : "bg-[rgba(95,255,96,0.07)] border-[rgba(95,255,96,0.2)] text-[rgba(95,255,96,0.75)]";
   return (
     <span
@@ -127,24 +111,9 @@ const Tag = ({ children, onDelete, color = "green" }) => {
   );
 };
 
-const StatRow = ({ icon: Icon, label, value }) => (
-  <div className="flex items-center justify-between py-1.5 border-b border-[rgba(95,255,96,0.05)] last:border-b-0">
-    <span className="flex items-center gap-2 font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.5)]">
-      <Icon size={12} className="text-[rgba(95,255,96,0.5)]" />
-      {label}
-    </span>
-    <span className="font-[family-name:'Syne',sans-serif] font-bold text-[0.78rem] text-[#5fff60]">
-      {value}
-    </span>
-  </div>
-);
-
 export const UserDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [coins, setCoins] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [showReward, setShowReward] = useState(false);
   const [editEducationIndex, setEditEducationIndex] = useState(undefined);
   const [educationForm, setEducationForm] = useState({
     institute: "",
@@ -152,7 +121,6 @@ export const UserDashboard = () => {
     department: "",
     location: "",
   });
-  const [userId, setUserId] = useState("");
   const [editAppsIndex, setEditAppsIndex] = useState(undefined);
   const [tempAppName, setTempAppName] = useState("");
   const [tempAppUrl, setTempAppUrl] = useState("");
@@ -164,7 +132,11 @@ export const UserDashboard = () => {
   const [selectedHackathonId, setSelectedHackathonId] = useState(null);
   const [likedHackathons, setLikedHackathons] = useState([]);
   const [loadingWishlist, setLoadingWishlist] = useState(false);
+  const [myRegistrations, setMyRegistrations] = useState([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+  const [registrationsError, setRegistrationsError] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const availableLanguages = [
     "C++",
@@ -187,32 +159,10 @@ export const UserDashboard = () => {
     "Operating Systems",
   ];
 
-  useEffect(() => {
-    const today = new Date().toDateString();
-    const lastVisit = localStorage.getItem("lastVisit");
-    const storedCoins = parseInt(localStorage.getItem("coins") || "0", 10);
-    const storedStreak = parseInt(localStorage.getItem("streak") || "0", 10);
-    let newCoins = storedCoins,
-      newStreak = storedStreak;
-    if (lastVisit !== today) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      newStreak = lastVisit === yesterday.toDateString() ? storedStreak + 1 : 1;
-      newCoins += 10 + Math.floor(newStreak / 5) * 5;
-      localStorage.setItem("coins", newCoins.toString());
-      localStorage.setItem("streak", newStreak.toString());
-      localStorage.setItem("lastVisit", today);
-      setShowReward(true);
-    }
-    setCoins(newCoins);
-    setStreak(newStreak);
-  }, []);
-
   const fetchData = async () => {
     try {
-      const res = await getDashboard();
-      setData(res.data.userData);
-      setUserId(res.data.userData._id);
+      const res = await ProfileAPI.getMyProfile();
+      setData(res.data.profile);
     } catch (err) {
       // console.error(err);
     } finally {
@@ -221,6 +171,8 @@ export const UserDashboard = () => {
   };
   useEffect(() => {
     fetchData();
+    fetchWishlist();
+    fetchMyRegistrations();
   }, []);
 
   useEffect(() => {
@@ -230,12 +182,11 @@ export const UserDashboard = () => {
         if (!token) return;
         const decoded = jwtDecode(token);
         if (decoded.exp < Math.floor(Date.now() / 1000)) {
+          logout();
           localStorage.removeItem("token");
-          localStorage.removeItem("email");
           toast.success("Session expired", { autoClose: 800 });
           setTimeout(() => {
             navigate("/account/login");
-            window.location.reload();
           }, 2000);
         }
       } catch {}
@@ -250,35 +201,51 @@ export const UserDashboard = () => {
     if (!token) return;
     setLoadingWishlist(true);
     try {
-      const res = await API.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/hackathons/wishlist`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await HackathonAPI.getWishlist();
       if (res.data.success) setLikedHackathons(res.data.likedHackathons);
     } catch {
     } finally {
       setLoadingWishlist(false);
     }
   };
-  useEffect(() => {
-    if (data) fetchWishlist();
-  }, [data]);
+
+  const fetchMyRegistrations = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setLoadingRegistrations(true);
+    setRegistrationsError(false);
+    try {
+      const res = await HackathonAPI.getMyRegistrations();
+      if (res.data.success) {
+        setMyRegistrations(res.data.registrations || []);
+      } else {
+        setRegistrationsError(true);
+      }
+    } catch (err) {
+      setRegistrationsError(true);
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
 
   const handleSaveEducation = async () => {
     if (!educationForm.institute || !educationForm.passOutYear) return;
     try {
-      if (editEducationIndex === "new")
-        await addEducation({ userId, ...educationForm });
-      else
-        await editEdu({
-          userId,
-          eduId: data.education[editEducationIndex]._id,
-          ...educationForm,
-        });
-      await fetchData();
+      let res;
+      if (editEducationIndex === "new") {
+        res = await ProfileAPI.addEducation(educationForm);
+      } else {
+        const eduId = data.education[editEducationIndex]._id;
+        res = await ProfileAPI.updateEducation(eduId, educationForm);
+      }
+      setData((p) => ({ ...p, education: res.data.education }));
       resetEducationForm();
+      toast.success(
+        editEducationIndex === "new" ? "Education added" : "Education updated"
+      );
     } catch (err) {
-      // console.error(err);
+      toast.error(err.response?.data?.message || "Failed to save education");
+      await fetchData();
     }
   };
   const handleDeleteEducation = async (idx) => {
@@ -288,8 +255,10 @@ export const UserDashboard = () => {
         ...p,
         education: p.education.filter((_, i) => i !== idx),
       }));
-      await deleteEducation({ userId, eduId });
-    } catch {
+      await ProfileAPI.removeEducation(eduId);
+      toast.success("Education removed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove education");
       await fetchData();
     }
   };
@@ -306,23 +275,27 @@ export const UserDashboard = () => {
   const handleSaveApp = async () => {
     if (!tempAppName || !tempAppUrl) return;
     try {
-      if (editAppsIndex === "new")
-        await addConnectedApp({
-          userId,
+      let res;
+      if (editAppsIndex === "new") {
+        res = await ProfileAPI.addConnectedApp({
           appName: tempAppName,
           appURL: tempAppUrl,
         });
-      else
-        await editConnectedApp({
-          userId,
-          appId: data.connectedApps[editAppsIndex]._id,
+      } else {
+        const appId = data.connectedApps[editAppsIndex]._id;
+        res = await ProfileAPI.updateConnectedApp(appId, {
           appName: tempAppName,
           appURL: tempAppUrl,
         });
-      await fetchData();
+      }
+      setData((p) => ({ ...p, connectedApps: res.data.connectedApps }));
       resetForm();
+      toast.success(
+        editAppsIndex === "new" ? "App connected" : "App updated"
+      );
     } catch (err) {
-      // console.error(err);
+      toast.error(err.response?.data?.message || "Failed to save app");
+      await fetchData();
     }
   };
   const handleDeleteApp = async (idx) => {
@@ -332,8 +305,10 @@ export const UserDashboard = () => {
         ...p,
         connectedApps: p.connectedApps.filter((_, i) => i !== idx),
       }));
-      await deleteConnectedApp({ userId, appId });
-    } catch {
+      await ProfileAPI.removeConnectedApp(appId);
+      toast.success("App removed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove app");
       await fetchData();
     }
   };
@@ -344,73 +319,64 @@ export const UserDashboard = () => {
   };
 
   const handleSaveLanguage = async () => {
-    if (
-      !selectedLanguage ||
-      data.languages.some((l) => l.name === selectedLanguage)
-    )
-      return;
+    if (!selectedLanguage || data.languages?.includes(selectedLanguage)) return;
     try {
-      await addLanguages({ userId, language: selectedLanguage });
-      setData({
-        ...data,
-        languages: [...(data.languages || []), { name: selectedLanguage }],
-      });
+      const updated = [...(data.languages || []), selectedLanguage];
+      const res = await ProfileAPI.updateLanguages(updated);
+      setData({ ...data, languages: res.data.languages });
       setSelectedLanguage("");
       setIsAddingLanguage(false);
+      toast.success("Language added");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
+      toast.error(err.response?.data?.message || "Failed to add language");
     }
   };
   const handleDeleteLanguage = async (langName) => {
     try {
-      await deleteLanguages({ userId, language: langName });
-      setData({
-        ...data,
-        languages: data.languages.filter((l) => l.language !== langName),
-      });
+      const updated = (data.languages || []).filter((l) => l !== langName);
+      const res = await ProfileAPI.updateLanguages(updated);
+      setData({ ...data, languages: res.data.languages });
+      toast.success("Language removed");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
+      toast.error(err.response?.data?.message || "Failed to remove language");
     }
   };
 
   const handleSaveSkill = async () => {
     if (!selectedSkill) return;
-    if (data.skills.some((s) => s.name === selectedSkill)) {
+    if (data.skills?.includes(selectedSkill)) {
       toast.error("Already added!");
       return;
     }
     try {
-      await addSkills({ userId, skill: selectedSkill });
-      setData({
-        ...data,
-        skills: [...(data.skills || []), { name: selectedSkill }],
-      });
+      const updated = [...(data.skills || []), selectedSkill];
+      const res = await ProfileAPI.updateSkills(updated);
+      setData({ ...data, skills: res.data.skills });
       setSelectedSkill("");
       setIsAddingSkill(false);
+      toast.success("Skill added");
     } catch (err) {
-      // console.error(err);
+      toast.error(err.response?.data?.message || "Failed to add skill");
     }
   };
   const handleDeleteSkill = async (skillName) => {
-    setData({
-      ...data,
-      skills: data.skills.filter((s) => s.skill !== skillName),
-    });
     try {
-      await deleteSkills({ userId, skill: skillName });
+      const updated = (data.skills || []).filter((s) => s !== skillName);
+      const res = await ProfileAPI.updateSkills(updated);
+      setData({ ...data, skills: res.data.skills });
+      toast.success("Skill removed");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
+      toast.error(err.response?.data?.message || "Failed to remove skill");
     }
   };
 
   const handleLogout = () => {
+    logout();
     localStorage.removeItem("token");
-    localStorage.removeItem("email");
     toast.success("Logged out", { autoClose: 1000 });
     setTimeout(() => navigate("/"), 1700);
   };
 
-  /* ── Loading / error states ── */
   if (loading)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] gap-3 font-[family-name:'JetBrains_Mono',monospace]">
@@ -429,6 +395,14 @@ export const UserDashboard = () => {
       </div>
     );
 
+  // Registrations whose linked hackathon still exists (defensive against deleted/unpopulated refs)
+  const validRegistrations = myRegistrations.filter((reg) => reg?.hackathon);
+  const orphanedCount = myRegistrations.length - validRegistrations.length;
+  const ongoingCount = validRegistrations.filter(
+    (reg) => !reg.hackathon.endDate || new Date(reg.hackathon.endDate) > new Date()
+  ).length;
+  const completedCount = validRegistrations.length - ongoingCount;
+
   return (
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');`}</style>
@@ -440,7 +414,7 @@ export const UserDashboard = () => {
                 <div className="relative">
                   <img
                     src={
-                      data.avatar_url ||
+                      data.image?.url ||
                       "https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_1280.png"
                     }
                     alt="Avatar"
@@ -465,62 +439,38 @@ export const UserDashboard = () => {
               </div>
             </Card>
 
-            {/* Coins + Streak */}
-            <Card amber>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Coins size={14} className="text-[#ffb84d]" />
-                  <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[#ffb84d] text-[1rem]">
-                    {coins}
-                  </span>
-                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] tracking-[0.1em] uppercase text-[rgba(255,184,77,0.5)]">
-                    coins
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Zap size={12} className="text-[#ffb84d]" />
-                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(255,184,77,0.7)]">
-                    {streak}d streak
-                  </span>
-                </div>
-              </div>
-              <div className="h-1.5 rounded-full bg-[rgba(255,184,77,0.1)] overflow-hidden">
-                <div
-                  className="h-full bg-[#ffb84d] rounded-full transition-all"
-                  style={{ width: `${Math.min((streak % 5) * 20, 100)}%` }}
-                />
-              </div>
-              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(255,184,77,0.35)] mt-1.5 tracking-[0.05em]">
-                {5 - (streak % 5)} more days for bonus coins
-              </p>
-            </Card>
-
-            {/* Community Stats */}
             <Card>
-              <SectionLabel>Community Stats</SectionLabel>
-              <StatRow
-                icon={Eye}
-                label="Views"
-                value={data.stats?.views || 0}
-              />
-              <StatRow
-                icon={CheckCircle}
-                label="Solutions"
-                value={data.stats?.solutions || 0}
-              />
-              <StatRow
-                icon={MessageSquare}
-                label="Discussions"
-                value={data.stats?.discussions || 0}
-              />
-              <StatRow
-                icon={Star}
-                label="Reputation"
-                value={data.stats?.reputation || 0}
-              />
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy size={14} className="text-[rgba(95,255,96,0.5)]" />
+                <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[0.85rem] tracking-tight">
+                  Participation
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col items-center gap-0.5 p-2.5 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
+                  <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[1.15rem] tracking-tight">
+                    {validRegistrations.length}
+                  </span>
+                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.52rem] tracking-[0.1em] uppercase text-[rgba(180,220,180,0.4)]">
+                    Joined
+                  </span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 p-2.5 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
+                  <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[1.15rem] tracking-tight">
+                    {ongoingCount}
+                  </span>
+                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.52rem] tracking-[0.1em] uppercase text-[rgba(180,220,180,0.4)]">
+                    Ongoing
+                  </span>
+                </div>
+              </div>
+              {completedCount > 0 && (
+                <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.35)] mt-2 tracking-[0.04em]">
+                  {completedCount} completed
+                </p>
+              )}
             </Card>
 
-            {/* Languages */}
             <Card>
               <SectionHead
                 action={
@@ -540,11 +490,8 @@ export const UserDashboard = () => {
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {data.languages?.length > 0 ? (
                   data.languages.map((l, i) => (
-                    <Tag
-                      key={i}
-                      onDelete={() => handleDeleteLanguage(l.language)}
-                    >
-                      {l.language || l.name}
+                    <Tag key={i} onDelete={() => handleDeleteLanguage(l)}>
+                      {l}
                     </Tag>
                   ))
                 ) : (
@@ -562,7 +509,7 @@ export const UserDashboard = () => {
                   >
                     <option value="">Select language</option>
                     {availableLanguages
-                      .filter((l) => !data.languages?.some((x) => x.name === l))
+                      .filter((l) => !data.languages?.includes(l))
                       .map((l, i) => (
                         <option key={i} value={l}>
                           {l}
@@ -587,7 +534,6 @@ export const UserDashboard = () => {
               )}
             </Card>
 
-            {/* Skills */}
             <Card>
               <SectionHead
                 action={
@@ -610,9 +556,9 @@ export const UserDashboard = () => {
                     <Tag
                       key={i}
                       color="blue"
-                      onDelete={() => handleDeleteSkill(s.skill)}
+                      onDelete={() => handleDeleteSkill(s)}
                     >
-                      {s.skill || s.name}
+                      {s}
                     </Tag>
                   ))
                 ) : (
@@ -654,9 +600,143 @@ export const UserDashboard = () => {
             </Card>
           </aside>
 
-          {/* ═══════ MAIN CONTENT ═══════ */}
           <main className="flex-1 flex flex-col gap-4 min-w-0">
-            {/* Education */}
+            <Card>
+              <SectionHead>
+                <Trophy
+                  size={13}
+                  className="inline mr-1.5 text-[rgba(95,255,96,0.5)]"
+                />
+                My Hackathons
+              </SectionHead>
+
+              {loadingRegistrations ? (
+                <div className="flex items-center gap-2 py-2">
+                  <RefreshCw
+                    size={12}
+                    className="animate-spin text-[rgba(95,255,96,0.4)]"
+                  />
+                  <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.62rem] text-[rgba(180,220,180,0.35)]">
+                    Loading your hackathons…
+                  </p>
+                </div>
+              ) : registrationsError ? (
+                <div className="flex flex-col items-start gap-2 bg-[rgba(255,60,60,0.04)] border border-[rgba(255,60,60,0.15)] rounded-[3px] p-3.5">
+                  <div className="flex items-center gap-2 text-[rgba(255,144,144,0.8)]">
+                    <AlertCircle size={13} />
+                    <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem]">
+                      Couldn't load your hackathons. Check your connection and
+                      try again.
+                    </span>
+                  </div>
+                  <Btn onClick={fetchMyRegistrations} color="amber">
+                    <RefreshCw size={10} /> Retry
+                  </Btn>
+                </div>
+              ) : validRegistrations.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {orphanedCount > 0 && (
+                    <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(255,184,77,0.45)]">
+                      {orphanedCount} of your registrations reference a
+                      hackathon that's no longer available.
+                    </p>
+                  )}
+                  {validRegistrations.map((reg, idx) => {
+                    const hack = reg.hackathon;
+                    const dateVal = reg.registeredAt || reg.createdAt;
+                    return (
+                      <div
+                        key={reg._id || hack._id || idx}
+                        className="flex gap-3 bg-[rgba(95,255,96,0.03)] border border-[rgba(95,255,96,0.1)] rounded-[3px] p-3 hover:border-[rgba(95,255,96,0.28)] transition-all"
+                      >
+                        <div
+                          onClick={() => navigate(`/hackathon/${hack.slug}`)}
+                          className="flex gap-3 flex-1 min-w-0 cursor-pointer"
+                        >
+                          {hack.image && (
+                            <div className="w-20 h-14 sm:w-24 sm:h-16 rounded-[2px] overflow-hidden flex-shrink-0">
+                              <img
+                                src={
+                                  typeof hack.image === "string"
+                                    ? hack.image
+                                    : hack.image?.url
+                                }
+                                alt={hack.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[0.82rem] tracking-tight truncate">
+                                {hack.title || "Untitled hackathon"}
+                              </h4>
+                              {reg.status && (
+                                <Tag color="amber">{reg.status}</Tag>
+                              )}
+                            </div>
+                            {hack.subTitle && (
+                              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] text-[rgba(180,220,180,0.4)] truncate mt-0.5">
+                                {hack.subTitle}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap gap-3 mt-1.5 items-center">
+                              {reg.team?.name && (
+                                <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.4)] flex items-center gap-1">
+                                  <Users size={10} />
+                                  {reg.team.name}
+                                </span>
+                              )}
+                              {dateVal && (
+                                <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.35)] flex items-center gap-1">
+                                  <Calendar size={10} />
+                                  {new Date(dateVal).toLocaleDateString()}
+                                </span>
+                              )}
+                              {hack.startDate && (
+                                <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.35)]">
+                                  Starts{" "}
+                                  {new Date(hack.startDate).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 self-center">
+                          <Btn
+                            color="amber"
+                            onClick={() => {
+                              setSelectedHackathonId(hack._id);
+                              setIsSubmissionOpen(true);
+                            }}
+                          >
+                            <Upload size={10} /> Submit
+                          </Btn>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center gap-3 py-8 px-4">
+                  <div className="w-14 h-14 rounded-full bg-[rgba(95,255,96,0.06)] border border-[rgba(95,255,96,0.18)] flex items-center justify-center">
+                    <Rocket size={22} className="text-[rgba(95,255,96,0.6)]" />
+                  </div>
+                  <h4 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[1rem] tracking-tight">
+                    You haven't joined a hackathon yet
+                  </h4>
+                  <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.45)] leading-relaxed max-w-xs">
+                    Build something real, team up with other developers, and
+                    compete for prizes. Your first hackathon is one click
+                    away.
+                  </p>
+                  <Btn onClick={() => navigate("/hackathons")} color="solid">
+                    <Trophy size={11} /> Browse Hackathons
+                  </Btn>
+                </div>
+              )}
+            </Card>
+
             <Card>
               <SectionHead
                 action={
@@ -786,7 +866,6 @@ export const UserDashboard = () => {
               )}
             </Card>
 
-            {/* Connected Apps */}
             <Card>
               <SectionHead
                 action={
@@ -881,19 +960,8 @@ export const UserDashboard = () => {
               )}
             </Card>
 
-            {/* Favourites / Wishlist */}
             <Card>
-              <SectionHead
-                action={
-                  <Btn onClick={fetchWishlist} disabled={loadingWishlist}>
-                    <RefreshCw
-                      size={10}
-                      className={loadingWishlist ? "animate-spin" : ""}
-                    />{" "}
-                    Refresh
-                  </Btn>
-                }
-              >
+              <SectionHead>
                 <Heart
                   size={13}
                   className="inline mr-1.5 text-[rgba(95,255,96,0.5)]"
@@ -910,7 +978,7 @@ export const UserDashboard = () => {
                   {likedHackathons.map((h) => (
                     <div
                       key={h._id}
-                      onClick={() => navigate(`/hackathon/${h._id}`)}
+                      onClick={() => navigate(`/hackathon/${h.slug}`)}
                       className="flex gap-3 bg-[rgba(95,255,96,0.03)] border border-[rgba(95,255,96,0.1)] rounded-[3px] p-3 cursor-pointer hover:border-[rgba(95,255,96,0.28)] transition-all"
                     >
                       {h.image && (
@@ -953,38 +1021,6 @@ export const UserDashboard = () => {
           </main>
         </div>
 
-        {/* ── Daily Reward Modal ── */}
-        {showReward && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/75 backdrop-blur-sm z-50 px-4">
-            <div className="ud-reward-modal ud-card relative bg-[rgba(8,10,8,0.98)] border border-[rgba(255,184,77,0.3)] rounded-[4px] p-7 max-w-xs w-full text-center shadow-[0_0_40px_rgba(255,184,77,0.1)]">
-              {/* amber top line */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-[rgba(255,184,77,0.4)] rounded-t-[4px]" />
-              <div className="text-3xl mb-3">🎉</div>
-              <h2 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[1.1rem] tracking-tight mb-2">
-                Daily Reward!
-              </h2>
-              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.55)] mb-1">
-                You earned{" "}
-                <span className="text-[#ffb84d] font-bold">
-                  +{10 + Math.floor(streak / 5) * 5} coins
-                </span>{" "}
-                today.
-              </p>
-              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] text-[rgba(255,184,77,0.5)] mb-5">
-                🔥 Streak: {streak} days
-              </p>
-              <Btn
-                onClick={() => setShowReward(false)}
-                color="solid"
-                className="w-full justify-center text-[0.68rem]"
-              >
-                Awesome!
-              </Btn>
-            </div>
-          </div>
-        )}
-
-        {/* ── Submission Modal ── */}
         {isSubmissionOpen && (
           <SubmissionForms
             isOpen={isSubmissionOpen}

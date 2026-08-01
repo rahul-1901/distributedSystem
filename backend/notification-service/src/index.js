@@ -8,7 +8,7 @@ import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
 dotenv.config();
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || 5004;
 const app = express();
 
 app.use(express.json());

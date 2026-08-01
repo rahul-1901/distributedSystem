@@ -109,7 +109,7 @@ class EmailService {
       data: {
         name: user.name,
         email: user.email,
-        verifyUrl: `${env.FRONTEND_URL}/verify-email/${token}`,
+        verifyUrl: `${env.BACKEND_URL}/api/auth/verify-email?token=${token}`,
       },
     });
   }
@@ -134,7 +134,7 @@ class EmailService {
       data: {
         name: user.name,
         email: user.email,
-        resetUrl: `${env.FRONTEND_URL}/reset-password/${token}`,
+        resetUrl: `${env.FRONTEND_URL}/account/reset-password?token=${token}`,
       },
     });
   }

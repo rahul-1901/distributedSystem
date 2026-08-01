@@ -5,10 +5,7 @@ import {
   FileText,
   Scale,
   CircleHelp,
-  Info,
   MessagesSquare,
-  NotebookPen,
-  Target as ThemeIcon,
   ThumbsUp,
   Phone,
   Images,
@@ -22,18 +19,15 @@ export const SidebarNav = ({
 }) => {
   const allSections = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "about", label: "About", icon: Info },
+    { id: "details", label: "Details", icon: FileText },
     { id: "prizes", label: "Prizes", icon: Award },
-    { id: "rules", label: "Rules", icon: FileText },
-    { id: "submission-guide", label: "Submission", icon: NotebookPen },
-    { id: "judging", label: "Judging", icon: Scale },
-    { id: "faqs", label: "FAQs", icon: CircleHelp },
-    { id: "refMaterial", label: "Reference", icon: FileText },
-    { id: "discussion", label: "Discussion", icon: MessagesSquare },
+    { id: "resources", label: "Resources", icon: FileText },
     { id: "results", label: "Results", icon: Award, requiresResult: true },
-    { id: "upvote", label: "Voting", icon: ThumbsUp, requiresResult: true },
+    { id: "upvote", label: "Voting", icon: ThumbsUp, requiresVoting: true },
     { id: "gallery", label: "Gallery", icon: Images },
-    { id: "contact", label: "Contact", icon: Phone }
+    { id: "contact", label: "Contact", icon: Phone },
+    { id: "discussion", label: "Discussion", icon: MessagesSquare },
+    { id: "faqs", label: "FAQs", icon: CircleHelp },
   ];
 
   const sections = allSections.filter((s) => {

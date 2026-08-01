@@ -27,7 +27,8 @@ import {
   registerParticipants, 
   isRegistered,
   getMyRegistration,
-  updateMyRegistration
+  updateMyRegistration,
+  getMyRegistrations
 } from "../controllers/registration.controller.js";
 
 import {
@@ -83,6 +84,7 @@ export const strictLimiter = rateLimit({
 
 //hackathon public routes
 router.get("/hackathon", getLimiter, getPublicHackathons);
+router.get("/my-registrations", verifyAuth, getLimiter, getMyRegistrations);
 router.get("/:id", getLimiter, getHackathonById);
 router.get("/:id/results", getLimiter, getHackathonResults);
 router.get("/:hackathonId/gallery", getLimiter, getHackathonGallery);

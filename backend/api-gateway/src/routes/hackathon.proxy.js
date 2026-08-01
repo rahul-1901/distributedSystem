@@ -4,9 +4,6 @@ import { env } from "../config/env.js";
 export const hackathonProxy = createProxyMiddleware({
   target: env.HACKATHON_SERVICE_URL,
   changeOrigin: true,
-  pathRewrite: {
-    "^/api/hackathons": "/api/hackathons",
-  },
   timeout: 30000,
   proxyTimeout: 30000,
   on: {

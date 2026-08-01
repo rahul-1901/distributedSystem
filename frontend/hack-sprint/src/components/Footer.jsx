@@ -112,9 +112,7 @@ const Footer = () => {
       external: false,
       links: [
         { name: "Home", url: "/" },
-        { name: "Dev Quest", url: "/quest" },
         { name: "Hackathons", url: "/hackathons" },
-        { name: "Leaderboard", url: "/leaderboard" },
       ],
     },
   ];

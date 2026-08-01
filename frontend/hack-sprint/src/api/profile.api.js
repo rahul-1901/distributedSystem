@@ -5,60 +5,37 @@ export const ProfileAPI = {
   getMyProfile() {
     return client.get(`${API.PROFILE}/me`);
   },
-
   updateProfile(data) {
     return client.patch(`${API.PROFILE}/me`, data);
   },
-
-  getPublicProfile(username) {
-    return client.get(`${API.PROFILE}/${username}`);
+  getPublicProfile(userName) {
+    return client.get(`${API.PROFILE}/${userName}`);
   },
-
-  addEducation(data) {
-    return client.post(`${API.PROFILE}/me/education`, data);
+  addEducation(payload) {
+    return client.post(`${API.PROFILE}/me/education`, payload);
   },
-
-  updateEducation(id, data) {
-    return client.patch(`${API.PROFILE}/me/education/${id}`, data);
+  updateEducation(id, payload) {
+    return client.patch(`${API.PROFILE}/me/education/${id}`, payload);
   },
-
   removeEducation(id) {
     return client.delete(`${API.PROFILE}/me/education/${id}`);
   },
-
-  addConnectedApp(data) {
-    return client.post(`${API.PROFILE}/me/apps`, data);
+  addConnectedApp(payload) {
+    return client.post(`${API.PROFILE}/me/apps`, payload);
   },
-
-  updateConnectedApp(id, data) {
-    return client.patch(`${API.PROFILE}/me/apps/${id}`, data);
+  updateConnectedApp(id, payload) {
+    return client.patch(`${API.PROFILE}/me/apps/${id}`, payload);
   },
-
   removeConnectedApp(id) {
     return client.delete(`${API.PROFILE}/me/apps/${id}`);
   },
-
   updateSkills(skills) {
-    return client.put(`${API.PROFILE}/me/skills`, {
-      skills,
-    });
+    return client.put(`${API.PROFILE}/me/skills`, { skills });
   },
-
   updateLanguages(languages) {
-    return client.put(`${API.PROFILE}/me/languages`, {
-      languages,
-    });
+    return client.put(`${API.PROFILE}/me/languages`, { languages });
   },
-
-  updateAvatar(formData) {
-    return client.patch(
-      `${API.PROFILE}/me/avatar`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+  updateAvatar(image) {
+    return client.patch(`${API.PROFILE}/me/avatar`, { image });
   },
 };

@@ -1,8 +1,8 @@
 export const API = {
   AUTH: "/api/auth",
   ADMIN_AUTH: "/api/admin-auth",
-  PROFILE: "/api/profile",
-  HACKATHON: "/api/hackatons",
+  PROFILE: "/api/auth/profile",
+  HACKATHON: "/api/hackathons",
   REGISTRATION: "/api/hackathons",
   TEAM: "/api/hackathons/teams",
   SUBMISSION: "/api/hackathons",

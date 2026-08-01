@@ -2,20 +2,19 @@ import client from "./client";
 import { API } from "./endpoints";
 
 export const MediaAPI = {
-  upload(file) {
+  uploadFile(file, resourceType, hackathonId, onUploadProgress) {
     const formData = new FormData();
 
     formData.append("file", file);
+    formData.append("resourceType", resourceType);
+    if (hackathonId) formData.append("hackathonId", hackathonId);
 
-    return client.post(
-      API.MEDIA,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    return client.post(API.MEDIA, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress,
+    });
   },
 
   delete(data) {

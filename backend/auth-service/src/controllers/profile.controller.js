@@ -9,7 +9,7 @@ export const getMyProfile = async (req, res, next) => {
       profile,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -22,7 +22,7 @@ export const getPublicProfile = async (req, res, next) => {
       profile,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -36,7 +36,7 @@ export const updateProfile = async (req, res, next) => {
       profile,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -49,7 +49,7 @@ export const addEducation = async (req, res, next) => {
       education,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -66,7 +66,7 @@ export const updateEducation = async (req, res, next) => {
       education,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -82,7 +82,7 @@ export const removeEducation = async (req, res, next) => {
       education,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -98,7 +98,7 @@ export const addConnectedApp = async (req, res, next) => {
       connectedApps,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -115,7 +115,7 @@ export const updateConnectedApp = async (req, res, next) => {
       connectedApps,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -131,7 +131,7 @@ export const removeConnectedApp = async (req, res, next) => {
       connectedApps,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -147,7 +147,7 @@ export const updateSkills = async (req, res, next) => {
       skills,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -163,7 +163,7 @@ export const updateLanguages = async (req, res, next) => {
       languages,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };
 
@@ -179,6 +179,6 @@ export const updateAvatar = async (req, res, next) => {
       image,
     });
   } catch (error) {
-    console.log(error.message);
+    next(error);
   }
 };

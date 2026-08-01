@@ -90,4 +90,21 @@ export class RegistrationRepository {
       hackathon: hackathonId,
     });
   }
+
+  async findUserRegistrations(userId) {
+    return RegisteredParticipantsModel.find({
+      user: userId,
+    })
+      .populate({
+        path: "hackathon",
+        select:
+          "title subTitle slug image banner startDate endDate registrationDeadline status mode location phases",
+      })
+      .populate({
+        path: "team",
+        select: "name secretCode members leader",
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+  }
 }

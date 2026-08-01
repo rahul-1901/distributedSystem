@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ThumbsUp,
-  Github,
-  ExternalLink,
   FileText,
-  Image as ImageIcon,
-  Video,
   ClipboardList,
   Users,
   User,
@@ -14,8 +10,9 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { VotingAPI } from "../api/voting.api.js";
 
 const PAGE_SIZE = 5;
 
@@ -32,24 +29,6 @@ const MEDALS = {
     emoji: "🥉",
     cls: "bg-[rgba(205,127,50,0.1)] text-[#cd7f32] border-[rgba(205,127,50,0.3)]",
   },
-};
-
-const AssetPill = ({ color, label }) => {
-  const c = {
-    blue: "bg-[rgba(96,200,255,0.07)] text-[rgba(96,200,255,0.75)] border-[rgba(96,200,255,0.2)]",
-    violet:
-      "bg-[rgba(167,139,250,0.07)] text-[rgba(167,139,250,0.75)] border-[rgba(167,139,250,0.2)]",
-    amber:
-      "bg-[rgba(255,184,77,0.07)] text-[rgba(255,184,77,0.75)] border-[rgba(255,184,77,0.2)]",
-    pink: "bg-[rgba(255,100,150,0.07)] text-[rgba(255,100,150,0.75)] border-[rgba(255,100,150,0.2)]",
-  }[color];
-  return (
-    <span
-      className={`font-[family-name:'JetBrains_Mono',monospace] text-[0.5rem] tracking-[0.1em] uppercase px-1.5 py-[2px] rounded-[2px] border ${c}`}
-    >
-      {label}
-    </span>
-  );
 };
 
 const AssetGroup = ({ icon: Icon, label, color, children }) => {
@@ -87,11 +66,7 @@ const SubmissionCard = ({
   const isTeam = !!submission.team;
   const medal = MEDALS[rank];
 
-  const hasAssets =
-    submission.repoUrl?.length > 0 ||
-    submission.docs?.length > 0 ||
-    submission.images?.length > 0 ||
-    submission.videos?.length > 0;
+  const hasAssets = !!submission.description;
 
   const handleVote = () => {
     if (isVotingClosed) {
@@ -99,11 +74,13 @@ const SubmissionCard = ({
       return;
     }
     if (!localStorage.getItem("token")) {
-      toast.info("Login to karlo", { autoClose: 1300 });
+      toast.info("Please log in to vote.", { autoClose: 1300 });
       return;
     }
     if (!isLiked && !canVote) {
-      toast.info("Pehle submission khol ke dekh lo!", { autoClose: 1300 });
+      toast.info("Open the submission first to vote for it.", {
+        autoClose: 1300,
+      });
       return;
     }
     onLike(submission._id);
@@ -180,28 +157,15 @@ const SubmissionCard = ({
       {hasAssets && (
         <>
           <button
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => {
+              setExpanded((v) => !v);
+              onOpenSubmission(submission._id);
+            }}
             className="w-full flex items-center justify-between px-5 py-3 cursor-pointer group hover:bg-[rgba(95,255,96,0.03)] transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
-                {submission.repoUrl?.length > 0 && (
-                  <AssetPill color="blue" label="URL" />
-                )}
-                {submission.docs?.length > 0 && (
-                  <AssetPill color="violet" label="Docs" />
-                )}
-                {submission.images?.length > 0 && (
-                  <AssetPill color="amber" label="Images" />
-                )}
-                {submission.videos?.length > 0 && (
-                  <AssetPill color="pink" label="Video" />
-                )}
-              </div>
-              <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(180,220,180,0.3)] tracking-[0.04em]">
-                View assets
-              </span>
-            </div>
+            <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(180,220,180,0.3)] tracking-[0.04em]">
+              View submission
+            </span>
             {expanded ? (
               <ChevronUp
                 size={13}
@@ -221,101 +185,11 @@ const SubmissionCard = ({
             }`}
           >
             <div className="px-5 pb-5 pt-4 flex flex-col gap-4 border-t border-[rgba(95,255,96,0.07)]">
-              {submission.repoUrl?.length > 0 && (
-                <AssetGroup
-                  icon={ClipboardList}
-                  label="Submission"
-                  color="blue"
-                >
-                  <div className="flex flex-wrap gap-2">
-                    {submission.repoUrl.map((url, i) => (
-                      <a
-                        key={i}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => onOpenSubmission(submission._id)}
-                        className="font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center gap-1.5 text-[0.62rem] tracking-[0.04em] px-3 py-1.5 bg-[rgba(96,200,255,0.06)] hover:bg-[rgba(96,200,255,0.12)] border border-[rgba(96,200,255,0.2)] hover:border-[rgba(96,200,255,0.38)] rounded-[2px] text-[rgba(96,200,255,0.7)] hover:text-[rgba(96,200,255,1)] transition-all"
-                      >
-                        <ExternalLink size={11} />
-                        {submission.repoUrl.length > 1
-                          ? `Submission ${i + 1}`
-                          : "View Submission"}
-                      </a>
-                    ))}
-                  </div>
-                </AssetGroup>
-              )}
-
-              {submission.docs?.length > 0 && (
-                <AssetGroup
-                  icon={FileText}
-                  label="Documentation"
-                  color="violet"
-                >
-                  <div className="flex flex-wrap gap-2">
-                    {submission.docs.map((doc, i) => (
-                      <a
-                        key={i}
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => onOpenSubmission(submission._id)}
-                        className="font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center gap-1.5 text-[0.62rem] tracking-[0.04em] px-3 py-1.5 bg-[rgba(167,139,250,0.06)] hover:bg-[rgba(167,139,250,0.12)] border border-[rgba(167,139,250,0.2)] hover:border-[rgba(167,139,250,0.38)] rounded-[2px] text-[rgba(167,139,250,0.7)] hover:text-[rgba(167,139,250,1)] transition-all"
-                      >
-                        <FileText size={11} />
-                        {doc.original_filename || `Document ${i + 1}`}
-                      </a>
-                    ))}
-                  </div>
-                </AssetGroup>
-              )}
-
-              {submission.images?.length > 0 && (
-                <AssetGroup
-                  icon={ImageIcon}
-                  label={`Images (${submission.images.length})`}
-                  color="amber"
-                >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {submission.images.map((img, i) => (
-                      <a
-                        key={i}
-                        href={img.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => onOpenSubmission(submission._id)}
-                        className="block rounded-[2px] overflow-hidden border border-[rgba(255,184,77,0.15)] hover:border-[rgba(255,184,77,0.38)] transition-all"
-                      >
-                        <img
-                          src={img.url}
-                          alt={`Screenshot ${i + 1}`}
-                          className="w-full h-24 object-cover hover:opacity-80 transition-opacity"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                </AssetGroup>
-              )}
-
-              {submission.videos?.length > 0 && (
-                <AssetGroup icon={Video} label="Videos" color="pink">
-                  <div className="flex flex-wrap gap-2">
-                    {submission.videos.map((vid, i) => (
-                      <a
-                        key={i}
-                        href={vid.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center gap-1.5 text-[0.62rem] tracking-[0.04em] px-3 py-1.5 bg-[rgba(255,100,150,0.06)] hover:bg-[rgba(255,100,150,0.12)] border border-[rgba(255,100,150,0.2)] hover:border-[rgba(255,100,150,0.38)] rounded-[2px] text-[rgba(255,100,150,0.7)] hover:text-[rgba(255,100,150,1)] transition-all"
-                      >
-                        <Video size={11} />
-                        {vid.original_filename || `Video ${i + 1}`}
-                      </a>
-                    ))}
-                  </div>
-                </AssetGroup>
-              )}
+              <AssetGroup icon={ClipboardList} label="Description" color="blue">
+                <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.6)] leading-relaxed whitespace-pre-wrap">
+                  {submission.description}
+                </p>
+              </AssetGroup>
             </div>
           </div>
         </>
@@ -391,8 +265,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
-const Upvote = () => {
-  const { id: hackathonId } = useParams();
+const Upvote = ({ hackathonId }) => {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -406,50 +279,23 @@ const Upvote = () => {
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("token"));
     fetchSubmissions();
-    if (localStorage.getItem("token")) fetchUserVotes();
-  }, [hackathonId]);
-
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/api/hackathons/${hackathonId}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => {
-        if (data?.votingDate && new Date() > new Date(data.votingDate))
-          setIsVotingClosed(true);
-      })
-      .catch(console.error);
   }, [hackathonId]);
 
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const r = await fetch(
-        `${
-          import.meta.env.VITE_API_BASE_URL
-        }/api/votes/hackathon/${hackathonId}`
-      );
-      if (!r.ok) throw new Error();
-      const data = await r.json();
-      setSubmissions(data.submissions || []);
-    } catch {
-      toast.error("Failed to load submissions");
+      const res = await VotingAPI.getVotingSubmissions(hackathonId);
+      setSubmissions(res.data.submissions || []);
+      setIsVotingClosed(false);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setIsVotingClosed(true);
+        setSubmissions([]);
+      } else {
+        toast.error("Failed to load submissions");
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchUserVotes = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const r = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/votes/user/${hackathonId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (r.ok) {
-        const d = await r.json();
-        setLikedSubmissions(new Set(d.votedSubmissions || []));
-      }
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -459,39 +305,18 @@ const Upvote = () => {
       return;
     }
     try {
-      const token = localStorage.getItem("token");
-      const r = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/votes/toggle`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ submissionId, hackathonId }),
-        }
-      );
-      if (!r.ok) throw new Error();
-      const data = await r.json();
+      const res = await VotingAPI.toggleVote(submissionId);
+      const { voted, voteCount } = res.data;
       setLikedSubmissions((prev) => {
         const n = new Set(prev);
-        data.voted ? n.add(submissionId) : n.delete(submissionId);
+        voted ? n.add(submissionId) : n.delete(submissionId);
         return n;
       });
       setSubmissions((prev) =>
-        prev.map((s) =>
-          s._id === submissionId
-            ? {
-                ...s,
-                voteCount: data.voted
-                  ? (s.voteCount || 0) + 1
-                  : Math.max((s.voteCount || 0) - 1, 0),
-              }
-            : s
-        )
+        prev.map((s) => (s._id === submissionId ? { ...s, voteCount } : s))
       );
-    } catch {
-      toast.error("Failed to update vote.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update vote.");
     }
   };
 

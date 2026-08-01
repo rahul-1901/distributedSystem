@@ -1,29 +1,32 @@
 import { useEffect } from "react";
-import { ProfileAPI } from "../api";
 import { useAuthStore } from "../store/authStore";
+import { ProfileAPI } from "../api/profile.api.js";
 
-function AuthProvider({ children }) {
+export default function AuthProvider({ children }) {
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
-  const finishLoading = useAuthStore((state) => state.finishLoading);
 
   useEffect(() => {
     const bootstrap = async () => {
-      try {
-        const { data } = await ProfileAPI.getMyProfile();
+      const token = localStorage.getItem("token");
 
-        login(data.user, data.user?.role || "student");
-      } catch (err) {
+      if (!token) {
         logout();
-      } finally {
-        finishLoading();
+        return;
+      }
+
+      try {
+        const res = await ProfileAPI.getMyProfile();
+        const profile = res.data.profile;
+        login(profile, profile.role || "student");
+      } catch (err) {
+        localStorage.removeItem("token");
+        logout();
       }
     };
 
     bootstrap();
-  }, [login, logout, finishLoading]);
+  }, [login, logout]);
 
   return children;
 }
-
-export default AuthProvider;

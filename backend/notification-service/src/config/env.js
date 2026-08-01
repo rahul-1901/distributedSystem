@@ -4,6 +4,7 @@ dotenv.config();
 
 const requiredEnvVars = [
   "FRONTEND_URL",
+  "BACKEND_URL",
   "BREVO_API_KEY",
   "BREVO_SENDER_EMAIL"
 ];
@@ -16,12 +17,13 @@ requiredEnvVars.forEach((key) => {
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
-  SERVICE_NAME: process.env.SERVICE_NAME || "auth-service",
-  PORT: process.env.PORT || 5001,
+  SERVICE_NAME: process.env.SERVICE_NAME || "notification-service",
+  PORT: process.env.PORT || 5004,
   REDIS_URL: process.env.REDIS_URL || "redis://redis:6379",
   REDIS_HOST: process.env.REDIS_HOST || "redis",
   REDIS_PORT: process.env.REDIS_PORT || 6379,
   FRONTEND_URL: process.env.FRONTEND_URL,
+  BACKEND_URL: process.env.BACKEND_URL,
   BREVO_API_KEY: process.env.BREVO_API_KEY,
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
 };

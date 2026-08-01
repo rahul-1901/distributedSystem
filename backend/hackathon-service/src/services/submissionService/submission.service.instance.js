@@ -16,9 +16,9 @@ const teamRepository = new TeamRepository();
 
 const registrationRepository = new RegistrationRepository();
 
-const mediaServiceClient = new MediaServiceClient();
+const mediaServiceClient = new MediaServiceClient(logger);
 
-const notificationClient = new NotificationClient();
+const notificationClient = new NotificationClient(logger);
 
 export const submissionService = new SubmissionService(
   submissionRepository,

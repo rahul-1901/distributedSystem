@@ -19,15 +19,6 @@ import { metricsMiddleware, metricsHandler } from "./metrics/metrics.js";
 
 dotenv.config();
 
-if (
-  !process.env.AWS_REGION ||
-  // !process.env.AWS_ACCESS_KEY_ID ||
-  // !process.env.AWS_SECRET_ACCESS_KEY ||
-  !process.env.AWS_S3_BUCKET_NAME
-) {
-  throw new Error("AWS configuration missing");
-}
-
 const app = express();
 
 app.set("trust proxy", 1);

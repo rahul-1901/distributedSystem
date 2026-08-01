@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import GoogleLogin from "../../components/GoogleLogin.jsx";
-import { API } from "../../backendApis/api.js";
+import GoogleLogin from "./GoogleLogin.jsx";
+import { AuthAPI } from "../../api/auth.api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 import { toast } from "react-toastify";
 
 const GoogleAuthWrapper = () => (
@@ -12,14 +13,32 @@ const GoogleAuthWrapper = () => (
 );
 
 const EyeOpen = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 const EyeClosed = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
     <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
     <line x1="1" y1="1" x2="23" y2="23" />
@@ -28,19 +47,12 @@ const EyeClosed = () => (
 
 function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("verified") === "success") {
-      toast.success("Email verified successfully, please login");
-    }
-  }, [location.search]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,16 +68,21 @@ function Login() {
 
     setLoading(true);
     try {
-      const res = await API.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/account/login`,
-        { email: email.trim().toLowerCase(), password }
-      );
+      const res = await AuthAPI.login({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-      localStorage.setItem("token", res.data.token);
+      const { token, email: userEmail, name } = res.data;
+
+      localStorage.setItem("token", token);
+      login({ email: userEmail, name }, "student");
+
       toast.success("Login successful");
       navigate("/");
     } catch (err) {
-      const message = err?.response?.data?.message || "Login failed. Please try again.";
+      const message =
+        err?.response?.data?.message || "Login failed. Please try again.";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -166,7 +183,6 @@ function Login() {
 
       <div className="lg-root lg-bg min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
         <div className="lg-card relative z-10 w-full max-w-[400px] bg-[rgba(10,12,10,0.93)] border border-[rgba(95,255,96,0.18)] rounded-[4px] p-8 backdrop-blur-xl shadow-[0_0_40px_rgba(95,255,96,0.08)]">
-
           <div className="lg-root inline-block text-[0.58rem] tracking-[0.18em] uppercase text-[#5fff60] border border-[rgba(95,255,96,0.25)] px-[0.65rem] py-[0.18rem] rounded-[2px] mb-4">
             secure access
           </div>
@@ -196,7 +212,9 @@ function Login() {
           <form onSubmit={handleSubmit} noValidate>
             <div className="flex flex-col gap-4">
               <div>
-                <label htmlFor="login-email" className="lg-label">Email</label>
+                <label htmlFor="login-email" className="lg-label">
+                  Email
+                </label>
                 <input
                   id="login-email"
                   className="lg-input"
@@ -211,7 +229,11 @@ function Login() {
 
               <div>
                 <div className="flex items-center justify-between mb-[0.3rem]">
-                  <label htmlFor="login-password" className="lg-label" style={{ marginBottom: 0 }}>
+                  <label
+                    htmlFor="login-password"
+                    className="lg-label"
+                    style={{ marginBottom: 0 }}
+                  >
                     Password
                   </label>
                   <Link
@@ -237,7 +259,9 @@ function Login() {
                     className="lg-eye"
                     onClick={() => setShowPassword((v) => !v)}
                     tabIndex={-1}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? <EyeClosed /> : <EyeOpen />}
                   </button>

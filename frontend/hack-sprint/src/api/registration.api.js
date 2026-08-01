@@ -2,10 +2,10 @@ import client from "./client";
 import { API } from "./endpoints";
 
 export const RegistrationAPI = {
-  register(hackathonId, data) {
+  register(hackathonId, registrationData) {
     return client.post(
       `${API.REGISTRATION}/${hackathonId}/register`,
-      data
+      { registrationData }
     );
   },
 

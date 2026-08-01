@@ -62,7 +62,7 @@ The split here is deliberate: the actual binary files live in Amazon S3, while m
 
 ## 5. Notification Service
 
-The Notification Service is responsible for notification management: creating notifications and reading notifications back through its APIs. Like the other services, its communication with the rest of the system is currently synchronous HTTP — there is no background worker, job queue, or message broker involved in how notifications are created or delivered today. Notification creation happens as part of the same synchronous request/response cycle as any other service call.
+The Notification Service is responsible for notification management (creating notifications and reading notifications back through its APIs) and for transactional email delivery. In-app notification creation happens synchronously, the same as any other internal service call. Email is different: the Auth Service enqueues email jobs onto a BullMQ/Redis queue rather than calling out synchronously, and the Notification Service runs a BullMQ worker that consumes those jobs and sends the actual email through Brevo's transactional email API using Handlebars-rendered templates. This queue is the one asynchronous, message-passing exception in an otherwise synchronous-HTTP system.
 
 ---
 
@@ -85,7 +85,7 @@ sequenceDiagram
     Nginx-->>Client: HTTPS response
 ```
 
-Services currently communicate synchronously over HTTP, and any service-to-service calls follow the same synchronous request/response model as client-facing traffic. This keeps the implementation simple and easy to reason about at the project's current size — there is exactly one way a request flows through the system, with no asynchronous branches or eventual-consistency behavior to account for.
+Services communicate synchronously over HTTP for nearly everything, and most service-to-service calls follow the same synchronous request/response model as client-facing traffic. The one exception is transactional email: the Auth Service pushes email jobs onto a BullMQ/Redis queue instead of calling the Notification Service directly, and the Notification Service's worker consumes them asynchronously (see Section 5). This keeps the rest of the implementation simple and easy to reason about at the project's current size — that queue is the only asynchronous branch in the system today.
 
 ---
 
@@ -128,8 +128,8 @@ The current production system consists of four services — Auth, Hackathon, Med
 
 The following are planned but **not implemented** in the current system. Nothing in this section reflects the system as it exists today.
 
-- **Asynchronous communication** — moving some inter-service interactions off the synchronous request/response path.
-- **Background job queues** — offloading work such as notification delivery or media processing to background workers.
+- **Broader asynchronous communication** — a BullMQ/Redis queue already moves transactional email off the synchronous request/response path (Section 5); extending that pattern to more inter-service interactions is still open.
+- **Background job queues for other workloads** — offloading additional work such as media processing to background workers, following the pattern already used for email.
 - **Event-driven architecture** — services reacting to events rather than direct synchronous calls.
 - **Dedicated databases per service** — splitting the shared MongoDB instance into per-service databases to match the logical ownership described in Section 8.
 - **Service discovery** — dynamic resolution of service addresses rather than static configuration.

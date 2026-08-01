@@ -5,6 +5,7 @@ import { cacheService } from "../cacheService/cache.service.instance.js";
 import { RegistrationRepository } from "../../repositories/registration.repository.js";
 import { SubmissionRepository } from "../../repositories/submission.repository.js";
 import { AdminRepository } from "../../repositories/admin.repository.js";
+import { mediaServiceClient } from "../mediaService/media.client.instance.js";
 
 const hackathonRepository = new HackathonRepository();
 
@@ -20,5 +21,6 @@ export const hackathonService = new HackathonService(
   registrationRepository,
   adminRepository,
   logger,
-  cacheService
+  cacheService,
+  mediaServiceClient
 );

@@ -1,11 +1,10 @@
-import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { HeroSection } from "../hackathon/Hero-section";
 import { SidebarNav } from "../hackathon/Sidebar-nav";
 import { ContentSection } from "../hackathon/Content-section";
 import { SocialShare } from "../hackathon/Social-share";
 import { useParams } from "react-router-dom";
-import { API } from "../backendApis/api";
+import { HackathonAPI } from "../api/hackathon.api.js";
 
 const GridBackground = () => (
   <div className="absolute inset-0 pointer-events-none bg-[rgba(8,10,8,0.92)] backdrop-blur-xl"></div>
@@ -28,7 +27,7 @@ const Loader = () => (
 );
 
 export default function HackathonDetails() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [hackathon, setHackathon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,24 +38,22 @@ export default function HackathonDetails() {
       setLoading(true);
       setError("");
       try {
-        const res = await API.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/hackathons/${id}`
-        );
+        const res = await HackathonAPI.getHackathonBySlug(slug);
+        console.log("Hackathon data:", res.data);
         if (!res.data) {
           setError("Hackathon not found");
           setHackathon(null);
         } else {
-          setHackathon(res.data);
+          setHackathon(res.data.hackathon);
         }
       } catch (err) {
-        // console.error(err);
         setError("Failed to load hackathon details. Please try again later.");
         setHackathon(null);
       }
       setLoading(false);
     };
     loadData();
-  }, [id]);
+  }, [slug]);
 
   if (loading) return <Loader />;
 
@@ -73,7 +70,7 @@ export default function HackathonDetails() {
       </div>
     );
 
-  const isHackathonActive = new Date() < new Date(hackathon.submissionEndDate);
+  const isHackathonActive = hackathon.lifecycleStatus === "ACTIVE";
 
   return (
     <div className="min-h-screen bg-[rgba(8,10,8,0.92)] backdrop-blur-xl relative text-white">
@@ -84,17 +81,12 @@ export default function HackathonDetails() {
           title={hackathon.title}
           subTitle={hackathon.subTitle}
           isActive={isHackathonActive}
-          startDate={hackathon.startDate}
-          endDate={hackathon.endDate}
           participantCount={hackathon.numParticipants || 0}
-          rewards={hackathon.rewards}
-          prizeMoney1={hackathon.prizeMoney1}
-          prizeMoney2={hackathon.prizeMoney2}
-          prizeMoney3={hackathon.prizeMoney3}
-          imageUrl={hackathon.image || "/assets/hackathon-banner.png"}
+          prizes={hackathon.prizes}
+          imageUrl={hackathon.image?.url || "/assets/hackathon-banner.png"}
           hackathonId={hackathon._id}
-          submissionStartDate={hackathon?.submissionStartDate}
-          submissionEndDate={hackathon?.submissionEndDate}
+          slug={hackathon.slug}
+          phases={hackathon.phases}
           onSectionChange={setActiveSection}
         />
 
@@ -102,7 +94,7 @@ export default function HackathonDetails() {
           <SidebarNav
             activeSection={activeSection}
             onSectionChange={setActiveSection}
-            showVoting={hackathon.showVoting}
+            showVoting={hackathon.votingConfig?.enabled}
             showResult={hackathon.showResult}
           />
 

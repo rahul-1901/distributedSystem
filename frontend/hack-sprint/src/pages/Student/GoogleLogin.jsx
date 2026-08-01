@@ -1,30 +1,23 @@
-import React, { useContext } from "react";
+import React from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
-import { AppContent } from "../context/AppContext";
-import { useState } from "react";
 import { toast } from "react-toastify";
-import { googleAuth } from "../backendApis/api";
+import { AuthAPI } from "../../api/auth.api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 export default function GoogleLogin() {
-
-  const [userData, setUserData] = useState([]);
-
   const navigate = useNavigate();
-
-  const { setIsLoggedIn } = useContext(AppContent);
+  const { login } = useAuth();
 
   const responseGoogle = async (authResult) => {
     try {
-
       if (authResult["code"]) {
-        const result = await googleAuth(authResult["code"]);
-        const { name, email } = result.data;
-        const token = result.data.token;
-        // console.log(result);
+        const result = await AuthAPI.googleLogin(authResult["code"]);
+        const { token, email, name } = result.data;
+
         localStorage.setItem("token", token);
-        localStorage.setItem("email", email);
-        setIsLoggedIn(true)
+        login({ email, name }, "student");
+
         navigate("/");
       }
     } catch (err) {

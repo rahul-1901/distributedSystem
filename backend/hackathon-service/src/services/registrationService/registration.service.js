@@ -14,8 +14,7 @@ export class RegistrationService {
     this.registrationRepository = registrationRepository;
     this.userRepository = userRepository;
     this.hackathonRepository = hackathonRepository;
-    this.notificationClient = notificationClient, 
-    this.logger = logger;
+    (this.notificationClient = notificationClient), (this.logger = logger);
   }
 
   getRegistrationPhase(hackathon, now) {
@@ -250,5 +249,16 @@ export class RegistrationService {
       registration._id,
       updatedFormData
     );
+  }
+
+  async getMyRegistrations(userId) {
+    if (!userId) {
+      throw new BadRequestError("User id is required");
+    }
+
+    const registrations =
+      await this.registrationRepository.findUserRegistrations(userId);
+
+    return registrations;
   }
 }

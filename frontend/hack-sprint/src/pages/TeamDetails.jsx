@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
-import { getDashboard } from "../backendApis/api";
+import { ProfileAPI } from "../api/profile.api.js";
+import { TeamAPI } from "../api/team.api.js";
 import {
   Users,
   Crown,
@@ -14,7 +14,6 @@ import {
   Clock,
   LinkIcon,
 } from "lucide-react";
-import { API } from "../backendApis/api";
 
 const mono = "font-[family-name:'JetBrains_Mono',monospace]";
 const syne = "font-[family-name:'Syne',sans-serif]";
@@ -163,47 +162,34 @@ const TeamDetails = () => {
     [teamId]
   );
 
-  const fetchTeam = useCallback(
-    async (user) => {
-      if (!user) return;
-      const code = getCode();
-      try {
-        if (code) {
-          const [teamRes, pendingRes] = await Promise.all([
-            API.get(
-              `${import.meta.env.VITE_API_BASE_URL}/api/team/search/${code}`
-            ),
-            API.post(
-              `${import.meta.env.VITE_API_BASE_URL}/api/team/pendingRequests`,
-              { teamCode: code }
-            ),
-          ]);
-          setTeamData({
-            ...teamRes.data.team,
-            pendingMembers: pendingRes.data,
-          });
-        }
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Error fetching team data.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [getCode]
-  );
+  const fetchTeam = useCallback(async () => {
+    const code = getCode();
+    if (!code) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const searchRes = await TeamAPI.searchTeam(code);
+      const teamRes = await TeamAPI.getTeam(searchRes.data.team.id);
+      setTeamData(teamRes.data.team);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Error fetching team data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [getCode]);
 
   useEffect(() => {
     if (location.state?.secretCode)
       localStorage.setItem("teamDetails_code", location.state.secretCode);
-    getDashboard()
+    ProfileAPI.getMyProfile()
       .then((res) => {
-        const u = res.data.userData;
-        setCurrentUser(u);
-        fetchTeam(u);
+        setCurrentUser(res.data.profile);
+        fetchTeam();
       })
       .catch(() => {
         toast.error("You must be logged in.");
-        navigate("/login");
+        navigate("/account/login");
       });
   }, [hackathonId, teamId, navigate, fetchTeam, location.state]);
 
@@ -223,12 +209,9 @@ const TeamDetails = () => {
   const handleRequestAction = async (userId, action) => {
     setActionLoading(true);
     try {
-      const r = await API.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/team/handleRequest`,
-        { teamCode: teamData.code, userId, action }
-      );
+      const r = await TeamAPI.handleRequest(teamData._id, { userId, action });
       toast.success(r.data.message);
-      fetchTeam(currentUser);
+      fetchTeam();
     } catch (err) {
       toast.error(err.response?.data?.message || `Error ${action}ing request.`);
     } finally {
@@ -324,7 +307,7 @@ const TeamDetails = () => {
                   <div className="grid sm:grid-cols-2 gap-4">
                     <CopyRow
                       label="Invite Code"
-                      value={teamData.code}
+                      value={teamData.secretCode}
                       copyKey="code"
                       copiedItem={copiedItem}
                       onCopy={handleCopy}

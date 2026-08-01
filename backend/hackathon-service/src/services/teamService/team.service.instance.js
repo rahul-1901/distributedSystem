@@ -14,7 +14,7 @@ const userRepository = new UserRepository();
 
 const hackathonRepository = new HackathonRepository();
 
-const notificationClient = new NotificationClient();
+const notificationClient = new NotificationClient(logger);
 
 export const teamService = new TeamService(
   teamRepository,

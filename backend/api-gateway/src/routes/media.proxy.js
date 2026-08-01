@@ -4,9 +4,6 @@ import { env } from "../config/env.js";
 export const mediaProxy = createProxyMiddleware({
   target: env.MEDIA_SERVICE_URL,
   changeOrigin: true,
-  pathRewrite: {
-    "^/api/media": "/api/media",
-  },
   timeout: 30000,
   proxyTimeout: 30000,
   on: {

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import GoogleLogin from "../../components/GoogleLogin.jsx";
-import { API } from "../../backendApis/api.js";
+import GoogleLogin from "./GoogleLogin.jsx";
+import { AuthAPI } from "../../api/auth.api.js";
 import { toast } from "react-toastify";
 
 const GoogleAuthWrapper = () => (
@@ -66,18 +66,16 @@ function Signup() {
 
     setLoading(true);
     try {
-      await API.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/account/signup`,
-        {
-          name,
-          email,
-          password,
-        }
-      );
+      const res = await AuthAPI.signup({
+        name,
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-      toast.success("Check your email to verify your account");
+      toast.success(
+        res.data.message || "Check your email to verify your account"
+      );
       setForm({ name: "", email: "", password: "" });
-      // Optionally redirect after a short delay
       setTimeout(() => navigate("/account/login"), 2000);
     } catch (err) {
       const message =

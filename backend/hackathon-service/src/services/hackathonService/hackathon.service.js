@@ -11,7 +11,8 @@ export class HackathonService {
     registrationRepository,
     adminRepository,
     logger,
-    cacheService
+    cacheService,
+    mediaServiceClient
   ) {
     this.hackathonRepository = hackathonRepository;
     this.submissionRepository = submissionRepository;
@@ -19,6 +20,7 @@ export class HackathonService {
     this.adminRepository = adminRepository;
     this.logger = logger;
     this.cacheService = cacheService;
+    this.mediaServiceClient = mediaServiceClient;
   }
 
   async deleteHackathonImage(hackathon, payload) {
@@ -585,6 +587,48 @@ export class HackathonService {
     };
   }
 
+  getLifecycleStatus(hackathon) {
+    if (hackathon.status !== "APPROVED") {
+      return hackathon.status;
+    }
+
+    const now = new Date();
+
+    if (!hackathon.phases || hackathon.phases.length === 0) {
+      return "UPCOMING";
+    }
+
+    const activePhases = hackathon.phases.filter(
+      (phase) => phase.isActive !== false
+    );
+
+    if (activePhases.length === 0) {
+      return "UPCOMING";
+    }
+
+    const earliest = new Date(
+      Math.min(
+        ...activePhases.map((phase) => new Date(phase.startDate).getTime())
+      )
+    );
+
+    const latest = new Date(
+      Math.max(
+        ...activePhases.map((phase) => new Date(phase.endDate).getTime())
+      )
+    );
+
+    if (now < earliest) {
+      return "UPCOMING";
+    }
+
+    if (now <= latest) {
+      return "ACTIVE";
+    }
+
+    return "COMPLETED";
+  }
+
   async getPublicHackathons(query) {
     const cacheKey = REDIS_KEYS.PUBLIC_HACKATHONS;
 
@@ -598,6 +642,11 @@ export class HackathonService {
       hackathons = await this.hackathonRepository.getApprovedHackathons();
       await this.cacheService.set(cacheKey, hackathons, 300);
     }
+
+    hackathons = hackathons.map((hackathon) => ({
+      ...(hackathon.toObject ? hackathon.toObject() : hackathon),
+      lifecycleStatus: this.getLifecycleStatus(hackathon),
+    }));
 
     const {
       status,
@@ -625,7 +674,7 @@ export class HackathonService {
 
     if (tag) {
       hackathons = hackathons.filter((h) =>
-        h.tag?.some((t) => t.toLowerCase() === tag.toLowerCase())
+        h.tags?.some((t) => t.toLowerCase() === tag.toLowerCase())
       );
     }
 
@@ -643,9 +692,13 @@ export class HackathonService {
     const pageNum = Number(page);
     const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
-    const data = hackathons
-      .slice(skip, skip + limitNum)
-      .sort((a, b) => Number(b.featured) - Number(a.featured));
+    hackathons.sort(
+      (a, b) =>
+        Number(b.featured) - Number(a.featured) ||
+        Number(a.featuredOrder || 0) - Number(b.featuredOrder || 0)
+    );
+
+    const data = hackathons.slice(skip, skip + limitNum);
 
     return {
       data,

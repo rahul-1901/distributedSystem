@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Loader from "../../components/Loader";
 import {
@@ -11,12 +11,23 @@ import {
   Search,
   Filter,
   X,
+  Star,
 } from "lucide-react";
 import { useHackathons } from "../../hooks/useHackathons";
 import "../Styles/AllHackathons.css";
 
 /* ── Grid background ── */
 const GridBackground = () => <div className="hk-bg" />;
+
+/* ── Phase helper — only used for the active-phase progress bar,
+   everything else comes pre-derived from useHackathons ── */
+const getActivePhase = (hackathon) => hackathon.phases?.find((p) => p.isActive);
+
+const getCountdownTarget = (hackathon) => {
+  if (hackathon.lifecycleStatus === "UPCOMING") return hackathon.overallStart;
+  if (hackathon.lifecycleStatus === "ACTIVE") return hackathon.submissionEnd;
+  return null;
+};
 
 /* ── Skeleton ── */
 const Skeleton = ({ className }) => (
@@ -141,6 +152,7 @@ const HackathonCard = ({ hackathon }) => {
   };
 
   const getCountdown = (target) => {
+    if (!target) return "";
     const diff = new Date(target).getTime() - Date.now();
     if (diff <= 0) return "0d 0h 0m";
     const d = Math.floor(diff / 86400000);
@@ -149,30 +161,23 @@ const HackathonCard = ({ hackathon }) => {
     return `${d}d ${h}h ${m}m`;
   };
 
+  const countdownTarget = getCountdownTarget(hackathon);
+
   useEffect(() => {
-    if (!hackathon.startDate || !hackathon.endDate) return;
+    if (!countdownTarget) return;
+    setCountdown(getCountdown(countdownTarget));
     const t = setInterval(() => {
-      setCountdown(
-        getCountdown(
-          hackathon.status === "upcoming"
-            ? hackathon.startDate
-            : hackathon.submissionEndDate
-        )
-      );
+      setCountdown(getCountdown(countdownTarget));
     }, 1000);
     return () => clearInterval(t);
-  }, [
-    hackathon.endDate,
-    hackathon.submissionEndDate,
-    hackathon.startDate,
-    hackathon.status,
-  ]);
+  }, [countdownTarget]);
 
-  const isExpired = hackathon.status === "expired";
-  const isUpcoming = hackathon.status === "upcoming";
-  const isActive = hackathon.status === "active";
+  const status = hackathon.lifecycleStatus;
+  const isCompleted = status === "COMPLETED";
+  const isUpcoming = status === "UPCOMING";
+  const isActive = status === "ACTIVE";
 
-  const statusStyle = isExpired
+  const statusStyle = isCompleted
     ? {
         dot: "bg-[#ff6060]",
         text: "text-[#ff9090]",
@@ -193,33 +198,44 @@ const HackathonCard = ({ hackathon }) => {
         bg: "bg-[rgba(95,255,96,0.06)]",
       };
 
-  const totalPrize = hackathon.rewards?.length
-    ? hackathon.rewards.reduce((s, r) => s + (r.amount || 0), 0)
-    : (hackathon.prizeMoney1 || 0) +
-      (hackathon.prizeMoney2 || 0) +
-      (hackathon.prizeMoney3 || 0);
+  const activePhase = getActivePhase(hackathon);
+  const isFeatured = !!hackathon.featured;
 
   return (
     <div
-      className="hk-card font-jb relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] backdrop-blur-sm cursor-pointer overflow-hidden transition-all duration-300 hover:border-[rgba(95,255,96,0.32)] hover:shadow-[0_0_28px_rgba(95,255,96,0.08)] hover:-translate-y-[2px]"
+      className={`hk-card font-jb relative bg-[rgba(10,12,10,0.88)] rounded-[4px] backdrop-blur-sm cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-[2px] ${
+        isFeatured
+          ? "border border-[rgba(95,255,96,0.4)] shadow-[0_0_20px_rgba(95,255,96,0.1)] hover:border-[rgba(95,255,96,0.65)] hover:shadow-[0_0_32px_rgba(95,255,96,0.18)]"
+          : "border border-[rgba(95,255,96,0.1)] hover:border-[rgba(95,255,96,0.32)] hover:shadow-[0_0_28px_rgba(95,255,96,0.08)]"
+      }`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => {
-        if (!isUpcoming) navigate(`/hackathon/${hackathon._id}`);
+        if (!isUpcoming) navigate(`/hackathon/${hackathon.slug}`);
       }}
     >
+      {/* featured banner */}
+      {isFeatured && (
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-1.5 py-1 bg-[#5fff60] text-[#050905]">
+          <Star size={10} className="fill-[#050905]" />
+          <span className="font-jb text-[0.55rem] font-bold tracking-[0.18em] uppercase">
+            Featured
+          </span>
+        </div>
+      )}
+
       {/* hover sweep */}
       {hovered && (
         <div className="hk-card-sweep absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-[rgba(95,255,96,0.04)] to-transparent pointer-events-none z-0" />
       )}
 
-      <div className="flex flex-col lg:flex-row">
+      <div className={`flex flex-col lg:flex-row ${isFeatured ? "pt-[22px]" : ""}`}>
         {/* ── Image ── */}
         <div className="lg:w-72 lg:h-52 h-44 w-full relative flex-shrink-0 overflow-hidden bg-[rgba(95,255,96,0.04)]">
-          {hackathon.image && !imgError ? (
+          {hackathon.image?.url && !imgError ? (
             <>
               <img
-                src={hackathon.image}
+                src={hackathon.image.url}
                 alt={hackathon.title}
                 className={`w-full h-full object-cover transition-all duration-500 ${
                   imgLoaded ? "opacity-100" : "opacity-0"
@@ -248,13 +264,13 @@ const HackathonCard = ({ hackathon }) => {
                   isActive ? "animate-pulse" : ""
                 }`}
               />
-              <span className={statusStyle.text}>{hackathon.status}</span>
+              <span className={statusStyle.text}>{status?.toLowerCase()}</span>
             </div>
           </div>
 
           {/* tech chips */}
           <div className="absolute bottom-3 left-3 flex gap-1 z-10 flex-wrap">
-            {(hackathon.techStack || []).slice(0, 3).map((tech, i) => (
+            {(hackathon.techStacks || []).slice(0, 3).map((tech, i) => (
               <span
                 key={i}
                 className="font-jb text-[0.55rem] tracking-[0.05em] px-1.5 py-[3px] rounded-[2px] bg-[rgba(10,12,10,0.8)] border border-[rgba(95,255,96,0.18)] text-[rgba(95,255,96,0.65)] backdrop-blur-sm"
@@ -262,9 +278,9 @@ const HackathonCard = ({ hackathon }) => {
                 {tech}
               </span>
             ))}
-            {hackathon.techStack?.length > 3 && (
+            {hackathon.techStacks?.length > 3 && (
               <span className="font-jb text-[0.55rem] px-1.5 py-[3px] rounded-[2px] bg-[rgba(10,12,10,0.8)] border border-[rgba(95,255,96,0.12)] text-[rgba(95,255,96,0.4)]">
-                +{hackathon.techStack.length - 3}
+                +{hackathon.techStacks.length - 3}
               </span>
             )}
           </div>
@@ -281,14 +297,9 @@ const HackathonCard = ({ hackathon }) => {
             >
               <Timer size={10} className={statusStyle.text} />
               <span className={statusStyle.text}>
-                {isExpired
+                {isCompleted
                   ? "Ended"
-                  : countdown ||
-                    getCountdown(
-                      isUpcoming
-                        ? hackathon.startDate
-                        : hackathon.submissionEndDate
-                    )}
+                  : countdown || getCountdown(countdownTarget)}
               </span>
             </div>
           </div>
@@ -300,15 +311,25 @@ const HackathonCard = ({ hackathon }) => {
                 {hackathon.title}
               </h3>
               <div className="flex flex-wrap gap-1.5">
-                {/* <span className="font-jb text-[0.55rem] tracking-[0.08em] uppercase px-2 py-[3px] rounded-[2px] bg-[rgba(95,255,96,0.07)] border border-[rgba(95,255,96,0.18)] text-[rgba(95,255,96,0.65)]">
-                  {hackathon.difficulty}
-                </span> */}
+                {hackathon.difficulty && (
+                  <span className="font-jb text-[0.55rem] tracking-[0.08em] uppercase px-2 py-[3px] rounded-[2px] bg-[rgba(255,184,77,0.07)] border border-[rgba(255,184,77,0.2)] text-[rgba(255,184,77,0.75)]">
+                    {hackathon.difficulty}
+                  </span>
+                )}
                 {(hackathon.category || []).map((cat, i) => (
                   <span
                     key={i}
                     className="font-jb text-[0.55rem] tracking-[0.08em] uppercase px-2 py-[3px] rounded-[2px] bg-[rgba(96,200,255,0.07)] border border-[rgba(96,200,255,0.18)] text-[rgba(96,200,255,0.65)]"
                   >
                     {cat}
+                  </span>
+                ))}
+                {(hackathon.tags || []).slice(0, 2).map((tag, i) => (
+                  <span
+                    key={`tag-${i}`}
+                    className="font-jb text-[0.55rem] tracking-[0.08em] uppercase px-2 py-[3px] rounded-[2px] bg-[rgba(95,255,96,0.06)] border border-[rgba(95,255,96,0.14)] text-[rgba(95,255,96,0.5)]"
+                  >
+                    {tag}
                   </span>
                 ))}
               </div>
@@ -323,32 +344,34 @@ const HackathonCard = ({ hackathon }) => {
             <div className="flex flex-wrap gap-4">
               <span className="font-jb inline-flex items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.4)]">
                 <Users size={11} className="text-[rgba(95,255,96,0.4)]" />
-                {hackathon.participants} participants
+                {hackathon.numParticipants || 0} participants
               </span>
-              {totalPrize > 0 && (
+              {hackathon.totalPrize > 0 && (
                 <span className="font-jb inline-flex items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.4)]">
                   <Trophy size={11} className="text-[rgba(255,184,77,0.5)]" />₹
-                  {totalPrize.toLocaleString("en-IN")}
+                  {hackathon.totalPrize.toLocaleString("en-IN")}
                 </span>
               )}
-              <span className="font-jb inline-flex items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.4)]">
-                <Calendar size={11} className="text-[rgba(95,255,96,0.4)]" />
-                {hackathon.dates}
-              </span>
+              {hackathon.formattedDate && (
+                <span className="font-jb inline-flex items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.4)]">
+                  <Calendar size={11} className="text-[rgba(95,255,96,0.4)]" />
+                  {hackathon.formattedDate}
+                </span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* progress bar */}
-      {isActive && (
+      {/* progress bar — tracks the currently active phase */}
+      {isActive && activePhase && (
         <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[rgba(95,255,96,0.06)]">
           <div
             className="h-full bg-[#5fff60] hk-progress transition-all duration-300"
             style={{
               width: `${getProgress(
-                hackathon.startDate,
-                hackathon.submissionEndDate
+                activePhase.startDate,
+                activePhase.endDate
               )}%`,
             }}
           />
@@ -365,12 +388,48 @@ const Hackathons = () => {
   const [activeTab, setActiveTab] = useState("active");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedTag, setSelectedTag] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
   const activeHackathons = hackathonsData?.active || [];
-  const expiredHackathons = hackathonsData?.expired || [];
+  const completedHackathons = hackathonsData?.completed || [];
   const upcomingHackathons = hackathonsData?.upcoming || [];
+
+  // Filter option sets come from whatever the backend actually returned —
+  // category/tags are freeform strings set by organizers, not a fixed enum,
+  // so a hardcoded options list would silently drift from real data.
+  // Derived from hackathonsData directly (stable reference from react-query)
+  // rather than the activeHackathons/etc. fallbacks, which get a fresh []
+  // on every render while loading.
+  const allHackathons = useMemo(() => {
+    if (!hackathonsData) return [];
+    return [
+      ...(hackathonsData.active || []),
+      ...(hackathonsData.upcoming || []),
+      ...(hackathonsData.completed || []),
+    ];
+  }, [hackathonsData]);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+    allHackathons.forEach((h) => (h.category || []).forEach((c) => c && set.add(c)));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [allHackathons]);
+
+  const availableTags = useMemo(() => {
+    const set = new Set();
+    allHackathons.forEach((h) => (h.tags || []).forEach((t) => t && set.add(t)));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [allHackathons]);
+
+  const availableDifficulties = useMemo(() => {
+    const set = new Set();
+    allHackathons.forEach((h) => h.difficulty && set.add(h.difficulty));
+    // Keep a sensible progression, but only show difficulties that actually occur.
+    const order = ["Beginner", "Intermediate", "Advanced", "Expert", "Tough"];
+    return order.filter((d) => set.has(d));
+  }, [allHackathons]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -383,27 +442,24 @@ const Hackathons = () => {
     const map = {
       active: activeHackathons,
       upcoming: upcomingHackathons,
-      expired: expiredHackathons,
+      completed: completedHackathons,
     };
-    const mainCats = ["Web Dev", "AI/ML", "Blockchain", "IoT"];
     return (map[activeTab] || []).filter((h) => {
       const matchSearch = h.title
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      let matchCat = true;
-      if (selectedCategory) {
-        if (selectedCategory === "Other") {
-          const cats = Array.isArray(h.category) ? h.category : [h.category];
-          matchCat = cats.every((c) => !mainCats.includes(c));
-        } else {
-          matchCat = Array.isArray(h.category)
-            ? h.category.includes(selectedCategory)
-            : h.category === selectedCategory;
-        }
-      }
+      const matchCat =
+        !selectedCategory ||
+        (h.category || []).some(
+          (c) => c.toLowerCase() === selectedCategory.toLowerCase()
+        );
+      const matchTag =
+        !selectedTag ||
+        (h.tags || []).some((t) => t.toLowerCase() === selectedTag.toLowerCase());
       return (
         matchSearch &&
         matchCat &&
+        matchTag &&
         (!selectedDifficulty || h.difficulty === selectedDifficulty)
       );
     });
@@ -412,9 +468,11 @@ const Hackathons = () => {
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
+    setSelectedTag("");
     setSelectedDifficulty("");
   };
-  const hasFilters = searchTerm || selectedCategory || selectedDifficulty;
+  const hasFilters =
+    searchTerm || selectedCategory || selectedTag || selectedDifficulty;
 
   const tabMeta = {
     active: {
@@ -429,10 +487,10 @@ const Hackathons = () => {
       count: upcomingHackathons.length,
       color: "blue",
     },
-    expired: {
-      label: "Expired",
+    completed: {
+      label: "Completed",
       icon: Timer,
-      count: expiredHackathons.length,
+      count: completedHackathons.length,
       color: "red",
     },
   };
@@ -440,12 +498,12 @@ const Hackathons = () => {
   const tabTitle = {
     active: "Active Hackathons",
     upcoming: "Upcoming Hackathons",
-    expired: "Expired Hackathons",
+    completed: "Completed Hackathons",
   };
   const tabGradient = {
     active: "from-[#5fff60] to-[#2d8030]",
     upcoming: "from-[#60c8ff] to-[#2060a0]",
-    expired: "from-[#ff9090] to-[#a03030]",
+    completed: "from-[#ff9090] to-[#a03030]",
   };
 
   const selectCls =
@@ -515,7 +573,7 @@ const Hackathons = () => {
                 {hasFilters && (
                   <span className="font-jb text-[0.52rem] px-1.5 py-[1px] rounded-[2px] bg-[rgba(95,255,96,0.15)] text-[#5fff60]">
                     {
-                      [searchTerm, selectedCategory, selectedDifficulty].filter(
+                      [searchTerm, selectedCategory, selectedTag, selectedDifficulty].filter(
                         Boolean
                       ).length
                     }
@@ -546,15 +604,32 @@ const Hackathons = () => {
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className={selectCls}
+                    disabled={availableCategories.length === 0}
                   >
                     <option value="">All Categories</option>
-                    {["Web Dev", "AI/ML", "Blockchain", "IoT", "Other"].map(
-                      (c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      )
-                    )}
+                    {availableCategories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-[160px]">
+                  <label className="font-jb block text-[0.55rem] tracking-[0.14em] uppercase text-[rgba(95,255,96,0.45)] mb-1.5">
+                    Tag
+                  </label>
+                  <select
+                    value={selectedTag}
+                    onChange={(e) => setSelectedTag(e.target.value)}
+                    className={selectCls}
+                    disabled={availableTags.length === 0}
+                  >
+                    <option value="">All Tags</option>
+                    {availableTags.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="min-w-[160px]">
@@ -565,15 +640,14 @@ const Hackathons = () => {
                     value={selectedDifficulty}
                     onChange={(e) => setSelectedDifficulty(e.target.value)}
                     className={selectCls}
+                    disabled={availableDifficulties.length === 0}
                   >
                     <option value="">All Difficulties</option>
-                    {["Beginner", "Intermediate", "Advanced", "Expert"].map(
-                      (d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      )
-                    )}
+                    {availableDifficulties.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -582,7 +656,6 @@ const Hackathons = () => {
 
           {/* ── Section heading ── */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-            {/* Title */}
             <h2
               className={`font-syne font-extrabold text-transparent bg-clip-text bg-gradient-to-b ${tabGradient[activeTab]} flex items-center gap-2 sm:gap-3`}
               style={{ fontSize: "clamp(1.2rem,4vw,2.4rem)" }}
@@ -598,14 +671,13 @@ const Hackathons = () => {
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#60c8ff] inline-block" />
               )}
 
-              {activeTab === "expired" && (
+              {activeTab === "completed" && (
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#ff9090] opacity-50 inline-block" />
               )}
 
               {tabTitle[activeTab]}
             </h2>
 
-            {/* Count */}
             <div className="font-jb text-[0.6rem] sm:text-[0.65rem] tracking-[0.08em] text-[rgba(180,220,180,0.4)]">
               <span className="text-[#5fff60]">
                 {loading ? "…" : getCurrentHackathons().length}
@@ -624,8 +696,8 @@ const Hackathons = () => {
                 <HackathonCardSkeleton key={i} />
               ))
             ) : getCurrentHackathons().length > 0 ? (
-              getCurrentHackathons().map((h, i) => (
-                <HackathonCard key={`${activeTab}-${i}`} hackathon={h} />
+              getCurrentHackathons().map((h) => (
+                <HackathonCard key={h.slug} hackathon={h} />
               ))
             ) : (
               <div className="font-jb text-center py-16 flex flex-col items-center gap-3">

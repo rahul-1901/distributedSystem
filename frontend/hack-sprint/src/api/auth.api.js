@@ -8,8 +8,8 @@ export const AuthAPI = {
   login(data) {
     return client.post(`${API.AUTH}/login`, data);
   },
-  googleLogin() {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL}${API.AUTH}/google`;
+  googleLogin(code) {
+    return client.get(`${API.AUTH}/google`, { params: { code } });
   },
   verifyEmail(token) {
     return client.get(`${API.AUTH}/verify-email?token=${token}`);

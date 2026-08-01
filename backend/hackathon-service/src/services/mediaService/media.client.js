@@ -8,7 +8,7 @@ export class MediaServiceClient {
 
   async deleteFile(key) {
     try {
-      await axios.delete(`${this.baseUrl}/uploads`, {
+      await axios.delete(`${this.baseUrl}/`, {
         data: {
           key,
         },

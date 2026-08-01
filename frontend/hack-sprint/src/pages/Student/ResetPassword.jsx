@@ -1,18 +1,35 @@
-import React, { useState, useContext } from "react";
-import { AppContent } from "../context/AppContext";
-import { API } from "../backendApis/api";
+import React, { useState } from "react";
+import { AuthAPI } from "../../api/auth.api";
 import { toast } from "react-toastify";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 
 const EyeOpen = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 const EyeClosed = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
     <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
     <line x1="1" y1="1" x2="23" y2="23" />
@@ -20,7 +37,6 @@ const EyeClosed = () => (
 );
 
 function ResetPassword() {
-  const { backendUrl } = useContext(AppContent);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,10 +62,7 @@ function ResetPassword() {
 
     setLoading(true);
     try {
-      const { data } = await API.post(
-        `${backendUrl}/api/account/reset-password`,
-        { token, newPassword }
-      );
+      const { data } = await AuthAPI.resetPassword({ token, newPassword });
 
       if (data.success) {
         toast.success(data.message || "Password updated successfully");
@@ -94,7 +107,18 @@ function ResetPassword() {
         `}</style>
         <div className="rp-root rp-bg min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
           <div className="rp-card relative z-10 w-full max-w-[400px] bg-[rgba(10,12,10,0.93)] border border-[rgba(255,80,80,0.2)] rounded-[4px] p-8 backdrop-blur-xl shadow-[0_0_40px_rgba(255,80,80,0.07)] flex flex-col items-center text-center">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ff5050" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-5" style={{ filter: "drop-shadow(0 0 8px rgba(255,80,80,0.4))" }}>
+            <svg
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ff5050"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mb-5"
+              style={{ filter: "drop-shadow(0 0 8px rgba(255,80,80,0.4))" }}
+            >
               <circle cx="12" cy="12" r="10" />
               <line x1="15" y1="9" x2="9" y2="15" />
               <line x1="9" y1="9" x2="15" y2="15" />
@@ -106,7 +130,8 @@ function ResetPassword() {
               Link <span className="text-[#ff5050]">Expired.</span>
             </h1>
             <p className="rp-root text-[0.63rem] tracking-[0.05em] text-[rgba(180,220,180,0.4)] mb-6 leading-relaxed">
-              This reset link is invalid or has expired. Please request a new one.
+              This reset link is invalid or has expired. Please request a new
+              one.
             </p>
             <Link
               to="/account/forgot-password"
@@ -223,7 +248,6 @@ function ResetPassword() {
 
       <div className="rp-root rp-bg min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
         <div className="rp-card relative z-10 w-full max-w-[400px] bg-[rgba(10,12,10,0.93)] border border-[rgba(95,255,96,0.18)] rounded-[4px] p-8 backdrop-blur-xl shadow-[0_0_40px_rgba(95,255,96,0.08)]">
-
           <div className="rp-root inline-block text-[0.58rem] tracking-[0.18em] uppercase text-[#5fff60] border border-[rgba(95,255,96,0.25)] px-[0.65rem] py-[0.18rem] rounded-[2px] mb-4">
             set new password
           </div>
@@ -242,9 +266,10 @@ function ResetPassword() {
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="flex flex-col gap-4">
-
               <div>
-                <label htmlFor="rp-new" className="rp-label">New password</label>
+                <label htmlFor="rp-new" className="rp-label">
+                  New password
+                </label>
                 <div className="relative">
                   <input
                     id="rp-new"
@@ -255,14 +280,22 @@ function ResetPassword() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     autoComplete="new-password"
                   />
-                  <button type="button" className="rp-eye" onClick={() => setShowNew(v => !v)} tabIndex={-1} aria-label="Toggle password visibility">
+                  <button
+                    type="button"
+                    className="rp-eye"
+                    onClick={() => setShowNew((v) => !v)}
+                    tabIndex={-1}
+                    aria-label="Toggle password visibility"
+                  >
                     {showNew ? <EyeClosed /> : <EyeOpen />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="rp-confirm" className="rp-label">Confirm password</label>
+                <label htmlFor="rp-confirm" className="rp-label">
+                  Confirm password
+                </label>
                 <div className="relative">
                   <input
                     id="rp-confirm"
@@ -273,7 +306,13 @@ function ResetPassword() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
                   />
-                  <button type="button" className="rp-eye" onClick={() => setShowConfirm(v => !v)} tabIndex={-1} aria-label="Toggle confirm password visibility">
+                  <button
+                    type="button"
+                    className="rp-eye"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    tabIndex={-1}
+                    aria-label="Toggle confirm password visibility"
+                  >
                     {showConfirm ? <EyeClosed /> : <EyeOpen />}
                   </button>
                 </div>
@@ -281,9 +320,16 @@ function ResetPassword() {
                 {confirmPassword.length > 0 && (
                   <p
                     className="rp-root text-[0.56rem] tracking-[0.08em] mt-1"
-                    style={{ color: newPassword === confirmPassword ? "rgba(95,255,96,0.6)" : "rgba(255,80,80,0.7)" }}
+                    style={{
+                      color:
+                        newPassword === confirmPassword
+                          ? "rgba(95,255,96,0.6)"
+                          : "rgba(255,80,80,0.7)",
+                    }}
                   >
-                    {newPassword === confirmPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
+                    {newPassword === confirmPassword
+                      ? "✓ Passwords match"
+                      : "✗ Passwords do not match"}
                   </p>
                 )}
               </div>

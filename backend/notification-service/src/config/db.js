@@ -7,13 +7,15 @@ export const connectDB = async () => {
       autoIndex: process.env.NODE_ENV !== "production",
     });
     
-    mongoose.set("debug", (collectionName, method, query) => {
-      console.log({
-        collectionName,
-        method,
-        query,
+    if (process.env.NODE_ENV !== "production") {
+      mongoose.set("debug", (collectionName, method, query) => {
+        console.log({
+          collectionName,
+          method,
+          query,
+        });
       });
-    });
+    }
 
     logger.info("MongoDB connected successfully");
   } catch (error) {

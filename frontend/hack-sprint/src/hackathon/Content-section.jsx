@@ -1,19 +1,159 @@
 import React, { useState, useEffect } from "react";
 import {
   Clock,
-  Code,
-  Users,
   ChevronDown,
   ChevronUp,
   Trophy,
   Link2,
+  Mail,
+  Phone as PhoneIcon,
 } from "lucide-react";
+import DOMPurify from "dompurify";
 import ChatInterface from "../components/Chat/ChatInterface";
 import Upvote from "./Upvote";
 import Gallery from "./Gallery";
 
 const FontStyle = () => (
-  <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');`}</style>
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap');
+
+    .hk-details h1,
+    .hk-details h2,
+    .hk-details h3,
+    .hk-details h4 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    .hk-details h1:first-child,
+    .hk-details h2:first-child,
+    .hk-details h3:first-child {
+      margin-top: 0;
+    }
+    .hk-details h2 { font-size: 1.35rem; line-height: 1.3; }
+    .hk-details h3 { font-size: 1.05rem; line-height: 1.35; }
+    .hk-details h4 { font-size: 0.9rem; }
+
+    .hk-details p {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: rgba(180,220,180,0.62);
+      margin-bottom: 1rem;
+    }
+
+    .hk-details ul,
+    .hk-details ol {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: rgba(180,220,180,0.62);
+      margin: 0 0 1.25rem 0;
+      padding-left: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .hk-details ul { list-style: none; }
+    .hk-details ul > li { position: relative; padding-left: 1rem; }
+    .hk-details ul > li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.65em;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #5fff60;
+    }
+    .hk-details ol {
+      list-style: none;
+      counter-reset: hk-ol;
+    }
+    .hk-details ol > li {
+      position: relative;
+      padding-left: 1.6rem;
+      counter-increment: hk-ol;
+    }
+    .hk-details ol > li::before {
+      content: counter(hk-ol, decimal-leading-zero) ".";
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: #5fff60;
+      font-weight: 600;
+    }
+    .hk-details li > ul,
+    .hk-details li > ol {
+      margin-top: 0.4rem;
+      margin-bottom: 0;
+    }
+
+    .hk-details strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .hk-details em {
+      font-style: italic;
+      color: rgba(180,220,180,0.45);
+    }
+
+    .hk-details a {
+      color: #5fff60;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-color: rgba(95,255,96,0.4);
+      transition: color 0.15s;
+    }
+    .hk-details a:hover {
+      color: #7fff80;
+      text-decoration-color: #7fff80;
+    }
+
+    .hk-details blockquote {
+      margin: 1.5rem 0;
+      padding: 0.9rem 1.2rem;
+      border-left: 2px solid #5fff60;
+      background: rgba(95,255,96,0.04);
+      border-radius: 0 3px 3px 0;
+    }
+    .hk-details blockquote p {
+      font-style: italic;
+      color: rgba(180,220,180,0.75);
+      margin-bottom: 0;
+    }
+
+    .hk-details hr {
+      border: none;
+      border-top: 1px solid rgba(95,255,96,0.1);
+      margin: 2rem 0;
+    }
+
+    .hk-details table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      margin-bottom: 1.25rem;
+    }
+    .hk-details th,
+    .hk-details td {
+      border: 1px solid rgba(95,255,96,0.1);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      color: rgba(180,220,180,0.6);
+    }
+    .hk-details th {
+      color: #5fff60;
+      font-weight: 600;
+      background: rgba(95,255,96,0.03);
+    }
+  `}</style>
 );
 
 const Card = ({ children, className = "" }) => (
@@ -39,26 +179,6 @@ const SubHead = ({ icon: Icon, children }) => (
   </h4>
 );
 
-const Tag = ({ children, color = "green" }) => {
-  const c =
-    color === "blue"
-      ? "bg-[rgba(96,200,255,0.07)] border-[rgba(96,200,255,0.2)] text-[rgba(96,200,255,0.75)]"
-      : "bg-[rgba(95,255,96,0.07)] border-[rgba(95,255,96,0.2)] text-[rgba(95,255,96,0.75)]";
-  return (
-    <span
-      className={`font-[family-name:'JetBrains_Mono',monospace] inline-block text-[0.6rem] tracking-[0.07em] px-2 py-1 rounded-[2px] border ${c}`}
-    >
-      {children}
-    </span>
-  );
-};
-
-const Label = ({ children }) => (
-  <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.52rem] tracking-[0.18em] uppercase text-[rgba(95,255,96,0.4)] mb-1">
-    {children}
-  </div>
-);
-
 const Empty = ({ label }) => (
   <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.35)] tracking-[0.04em]">
     No {label} information provided.
@@ -75,93 +195,13 @@ const fmtDate = (d) =>
     hour12: true,
   });
 
+const fmtDateRange = (start, end) =>
+  `${fmtDate(start)} → ${fmtDate(end)}`;
+
 export const ContentSection = ({ activeSection, hackathon }) => {
   const [expandedFAQ, setExpandedFAQ] = useState(null);
 
-  const SimpleSection = ({ title, content }) => (
-    <div>
-      <SectionHead>{title}</SectionHead>
-      <Card>
-        {content ? (
-          <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.72rem] text-[rgba(180,220,180,0.65)] leading-relaxed whitespace-pre-line">
-            {content}
-          </div>
-        ) : (
-          <Empty label={title.toLowerCase()} />
-        )}
-      </Card>
-    </div>
-  );
-
-  const RefSection = ({ title, content }) => {
-    const urls = Array.isArray(content) ? content : content ? [content] : [];
-    return (
-      <div>
-        <SectionHead>{title}</SectionHead>
-        <Card>
-          {urls.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {urls.map((url, i) => (
-                <a
-                  key={i}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] flex items-center gap-1.5 break-all transition-colors"
-                >
-                  <Link2 size={11} className="flex-shrink-0 opacity-60" />
-                  {url}
-                </a>
-              ))}
-            </div>
-          ) : (
-            <Empty label={title.toLowerCase()} />
-          )}
-        </Card>
-      </div>
-    );
-  };
-
-  const ListSection = ({ title, content }) => {
-    const isLink = (t) => typeof t === "string" && t.startsWith("http");
-    const ok = Array.isArray(content) && content.length > 0;
-    return (
-      <div>
-        <SectionHead>{title}</SectionHead>
-        <Card>
-          {ok ? (
-            <ul className="flex flex-col gap-2">
-              {content.map((item, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(95,255,96,0.5)] mt-[3px] flex-shrink-0">
-                    {String(i + 1).padStart(2, "0")}.
-                  </span>
-                  {isLink(item) ? (
-                    <a
-                      href={item}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] underline transition-colors"
-                    >
-                      Rule Book
-                    </a>
-                  ) : (
-                    <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.6)] leading-relaxed">
-                      {item}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty label={title.toLowerCase()} />
-          )}
-        </Card>
-      </div>
-    );
-  };
-
-  const TimelineRow = ({ label, date, last }) => (
+  const TimelineRow = ({ label, range, last }) => (
     <div
       className={`flex gap-4 pb-5 ${
         !last ? "border-b border-[rgba(95,255,96,0.06)]" : ""
@@ -176,7 +216,7 @@ export const ContentSection = ({ activeSection, hackathon }) => {
           {label}
         </div>
         <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.62rem] text-[rgba(180,220,180,0.45)] mt-0.5">
-          {fmtDate(date)}
+          {range}
         </div>
       </div>
     </div>
@@ -184,7 +224,10 @@ export const ContentSection = ({ activeSection, hackathon }) => {
 
   const renderContent = () => {
     switch (activeSection) {
-      case "overview":
+      case "overview": {
+        const sortedPhases = [...(hackathon.phases || [])].sort(
+          (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        );
         return (
           <div className="flex flex-col gap-5">
             <Card>
@@ -196,89 +239,81 @@ export const ContentSection = ({ activeSection, hackathon }) => {
 
             <Card>
               <SubHead icon={Clock}>Event Timeline</SubHead>
-              <div className="flex flex-col gap-0">
-                {[
-                  ["Registration Opens", hackathon.startDate],
-                  ["Registration Closes", hackathon.endDate],
-                  ["PPT Submission Opens", hackathon.submissionStartDate],
-                  ["PPT Submission Deadline", hackathon.submissionEndDate],
-                ].map(([label, date], i, arr) => (
-                  <TimelineRow
-                    key={label}
-                    label={label}
-                    date={date}
-                    last={i === arr.length - 1}
-                  />
-                ))}
-              </div>
-            </Card>
-
-            {/* <div className="grid sm:grid-cols-2 gap-4">
-              <Card>
-                <SubHead icon={Code}>Difficulty</SubHead>
-                <Tag>{hackathon.difficulty}</Tag>
-              </Card>
-              <Card>
-                <SubHead icon={Users}>Categories</SubHead>
-                <div className="flex flex-wrap gap-1.5">
-                  {hackathon.category?.map((cat, i) => (
-                    <Tag key={i} color="blue">
-                      {cat}
-                    </Tag>
+              {sortedPhases.length > 0 ? (
+                <div className="flex flex-col gap-0">
+                  {sortedPhases.map((p, i) => (
+                    <TimelineRow
+                      key={p._id}
+                      label={p.phaseName}
+                      range={fmtDateRange(p.startDate, p.endDate)}
+                      last={i === sortedPhases.length - 1}
+                    />
                   ))}
                 </div>
-              </Card>
-            </div> */}
-
-            {/* <Card>
-              <SubHead>Recommended Tech Stack</SubHead>
-              <div className="flex flex-wrap gap-1.5">
-                {hackathon.techStackUsed?.map((tech, i) => (
-                  <Tag key={i}>{tech}</Tag>
-                ))}
-              </div>
-            </Card> */}
+              ) : (
+                <Empty label="timeline" />
+              )}
+            </Card>
           </div>
         );
+      }
+
+      case "details": {
+        const html = hackathon.detailsContent
+          ? DOMPurify.sanitize(hackathon.detailsContent)
+          : "";
+        return (
+          <div>
+            <SectionHead>Details</SectionHead>
+            <Card>
+              {html ? (
+                <div
+                  className="hk-details"
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              ) : (
+                <Empty label="details" />
+              )}
+            </Card>
+          </div>
+        );
+      }
+
       case "prizes": {
-        const rewards =
-          hackathon.rewards?.length > 0
-            ? hackathon.rewards
-            : [
-                hackathon.prizeMoney1 > 0
-                  ? { description: "1st Prize", amount: hackathon.prizeMoney1 }
-                  : null,
-                hackathon.prizeMoney2 > 0
-                  ? { description: "2nd Prize", amount: hackathon.prizeMoney2 }
-                  : null,
-                hackathon.prizeMoney3 > 0
-                  ? { description: "3rd Prize", amount: hackathon.prizeMoney3 }
-                  : null,
-              ].filter(Boolean);
-        const total = rewards.reduce((s, r) => s + (r.amount || 0), 0);
+        const prizes = hackathon.prizes || [];
+        const total = prizes.reduce((s, p) => s + (p.amount || 0), 0);
         return (
           <div>
             <SectionHead>Prizes</SectionHead>
             <Card>
-              {total > 0 ? (
+              {prizes.length > 0 ? (
                 <div className="flex flex-col gap-3">
-                  <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.55)]">
-                    Total prize pool:{" "}
-                    <span className="text-[#5fff60] font-semibold">
-                      ₹{total.toLocaleString("en-IN")}
-                    </span>
-                  </p>
-                  <div className="flex flex-col gap-1.5">
-                    {rewards.map((r, i) => (
+                  {total > 0 && (
+                    <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.55)]">
+                      Total prize pool:{" "}
+                      <span className="text-[#5fff60] font-semibold">
+                        ₹{total.toLocaleString("en-IN")}
+                      </span>
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    {prizes.map((p, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between py-1.5 border-b border-[rgba(95,255,96,0.06)] last:border-b-0"
+                        className="flex items-start justify-between gap-4 py-1.5 border-b border-[rgba(95,255,96,0.06)] last:border-b-0"
                       >
-                        <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.5)]">
-                          {r.description}
-                        </span>
-                        <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[#5fff60] text-sm">
-                          ₹{r.amount.toLocaleString("en-IN")}
+                        <div>
+                          <p className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-sm">
+                            {p.title}
+                          </p>
+                          {p.description && (
+                            <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] text-[rgba(180,220,180,0.4)] mt-0.5">
+                              {p.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-[family-name:'Syne',sans-serif] font-extrabold text-[#5fff60] text-sm flex-shrink-0">
+                          ₹{(p.amount || 0).toLocaleString("en-IN")}
                         </span>
                       </div>
                     ))}
@@ -291,40 +326,37 @@ export const ContentSection = ({ activeSection, hackathon }) => {
           </div>
         );
       }
-      case "themes":
-        return <ListSection title="Themes" content={hackathon.themes} />;
-      case "submission-guide":
+
+      case "judging": {
+        const jc = hackathon.judgingConfig;
         return (
-          <ListSection
-            title="Submission Guide"
-            content={hackathon.projectSubmission}
-          />
+          <div>
+            <SectionHead>Judging</SectionHead>
+            <Card>
+              {jc && (jc.minScore != null || jc.maxScore != null) ? (
+                <div className="flex items-center gap-3">
+                  <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.72rem] text-[rgba(180,220,180,0.6)]">
+                    Submissions are scored on a scale of{" "}
+                    <span className="text-[#5fff60] font-semibold">
+                      {jc.minScore}
+                    </span>{" "}
+                    to{" "}
+                    <span className="text-[#5fff60] font-semibold">
+                      {jc.maxScore}
+                    </span>
+                    .
+                  </p>
+                </div>
+              ) : (
+                <Empty label="judging" />
+              )}
+            </Card>
+          </div>
         );
-      case "judging":
-        return (
-          <ListSection
-            title="Judging Criteria"
-            content={hackathon.evaluationCriteria}
-          />
-        );
-      case "rules":
-        return (
-          <ListSection
-            title="Rules & Guidelines"
-            content={hackathon.TandCforHackathon}
-          />
-        );
-      case "about":
-        return <SimpleSection title="About" content={hackathon.aboutUs} />;
-      case "refMaterial":
-        return (
-          <RefSection
-            title="Reference Material"
-            content={hackathon.refMaterial}
-          />
-        );
+      }
+
       case "faqs": {
-        const faqs = hackathon.FAQs || [];
+        const faqs = hackathon.faqs || [];
         return (
           <div>
             <SectionHead>Frequently Asked Questions</SectionHead>
@@ -379,22 +411,87 @@ export const ContentSection = ({ activeSection, hackathon }) => {
           </div>
         );
       }
+
+      case "resources": {
+        const resources = hackathon.resources || [];
+        return (
+          <div>
+            <SectionHead>Resources</SectionHead>
+            <Card>
+              {resources.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {resources.map((r, i) => (
+                    <a
+                      key={i}
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] flex items-center gap-1.5 transition-colors"
+                    >
+                      <Link2 size={11} className="flex-shrink-0 opacity-60" />
+                      {r.title || r.url}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <Empty label="resource" />
+              )}
+            </Card>
+          </div>
+        );
+      }
+
       case "discussion":
         return <ChatInterface hackathonId={hackathon._id} />;
-      case "contact":
+
+      case "contact": {
+        const contacts = hackathon.contacts || [];
         return (
           <div>
             <SectionHead>Contact</SectionHead>
-
             <Card>
-              {hackathon.contact?.length > 0 ? (
+              {contacts.length > 0 ? (
                 <div className="flex flex-col gap-3">
-                  {hackathon.contact.map((item, i) => {
-                    const value = item.value || "";
-                    const title = item.title || "";
-
-                    const isEmail = value.includes("@");
-                    const isLink = value.startsWith("http");
+                  {contacts.map((item, i) => {
+                    const { label, type, value } = item;
+                    let content;
+                    if (type === "EMAIL")
+                      content = (
+                        <a
+                          href={`mailto:${value}`}
+                          className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[#5fff60] hover:underline break-all flex items-center gap-1.5"
+                        >
+                          <Mail size={12} /> {value}
+                        </a>
+                      );
+                    else if (type === "PHONE")
+                      content = (
+                        <a
+                          href={`tel:${value}`}
+                          className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[#5fff60] hover:underline break-all flex items-center gap-1.5"
+                        >
+                          <PhoneIcon size={12} /> {value}
+                        </a>
+                      );
+                    else if (
+                      ["WEBSITE", "LINKEDIN", "DISCORD"].includes(type)
+                    )
+                      content = (
+                        <a
+                          href={value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[#5fff60] hover:underline break-all"
+                        >
+                          {value}
+                        </a>
+                      );
+                    else
+                      content = (
+                        <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[rgba(180,220,180,0.6)] break-all">
+                          {value}
+                        </p>
+                      );
 
                     return (
                       <div
@@ -402,30 +499,9 @@ export const ContentSection = ({ activeSection, hackathon }) => {
                         className="flex items-center justify-between gap-3"
                       >
                         <p className="text-[0.6rem] text-[#5fff60] uppercase tracking-wider">
-                          {title}
+                          {label}
                         </p>
-
-                        {isEmail ? (
-                          <a
-                            href={`mailto:${value}`}
-                            className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[#5fff60] hover:underline break-all"
-                          >
-                            {value}
-                          </a>
-                        ) : isLink ? (
-                          <a
-                            href={value}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[#5fff60] hover:underline break-all"
-                          >
-                            {value}
-                          </a>
-                        ) : (
-                          <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[rgba(180,220,180,0.6)] break-all">
-                            {value}
-                          </p>
-                        )}
+                        {content}
                       </div>
                     );
                   })}
@@ -436,8 +512,11 @@ export const ContentSection = ({ activeSection, hackathon }) => {
             </Card>
           </div>
         );
+      }
+
       case "upvote":
         return <Upvote />;
+
       case "gallery":
         return (
           <div>
@@ -445,8 +524,10 @@ export const ContentSection = ({ activeSection, hackathon }) => {
             <Gallery />
           </div>
         );
+
       case "results":
         return <ResultsSection hackathonId={hackathon._id} />;
+
       default:
         return (
           <div className="text-center py-12">

@@ -66,3 +66,18 @@ export const updateMyRegistration = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getMyRegistrations = async (req, res, next) => {
+  try {
+    const registrations = await registrationService.getMyRegistrations(
+      req.user._id
+    );
+
+    return res.status(200).json({
+      success: true,
+      registrations,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

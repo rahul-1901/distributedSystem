@@ -1,15 +1,16 @@
 import { Outlet } from "react-router-dom";
-
-import StudentNavbar from "../components/student/StudentNavbar";
+import React from "react";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 function StudentLayout() {
   return (
     <>
-      <StudentNavbar />
-
+      <Navbar />
       <main>
         <Outlet />
       </main>
+      <Footer />
     </>
   );
 }
