@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
 import { ProfileAPI } from "../api/profile.api.js";
+import { AdminAPI } from "../api/admin.api.js";
 
 export default function AuthProvider({ children }) {
   const login = useAuthStore((state) => state.login);
@@ -8,6 +9,18 @@ export default function AuthProvider({ children }) {
 
   useEffect(() => {
     const bootstrap = async () => {
+      const adminToken = localStorage.getItem("adminToken");
+
+      if (adminToken) {
+        try {
+          const res = await AdminAPI.getProfile();
+          login(res.data.admin, "admin");
+          return;
+        } catch {
+          localStorage.removeItem("adminToken");
+        }
+      }
+
       const token = localStorage.getItem("token");
 
       if (!token) {

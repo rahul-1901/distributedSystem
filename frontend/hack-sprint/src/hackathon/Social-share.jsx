@@ -5,15 +5,14 @@ import {
   Linkedin,
   Link2,
   Heart,
-  Github,
-  MessageCircle,
   X,
   ArrowRight,
   Check,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { HackathonAPI } from "../api/hackathon.api.js";
 
 export const SocialShare = ({ hackathonId: id }) => {
@@ -249,16 +248,6 @@ export const SocialShare = ({ hackathonId: id }) => {
     );
   };
 
-  const handleGithub = async () => {
-    await copyCurrentUrl(false);
-
-    window.open(
-      "https://github.com/devlup-labs/HackSprint",
-      "_blank",
-      "noopener,noreferrer"
-    );
-  };
-
   /* =========================================================
      REUSABLE ICON BUTTON
   ========================================================= */
@@ -338,26 +327,23 @@ export const SocialShare = ({ hackathonId: id }) => {
     {
       label: "WhatsApp",
       description: "Share with a link preview",
-      icon: MessageCircle,
+      icon: FaWhatsapp,
       action: handleWhatsAppShare,
+      brand: "#25D366",
     },
     {
       label: "Instagram",
       description: "Link copied — paste into a story or DM",
       icon: Instagram,
       action: handleInstagramShare,
+      brand: "#E1306C",
     },
     {
       label: "LinkedIn",
       description: "Share this hackathon as a post",
       icon: Linkedin,
       action: handleLinkedInShare,
-    },
-    {
-      label: "GitHub",
-      description: "Open the HackSprint repository",
-      icon: Github,
-      action: handleGithub,
+      brand: "#0A66C2",
     },
   ];
 
@@ -438,6 +424,8 @@ export const SocialShare = ({ hackathonId: id }) => {
                 relative
                 z-[1]
 
+                font-[family-name:'JetBrains_Mono',monospace]
+
                 w-full
                 max-w-[460px]
 
@@ -448,7 +436,7 @@ export const SocialShare = ({ hackathonId: id }) => {
                 border
                 border-[rgba(95,255,96,0.22)]
 
-                rounded-[16px]
+                rounded-[4px]
 
                 shadow-[0_0_80px_rgba(0,0,0,0.75)]
 
@@ -522,10 +510,11 @@ export const SocialShare = ({ hackathonId: id }) => {
                     <h2
                       id="share-modal-title"
                       className="
+                        font-[family-name:'Syne',sans-serif]
                         text-white
                         text-xl
                         sm:text-[22px]
-                        font-semibold
+                        font-extrabold
                         tracking-[-0.02em]
                       "
                     >
@@ -582,11 +571,12 @@ export const SocialShare = ({ hackathonId: id }) => {
 
                 <div className="flex flex-col gap-2.5">
                   {shareOptions.map(
-                    ({ label, description, icon: Icon, action }) => (
+                    ({ label, description, icon: Icon, action, brand }) => (
                       <button
                         key={label}
                         type="button"
                         onClick={action}
+                        style={{ "--brand": brand }}
                         className="
                           group
 
@@ -600,7 +590,7 @@ export const SocialShare = ({ hackathonId: id }) => {
                           sm:px-4
                           py-3
 
-                          rounded-[10px]
+                          rounded-[4px]
 
                           border
                           border-white/[0.07]
@@ -609,8 +599,8 @@ export const SocialShare = ({ hackathonId: id }) => {
 
                           text-left
 
-                          hover:bg-[#5fff60]/[0.045]
-                          hover:border-[#5fff60]/25
+                          hover:bg-[var(--brand)]/[0.06]
+                          hover:border-[var(--brand)]/25
 
                           active:scale-[0.99]
 
@@ -635,9 +625,9 @@ export const SocialShare = ({ hackathonId: id }) => {
 
                             text-white/65
 
-                            group-hover:text-[#5fff60]
-                            group-hover:border-[#5fff60]/30
-                            group-hover:bg-[#5fff60]/5
+                            group-hover:text-[var(--brand)]
+                            group-hover:border-[var(--brand)]/30
+                            group-hover:bg-[var(--brand)]/5
 
                             transition-all
                             duration-200
@@ -709,7 +699,7 @@ export const SocialShare = ({ hackathonId: id }) => {
                     px-3
                     py-3
 
-                    rounded-[10px]
+                    rounded-[4px]
 
                     border
                     border-dashed
@@ -892,7 +882,7 @@ export const SocialShare = ({ hackathonId: id }) => {
               hoverBg="hover:bg-[rgba(37,211,102,0.10)]"
               hoverShadow="hover:shadow-[0_0_10px_rgba(37,211,102,0.18)]"
             >
-              <MessageCircle
+              <FaWhatsapp
                 size={14}
                 className="
                   text-[rgba(37,211,102,0.75)]
@@ -912,21 +902,6 @@ export const SocialShare = ({ hackathonId: id }) => {
                 className="
                   text-[rgba(225,48,108,0.65)]
                   group-hover:text-[rgb(225,48,108)]
-                "
-              />
-            </IconBtn>
-
-            <IconBtn
-              onClick={openShareModal}
-              ariaLabel="Share on GitHub"
-              hoverBg="hover:bg-[rgba(220,220,220,0.08)]"
-              hoverShadow="hover:shadow-[0_0_10px_rgba(200,200,200,0.12)]"
-            >
-              <Github
-                size={14}
-                className="
-                  text-[rgba(200,200,200,0.60)]
-                  group-hover:text-white
                 "
               />
             </IconBtn>

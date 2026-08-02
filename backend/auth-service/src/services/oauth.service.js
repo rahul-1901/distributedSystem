@@ -24,7 +24,7 @@ export class OAuthService {
       `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${tokens.access_token}`
     );
 
-    const { name, email } = userRes.data;
+    const { name, email, picture } = userRes.data;
 
     let user = await userRepository.findByEmail(email);
 
@@ -38,6 +38,11 @@ export class OAuthService {
         email,
         provider: "google",
         isVerified: true,
+        image: picture ? { url: picture, key: "" } : undefined,
+      });
+    } else if (picture && !user.image?.url) {
+      user = await userRepository.updateById(user._id, {
+        image: { url: picture, key: "" },
       });
     }
 

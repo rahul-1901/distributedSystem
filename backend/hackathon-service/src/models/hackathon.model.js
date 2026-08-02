@@ -109,6 +109,11 @@ const hackathonSchema = new mongoose.Schema(
     subTitle: {
       type: String,
     },
+    venue: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     description: {
       type: String,
     },
@@ -166,6 +171,9 @@ const hackathonSchema = new mongoose.Schema(
       {
         title: String,
         url: String,
+        key: String,
+        format: String,
+        size: Number,
       },
     ],
     faqs: [

@@ -10,7 +10,6 @@ import AdminLayout from "../layouts/AdminLayout";
 
 import Home from "../pages/Home";
 
-import Admin from "../pages/Admin/Admin.jsx";
 import Login from "../pages/Student/Login.jsx";
 import NotFoundPage from "../pages/NotFound";
 import Dashboard from "../pages/Student/Dashboard.jsx";
@@ -40,55 +39,39 @@ import CreateHackathonPage from "../pages/Admin/CreateHackathonPage.jsx";
 function AppRoutes() {
   return (
     <Routes>
-      {/* ================= PUBLIC ROUTES ================= */}
-
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-
         <Route path="/hackathons" element={<AllHackathons />} />
-
         <Route path="/hackathon/:slug" element={<HackathonDetails />} />
-
         <Route
           path="/participation-policies"
           element={<ParticipantPoliciesPage />}
         />
-
         <Route path="/organizer-ruleBook" element={<OrganizerPlaybookPage />} />
-
         <Route path="/terms-and-condition" element={<LegalSupportPage />} />
+        <Route path="/adminhome" element={<Adminhome />} />
       </Route>
-
-      {/* ================= GUEST / AUTH ROUTES ================= */}
 
       <Route element={<GuestRoute />}>
         <Route path="/account/login" element={<Login />} />
-
         <Route path="/account/signup" element={<Signup />} />
       </Route>
 
       <Route path="/account/forgot-password" element={<ForgotPassword />} />
-
       <Route path="/account/reset-password" element={<ResetPassword />} />
-
-      {/* ================= STUDENT ROUTES ================= */}
 
       <Route element={<ProtectedRoute />}>
         <Route element={<StudentLayout />}>
           <Route path="/studenthome" element={<Studenthome />} />
-
           <Route path="/dashboard" element={<Dashboard />} />
-
           <Route
             path="/hackathon/RegistrationForm/:slug"
             element={<RegistrationForm />}
           />
-
           <Route
             path="/hackathon/:slug/team/:teamId"
             element={<TeamDetails />}
           />
-
           <Route
             path="/hackathon/:slug/submission/:id"
             element={<UserSubmissionDetailPage />}
@@ -96,28 +79,18 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* ================= ADMIN AUTH ROUTES ================= */}
-
       <Route path="/adminlogin" element={<AdminLogin />} />
-
       <Route path="/admin/signup" element={<AdminSignup />} />
-
-      {/* ================= ADMIN ROUTES ================= */}
 
       <Route element={<AdminRoute />}>
         <Route element={<AdminLayout />}>
-          <Route path="/adminhome" element={<Adminhome />} />
-
           <Route path="/admin" element={<AdminProfile />} />
-
           <Route path="/createHackathon" element={<CreateHackathonPage />} />
 
           <Route
             path="/admin/:slug/usersubmissions"
             element={<HackathonUsersPage />}
           />
-
-          <Route path="/hacksprintTeraBaap" element={<Admin />} />
         </Route>
       </Route>
 

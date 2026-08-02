@@ -156,6 +156,21 @@ export const getPendingHackathons = async (req, res, next) => {
   }
 };
 
+export const getAllHackathonsForController = async (req, res, next) => {
+  try {
+    const hackathons = await hackathonService.getAllHackathonsForController(
+      req.admin._id
+    );
+
+    return res.status(200).json({
+      success: true,
+      hackathons,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const approveHackathon = async (req, res, next) => {
   try {
     const hackathon = await hackathonService.approveHackathon({

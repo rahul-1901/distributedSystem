@@ -33,9 +33,19 @@ export class AdminRepository {
     });
   }
 
+  async getAllAdmins() {
+    return Admin.find({}).sort({
+      createdAt: -1,
+    });
+  }
+
   async updateVerificationStatus(adminId, updateData) {
     return Admin.findByIdAndUpdate(adminId, updateData, {
       new: true,
     });
+  }
+
+  async deleteById(adminId) {
+    return Admin.findByIdAndDelete(adminId);
   }
 }

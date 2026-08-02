@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ProfileAPI } from "../../api/profile.api.js";
 import { HackathonAPI } from "../../api/hackathon.api.js";
+import { MediaAPI } from "../../api/media.api.js";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { useAuth } from "../../hooks/useAuth.js";
 import {
   Heart,
@@ -26,6 +28,7 @@ import {
   AlertCircle,
   Rocket,
   Upload,
+  Camera,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import SubmissionForms from "../../hackathon/DashboardSubmission";
@@ -111,6 +114,187 @@ const Tag = ({ children, onDelete, color = "green" }) => {
   );
 };
 
+const EditProfileModal = ({ data, onClose, onSaved }) => {
+  const [form, setForm] = useState({
+    name: data.name || "",
+    bio: data.bio || "",
+    location: data.location || "",
+    contactNumber: data.contactNumber || "",
+  });
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(data.image?.url || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const handleAvatarSelect = (file) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Invalid image format.");
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error("Name is required.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      let updated = { ...data };
+
+      if (avatarFile) {
+        const uploadRes = await MediaAPI.uploadFile(avatarFile, "avatar");
+        const { url, key } = uploadRes.data.file;
+        const avatarRes = await ProfileAPI.updateAvatar({ url, key });
+        updated.image = avatarRes.data.image;
+      }
+
+      const profileRes = await ProfileAPI.updateProfile({
+        name: form.name.trim(),
+        bio: form.bio.trim(),
+        location: form.location.trim(),
+        contactNumber: form.contactNumber.trim(),
+      });
+      updated = { ...updated, ...profileRes.data.profile };
+
+      toast.success("Profile updated!");
+      onSaved(updated);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update profile.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 font-[family-name:'JetBrains_Mono',monospace]">
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md bg-[#0b0f0b] border border-[rgba(95,255,96,0.2)] rounded-[4px] p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-lg">
+            Edit Profile
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-[rgba(180,220,180,0.4)] hover:text-white transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center gap-3 mb-5">
+          <div className="relative">
+            <img
+              src={
+                avatarPreview ||
+                "https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_1280.png"
+              }
+              alt="Avatar"
+              className="w-20 h-20 rounded-full border-2 border-[rgba(95,255,96,0.3)] object-cover"
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#5fff60] flex items-center justify-center text-[#050905] hover:bg-[#7fff80] transition-colors cursor-pointer"
+            >
+              <Camera size={13} />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => e.target.files[0] && handleAvatarSelect(e.target.files[0])}
+            />
+          </div>
+          <p className="text-[0.58rem] text-[rgba(180,220,180,0.3)]">
+            JPEG, PNG, WEBP · Max 5MB
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
+              Name *
+            </label>
+            <input
+              className={inputCls}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Your name"
+            />
+          </div>
+          <div>
+            <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
+              Bio
+            </label>
+            <textarea
+              className={inputCls}
+              rows={3}
+              value={form.bio}
+              onChange={(e) => setForm({ ...form, bio: e.target.value.slice(0, 500) })}
+              placeholder="A short bio about yourself"
+            />
+          </div>
+          <div>
+            <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
+              Location
+            </label>
+            <input
+              className={inputCls}
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              placeholder="City, Country"
+            />
+          </div>
+          <div>
+            <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
+              Contact Number
+            </label>
+            <input
+              className={inputCls}
+              value={form.contactNumber}
+              onChange={(e) => setForm({ ...form, contactNumber: e.target.value })}
+              placeholder="+91XXXXXXXXXX"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <Btn onClick={onClose} color="red" className="flex-1 justify-center">
+            Cancel
+          </Btn>
+          <Btn
+            onClick={handleSave}
+            color="solid"
+            disabled={isSaving}
+            className="flex-1 justify-center"
+          >
+            {isSaving ? "Saving…" : "Save Changes"}
+          </Btn>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 export const UserDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -136,7 +320,8 @@ export const UserDashboard = () => {
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
   const [registrationsError, setRegistrationsError] = useState(false);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, login } = useAuth();
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   const availableLanguages = [
     "C++",
@@ -164,7 +349,12 @@ export const UserDashboard = () => {
       const res = await ProfileAPI.getMyProfile();
       setData(res.data.profile);
     } catch (err) {
-      // console.error(err);
+      if (err.response?.status === 401) {
+        logout();
+        localStorage.removeItem("token");
+        navigate("/account/login", { replace: true });
+        return;
+      }
     } finally {
       setLoading(false);
     }
@@ -184,7 +374,7 @@ export const UserDashboard = () => {
         if (decoded.exp < Math.floor(Date.now() / 1000)) {
           logout();
           localStorage.removeItem("token");
-          toast.success("Session expired", { autoClose: 800 });
+          toast.success("Session expired", { duration: 800 });
           setTimeout(() => {
             navigate("/account/login");
           }, 2000);
@@ -373,7 +563,7 @@ export const UserDashboard = () => {
   const handleLogout = () => {
     logout();
     localStorage.removeItem("token");
-    toast.success("Logged out", { autoClose: 1000 });
+    toast.success("Logged out", { duration: 1000 });
     setTimeout(() => navigate("/"), 1700);
   };
 
@@ -429,6 +619,13 @@ export const UserDashboard = () => {
                     Student
                   </p>
                 </div>
+                <Btn
+                  onClick={() => setShowEditProfile(true)}
+                  color="green"
+                  className="w-full justify-center"
+                >
+                  <Pencil size={11} /> Edit Profile
+                </Btn>
                 <Btn
                   onClick={handleLogout}
                   color="red"
@@ -981,10 +1178,10 @@ export const UserDashboard = () => {
                       onClick={() => navigate(`/hackathon/${h.slug}`)}
                       className="flex gap-3 bg-[rgba(95,255,96,0.03)] border border-[rgba(95,255,96,0.1)] rounded-[3px] p-3 cursor-pointer hover:border-[rgba(95,255,96,0.28)] transition-all"
                     >
-                      {h.image && (
+                      {h.image?.url && (
                         <div className="w-20 h-14 sm:w-24 sm:h-16 rounded-[2px] overflow-hidden flex-shrink-0">
                           <img
-                            src={h.image}
+                            src={h.image.url}
                             alt={h.title}
                             className="w-full h-full object-cover"
                           />
@@ -1000,9 +1197,11 @@ export const UserDashboard = () => {
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-1.5 items-center">
-                          {h.startDate && (
+                          {h.phases?.length > 0 && (
                             <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] text-[rgba(180,220,180,0.35)]">
-                              {new Date(h.startDate).toLocaleDateString()}
+                              {new Date(
+                                Math.min(...h.phases.map((p) => new Date(p.startDate).getTime()))
+                              ).toLocaleDateString()}
                             </span>
                           )}
                           {h.difficulty && <Tag>{h.difficulty}</Tag>}
@@ -1029,6 +1228,17 @@ export const UserDashboard = () => {
               setIsSubmissionOpen(false);
             }}
             hackathonId={selectedHackathonId}
+          />
+        )}
+
+        {showEditProfile && (
+          <EditProfileModal
+            data={data}
+            onClose={() => setShowEditProfile(false)}
+            onSaved={(updated) => {
+              setData(updated);
+              login(updated, updated.role || "student");
+            }}
           />
         )}
       </div>

@@ -1,7 +1,7 @@
 import React from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { AuthAPI } from "../../api/auth.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 
@@ -24,7 +24,7 @@ export default function GoogleLogin() {
       const errorMessage =
         err.response?.data?.message || err.message || "Something went wrong";
 
-      toast.error(errorMessage, { className: "text-sm max-w-xs" });
+      toast.error(errorMessage);
     }
   };
 

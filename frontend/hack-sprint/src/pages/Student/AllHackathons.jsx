@@ -12,6 +12,7 @@ import {
   Filter,
   X,
   Star,
+  MapPin,
 } from "lucide-react";
 import { useHackathons } from "../../hooks/useHackathons";
 import "../Styles/AllHackathons.css";
@@ -358,6 +359,12 @@ const HackathonCard = ({ hackathon }) => {
                   {hackathon.formattedDate}
                 </span>
               )}
+              {hackathon.venue && (
+                <span className="font-jb inline-flex items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.4)]">
+                  <MapPin size={11} className="text-[rgba(95,255,96,0.4)]" />
+                  {hackathon.venue}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -444,25 +451,33 @@ const Hackathons = () => {
       upcoming: upcomingHackathons,
       completed: completedHackathons,
     };
-    return (map[activeTab] || []).filter((h) => {
-      const matchSearch = h.title
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchCat =
-        !selectedCategory ||
-        (h.category || []).some(
-          (c) => c.toLowerCase() === selectedCategory.toLowerCase()
+    return (map[activeTab] || [])
+      .filter((h) => {
+        const matchSearch = h.title
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        const matchCat =
+          !selectedCategory ||
+          (h.category || []).some(
+            (c) => c.toLowerCase() === selectedCategory.toLowerCase()
+          );
+        const matchTag =
+          !selectedTag ||
+          (h.tags || []).some((t) => t.toLowerCase() === selectedTag.toLowerCase());
+        return (
+          matchSearch &&
+          matchCat &&
+          matchTag &&
+          (!selectedDifficulty || h.difficulty === selectedDifficulty)
         );
-      const matchTag =
-        !selectedTag ||
-        (h.tags || []).some((t) => t.toLowerCase() === selectedTag.toLowerCase());
-      return (
-        matchSearch &&
-        matchCat &&
-        matchTag &&
-        (!selectedDifficulty || h.difficulty === selectedDifficulty)
-      );
-    });
+      })
+      .sort((a, b) => {
+        const af = a.featured ? 1 : 0;
+        const bf = b.featured ? 1 : 0;
+        if (af !== bf) return bf - af;
+        if (af) return (a.featuredOrder || 0) - (b.featuredOrder || 0);
+        return 0;
+      });
   };
 
   const clearFilters = () => {

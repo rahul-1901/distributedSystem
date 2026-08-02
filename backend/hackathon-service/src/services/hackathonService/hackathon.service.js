@@ -174,6 +174,7 @@ export class HackathonService {
       image: payload.image,
       title: payload.title,
       subTitle: payload.subTitle,
+      venue: payload.venue,
       description: payload.description,
       detailsContent: payload.detailsContent,
 
@@ -231,46 +232,18 @@ export class HackathonService {
       throw new NotFoundError("Hackathon not found");
     }
 
-    if (hackathon.createdBy.toString() !== adminId.toString()) {
-      throw new ForbiddenError("Not your hackathon");
+    const isOwner = hackathon.createdBy.toString() === adminId.toString();
+
+    if (!isOwner) {
+      const admin = await this.adminRepository.getById(adminId);
+
+      if (!admin?.controller) {
+        throw new ForbiddenError("Not your hackathon");
+      }
     }
 
     if (hackathon.lifecycleStatus === "COMPLETED") {
       throw new ForbiddenError("Completed hackathons cannot be edited");
-    }
-
-    const [registrationCount, submissionCount] = await Promise.all([
-      this.registrationRepository.countByHackathon(hackathonId),
-
-      this.submissionRepository.countByHackathon(hackathonId),
-    ]);
-
-    /**
-     * Registration lock
-     */
-
-    if (registrationCount > 0) {
-      if (
-        payload.registrationForm ||
-        payload.participationType ||
-        payload.maxTeamSize
-      ) {
-        throw new ForbiddenError(
-          "Registration settings cannot be modified after participants have registered"
-        );
-      }
-    }
-
-    /**
-     * Submission lock
-     */
-
-    if (submissionCount > 0) {
-      if (payload.phases || payload.judgingConfig || payload.votingConfig) {
-        throw new ForbiddenError(
-          "Submission workflow cannot be modified after submissions exist"
-        );
-      }
     }
 
     /**
@@ -297,6 +270,7 @@ export class HackathonService {
       image: payload.image,
       title: payload.title,
       subTitle: payload.subTitle,
+      venue: payload.venue,
       description: payload.description,
       detailsContent: payload.detailsContent,
 
@@ -428,6 +402,16 @@ export class HackathonService {
     }
 
     return this.hackathonRepository.getPendingHackathons();
+  }
+
+  async getAllHackathonsForController(controllerId) {
+    const controller = await this.adminRepository.getById(controllerId);
+
+    if (!controller || !controller.controller) {
+      throw new ForbiddenError("Unauthorized");
+    }
+
+    return this.hackathonRepository.getAllHackathonsForController();
   }
 
   async approveHackathon({ hackathonId, controllerId }) {

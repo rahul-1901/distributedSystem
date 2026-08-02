@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Code, Clock, Users, Calendar } from "lucide-react";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { HackathonAPI } from "../api/hackathon.api.js";
 import { SubmissionAPI } from "../api/submission.api.js";
 import DynamicFieldsForm from "../components/DynamicFieldsForm.jsx";

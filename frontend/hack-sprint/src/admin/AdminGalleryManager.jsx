@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import {
   Upload,
   Trash2,
@@ -263,7 +263,7 @@ const AdminGalleryManager = ({ hackathonId }) => {
 
   const handleFiles = useCallback((selected) => {
     const valid = selected.slice(0, 10);
-    if (selected.length > 10) toast.warn("Only first 10 images will be used");
+    if (selected.length > 10) toast("Only first 10 images will be used", { icon: "⚠️" });
     setFiles(valid);
     setPreviews(valid.map((f) => URL.createObjectURL(f)));
   }, []);

@@ -1,21 +1,23 @@
 import React from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { adminGoogleAuth } from "../../backendApis/api";
+import toast from "react-hot-toast";
+import { AdminAuthAPI } from "../../api/admin-auth.api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 export default function AdminGoogleLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const responseGoogle = async (authResult) => {
     try {
       if (authResult["code"]) {
-        const result = await adminGoogleAuth(authResult["code"]);
+        const result = await AdminAuthAPI.googleLogin(authResult["code"]);
 
         const { token, admin } = result.data;
 
         localStorage.setItem("adminToken", token);
-        localStorage.setItem("adminEmail", admin.email);
+        login(admin, "admin");
 
         navigate("/admin");
       }
@@ -23,7 +25,7 @@ export default function AdminGoogleLogin() {
       const errorMessage =
         err.response?.data?.message || err.message || "Something went wrong";
 
-      toast.error(errorMessage, { className: "text-sm max-w-xs" });
+      toast.error(errorMessage);
     }
   };
 

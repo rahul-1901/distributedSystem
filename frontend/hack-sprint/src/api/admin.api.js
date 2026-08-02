@@ -28,14 +28,22 @@ export const AdminAPI = {
 
   approveVerification(adminId) {
     return client.post(
-      `${API.ADMIN}/${adminId}/approve`
+      `${API.ADMIN}/admins/${adminId}/approve`
     );
   },
 
   rejectVerification(adminId, data) {
     return client.post(
-      `${API.ADMIN}/${adminId}/reject`,
+      `${API.ADMIN}/admins/${adminId}/reject`,
       data
     );
+  },
+
+  getAllAdmins() {
+    return client.get(`${API.ADMIN}/admins`);
+  },
+
+  deleteAdmin(adminId) {
+    return client.delete(`${API.ADMIN}/admins/${adminId}`);
   },
 };

@@ -1,13 +1,17 @@
 import { Outlet } from "react-router-dom";
 import React from "react";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 function AdminLayout() {
   return (
-    <div className="flex min-h-screen">
-      <main className="flex-1">
+    <>
+      <Navbar variant="admin" />
+      <main>
         <Outlet />
       </main>
-    </div>
+      <Footer />
+    </>
   );
 }
 

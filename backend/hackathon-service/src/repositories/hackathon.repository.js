@@ -194,6 +194,18 @@ export class HackathonRepository {
       .lean();
   }
 
+  async getAllHackathonsForController() {
+    return hackathonModel
+      .find({})
+      .populate("createdBy", "adminName email organizationName")
+      .sort({
+        createdAt: -1,
+      })
+      .lean({
+        virtuals: true,
+      });
+  }
+
   async findBySlug(slug) {
     return hackathonModel
       .findOne({

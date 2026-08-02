@@ -2,7 +2,7 @@ import client from "./client";
 import { API } from "./endpoints";
 
 export const MediaAPI = {
-  uploadFile(file, resourceType, hackathonId, onUploadProgress) {
+  uploadFile(file, resourceType, hackathonId, onUploadProgress, asAdmin = false) {
     const formData = new FormData();
 
     formData.append("file", file);
@@ -14,12 +14,14 @@ export const MediaAPI = {
         "Content-Type": "multipart/form-data",
       },
       onUploadProgress,
+      adminRequest: asAdmin,
     });
   },
 
-  delete(data) {
+  delete(data, asAdmin = false) {
     return client.delete(API.MEDIA, {
       data,
+      adminRequest: asAdmin,
     });
   },
 };

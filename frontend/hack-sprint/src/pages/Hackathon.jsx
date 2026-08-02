@@ -69,8 +69,6 @@ export default function HackathonDetails() {
       </div>
     );
 
-  const isHackathonActive = hackathon.lifecycleStatus === "ACTIVE";
-
   return (
     <div className="min-h-screen bg-[rgba(8,10,8,0.92)] backdrop-blur-xl relative text-white">
       <GridBackground />
@@ -79,7 +77,7 @@ export default function HackathonDetails() {
         <HeroSection
           title={hackathon.title}
           subTitle={hackathon.subTitle}
-          isActive={isHackathonActive}
+          venue={hackathon.venue}
           participantCount={hackathon.numParticipants || 0}
           prizes={hackathon.prizes}
           imageUrl={hackathon.image?.url || "/assets/hackathon-banner.png"}

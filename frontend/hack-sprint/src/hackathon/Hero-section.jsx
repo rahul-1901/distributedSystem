@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, Users, Trophy, Clock, ChevronRight } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  Trophy,
+  Clock,
+  ChevronRight,
+  CheckCircle2,
+  MapPin,
+} from "lucide-react";
 import { ProfileAPI } from "../api/profile.api.js";
 import { HackathonAPI } from "../api/hackathon.api.js";
 import SubmissionForm from "./SubmissionForm";
 
+const dayMs = 1000 * 60 * 60 * 24;
+
+const daysUntil = (date, now) =>
+  Math.max(0, Math.ceil((new Date(date) - now) / dayMs));
+
+const shortDate = (date) =>
+  new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
 export const HeroSection = ({
   title,
   subTitle,
-  isActive,
+  venue,
   participantCount = 0,
   prizes = [],
   imageUrl = "/assets/hackathon-banner.png",
@@ -24,27 +40,47 @@ export const HeroSection = ({
   const [isLeader, setIsLeader] = useState(false);
   const [isTeamMember, setIsTeamMember] = useState(false);
   const [teamCode, setTeamCode] = useState("");
+  const [now, setNow] = useState(() => new Date());
   const navigate = useNavigate();
 
-  const registrationPhase = phases.find(
-    (p) => p.phaseType === "REGISTRATION" && p.isActive
-  );
-  const submissionPhases = phases.filter((p) => p.phaseType === "SUBMISSION");
-  const activeSubmissionPhase = submissionPhases.find((p) => {
-    const now = new Date();
-    return (
-      p.isActive && now >= new Date(p.startDate) && now <= new Date(p.endDate)
-    );
-  });
+  // Ticks the phase derivation forward on its own, so status/countdowns never
+  // sit stale until an unrelated re-render happens to refresh them.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
-  const isWithinRegistrationPeriod = () => {
-    if (!registrationPhase) return false;
-    const now = new Date();
-    return (
-      now >= new Date(registrationPhase.startDate) &&
-      now <= new Date(registrationPhase.endDate)
-    );
-  };
+  const sortedPhases = [...phases].sort(
+    (a, b) => new Date(a.startDate) - new Date(b.startDate)
+  );
+  const registrationPhase = phases.find((p) => p.phaseType === "REGISTRATION");
+  const submissionPhases = phases.filter((p) => p.phaseType === "SUBMISSION");
+
+  const currentPhase = sortedPhases.find(
+    (p) => now >= new Date(p.startDate) && now <= new Date(p.endDate)
+  );
+  const nextPhase = sortedPhases.find((p) => new Date(p.startDate) > now);
+  const earliestStart = sortedPhases[0] ? new Date(sortedPhases[0].startDate) : null;
+  const latestEnd = sortedPhases.length
+    ? new Date(Math.max(...sortedPhases.map((p) => new Date(p.endDate).getTime())))
+    : null;
+
+  const phaseState = !earliestStart
+    ? "UNSCHEDULED"
+    : now < earliestStart
+    ? "UPCOMING"
+    : now > latestEnd
+    ? "COMPLETED"
+    : "ACTIVE";
+
+  const activeSubmissionPhase = submissionPhases.find(
+    (p) => now >= new Date(p.startDate) && now <= new Date(p.endDate)
+  );
+
+  const isWithinRegistrationPeriod = () =>
+    !!registrationPhase &&
+    now >= new Date(registrationPhase.startDate) &&
+    now <= new Date(registrationPhase.endDate);
 
   const isWithinSubmissionPeriod = () => !!activeSubmissionPhase;
 
@@ -134,13 +170,6 @@ export const HeroSection = ({
     })} – ${e.toLocaleDateString("en-US", { ...opt, year: "numeric" })}`;
   };
 
-  const getDaysRemaining = () => {
-    if (!activeSubmissionPhase) return 0;
-    const diff = new Date(activeSubmissionPhase.endDate) - new Date();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days > 0 ? days : 0;
-  };
-
   const actionCls = [
     "font-[family-name:'JetBrains_Mono',monospace]",
     "inline-flex items-center justify-center gap-2",
@@ -164,7 +193,7 @@ export const HeroSection = ({
         </Link>
       );
 
-    if (!isActive) return null;
+    if (phaseState === "COMPLETED" || phaseState === "UNSCHEDULED") return null;
 
     if (!registered) {
       if (isWithinRegistrationPeriod())
@@ -181,7 +210,9 @@ export const HeroSection = ({
           disabled
           className={`${actionCls} bg-[rgba(95,255,96,0.04)] border-[rgba(95,255,96,0.1)] text-[rgba(95,255,96,0.28)] cursor-not-allowed`}
         >
-          Registration Closed
+          {registrationPhase && now < new Date(registrationPhase.startDate)
+            ? "Registration Opens Soon"
+            : "Registration Closed"}
         </button>
       );
     }
@@ -287,6 +318,57 @@ export const HeroSection = ({
     title
   )}`;
 
+  const statusBadge = {
+    ACTIVE: {
+      label: "Active",
+      cls: "bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60]",
+      pulse: true,
+    },
+    UPCOMING: {
+      label: "Upcoming",
+      cls: "bg-[rgba(255,184,77,0.08)] border-[rgba(255,184,77,0.25)] text-[rgba(255,184,77,0.85)]",
+      pulse: false,
+    },
+    COMPLETED: {
+      label: "Ended",
+      cls: "bg-[rgba(120,120,120,0.07)] border-[rgba(120,120,120,0.2)] text-[rgba(180,180,180,0.5)]",
+      pulse: false,
+    },
+    UNSCHEDULED: {
+      label: "TBD",
+      cls: "bg-[rgba(120,120,120,0.07)] border-[rgba(120,120,120,0.2)] text-[rgba(180,180,180,0.5)]",
+      pulse: false,
+    },
+  }[phaseState];
+
+  const timeStat = (() => {
+    if (phaseState === "COMPLETED")
+      return {
+        value: "Concluded",
+        label: `Ended ${shortDate(latestEnd)}`,
+        icon: CheckCircle2,
+      };
+    if (phaseState === "UPCOMING")
+      return {
+        value: `${daysUntil(earliestStart, now)} Days`,
+        label: `${sortedPhases[0].phaseName} Starts`,
+        icon: Clock,
+      };
+    if (currentPhase)
+      return {
+        value: `${daysUntil(currentPhase.endDate, now)} Days`,
+        label: `${currentPhase.phaseName} Ends`,
+        icon: Clock,
+      };
+    if (nextPhase)
+      return {
+        value: `${daysUntil(nextPhase.startDate, now)} Days`,
+        label: `${nextPhase.phaseName} Starts`,
+        icon: Clock,
+      };
+    return { value: "TBD", label: "Time Left", icon: Clock };
+  })();
+
   return (
     <>
       <div className="border-b border-[rgba(95,255,96,0.1)] bg-[#0a0a0a] font-[family-name:'JetBrains_Mono',monospace] overflow-hidden">
@@ -304,16 +386,12 @@ export const HeroSection = ({
         <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-7">
           <div className="flex flex-wrap items-start gap-3 mb-5">
             <span
-              className={`font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center gap-1.5 text-[0.58rem] tracking-[0.12em] uppercase px-2.5 py-1 rounded-[2px] border ${
-                isActive
-                  ? "bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60]"
-                  : "bg-[rgba(120,120,120,0.07)] border-[rgba(120,120,120,0.2)] text-[rgba(180,180,180,0.5)]"
-              }`}
+              className={`font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center gap-1.5 text-[0.58rem] tracking-[0.12em] uppercase px-2.5 py-1 rounded-[2px] border ${statusBadge.cls}`}
             >
-              {isActive && (
+              {statusBadge.pulse && (
                 <span className="w-1.5 h-1.5 rounded-full bg-[#5fff60] animate-pulse" />
               )}
-              {isActive ? "Active" : "Ended"}
+              {statusBadge.label}
             </span>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5">
@@ -362,6 +440,14 @@ export const HeroSection = ({
                   {subTitle}
                 </p>
               )}
+              {venue && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <MapPin size={12} className="text-[rgba(95,255,96,0.5)] flex-shrink-0" />
+                  <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.7rem] text-[rgba(180,220,180,0.5)]">
+                    {venue}
+                  </span>
+                </div>
+              )}
               {registered && (
                 <div className="mt-2 inline-flex items-center gap-1.5">
                   <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.56rem] tracking-[0.1em] uppercase text-[rgba(95,255,96,0.38)]">
@@ -398,11 +484,7 @@ export const HeroSection = ({
               icon={Users}
             />
             <PrizeStatCard prizes={prizes} icon={Trophy} />
-            <StatCard
-              value={isActive ? `${getDaysRemaining()} Days` : "Ended"}
-              label="Time Left"
-              icon={Clock}
-            />
+            <StatCard value={timeStat.value} label={timeStat.label} icon={timeStat.icon} />
           </div>
         </div>
       </div>

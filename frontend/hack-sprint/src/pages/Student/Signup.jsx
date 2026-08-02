@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import GoogleLogin from "./GoogleLogin.jsx";
 import { AuthAPI } from "../../api/auth.api.js";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 
 const GoogleAuthWrapper = () => (
   <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>

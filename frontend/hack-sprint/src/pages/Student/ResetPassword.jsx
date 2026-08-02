@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { AuthAPI } from "../../api/auth.api";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 
 const EyeOpen = () => (

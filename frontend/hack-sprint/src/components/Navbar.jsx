@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileAPI } from "../api/profile.api.js";
+import { useAuth } from "../hooks/useAuth.js";
 import {
   Menu, X, User, Trophy, LogOut,
-  LogIn, Github, GitBranch, ArrowRight,
+  LogIn, Github, GitBranch, ArrowRight, Shield,
 } from "lucide-react";
 import "./Navbar.css";
 
-const Navbar = () => {
+const Navbar = ({ variant = "student" }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isAdminVariant = variant === "admin";
+  const { user: adminUser, logout: authLogout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -30,6 +33,11 @@ const Navbar = () => {
     setUserInfo(null); setIsLoggedIn(false);
     navigate("/"); setIsOpen(false); setShowProfileMenu(false);
   };
+  const handleAdminLogout = () => {
+    localStorage.removeItem("adminToken");
+    authLogout();
+    navigate("/adminhome"); setIsOpen(false); setShowProfileMenu(false);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -44,10 +52,11 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
+    if (isAdminVariant) return;
     const token = localStorage.getItem("token");
     if (!token) { setIsLoggedIn(false); return; }
     fetchProfile();
-  }, [location]);
+  }, [location, isAdminVariant]);
 
   useEffect(() => {
     setAdminLoggedIn(!!localStorage.getItem("adminToken"));
@@ -155,7 +164,9 @@ const Navbar = () => {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="w-8 h-8 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center hover:border-[rgba(95,255,96,0.6)] hover:shadow-[0_0_12px_rgba(95,255,96,0.2)] transition-all duration-200 cursor-pointer"
                 >
-                  {isLoggedIn && userInfo?.name
+                  {isAdminVariant
+                    ? <Shield size={14} className="text-[#5fff60]" />
+                    : isLoggedIn && userInfo?.name
                     ? <span className="nb-syne font-extrabold text-[#5fff60] text-[0.7rem]">{userInfo.name[0].toUpperCase()}</span>
                     : <User size={14} className="text-[#5fff60]" />}
                 </button>
@@ -165,7 +176,38 @@ const Navbar = () => {
                     <span className="absolute top-[-1px] left-[-1px] w-[8px] h-[8px] border-t-2 border-l-2 border-[rgba(95,255,96,0.45)]" />
                     <span className="absolute bottom-[-1px] right-[-1px] w-[8px] h-[8px] border-b-2 border-r-2 border-[rgba(95,255,96,0.45)]" />
 
-                    {isLoggedIn ? (
+                    {isAdminVariant ? (
+                      <>
+                        <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(95,255,96,0.08)] bg-[rgba(95,255,96,0.04)]">
+                          <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
+                            <Shield size={16} className="text-[#5fff60]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="nb-root text-[0.75rem] font-semibold text-white truncate">{adminUser?.adminName || "Admin"}</p>
+                            <p className="nb-root text-[0.6rem] text-[rgba(180,220,180,0.4)] truncate">{adminUser?.email || ""}</p>
+                          </div>
+                        </div>
+
+                        <div className="p-3">
+                          <button
+                            onClick={() => handleNavigate("/admin")}
+                            className="nb-root w-full flex items-center justify-center gap-1.5 p-2.5 bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.1)] rounded-[3px] text-[rgba(180,220,180,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.28)] hover:bg-[rgba(95,255,96,0.08)] transition-all cursor-pointer"
+                          >
+                            <Shield size={15} className="text-[#5fff60]" />
+                            <span className="text-[0.58rem] tracking-[0.06em] uppercase">Admin Profile</span>
+                          </button>
+                        </div>
+
+                        <div className="px-3 pb-3 border-t border-[rgba(95,255,96,0.08)] pt-2">
+                          <button
+                            onClick={handleAdminLogout}
+                            className="nb-root w-full flex items-center gap-2 text-[0.62rem] tracking-[0.06em] uppercase px-3 py-2 rounded-[3px] text-[rgba(255,80,80,0.6)] hover:text-[#ff6060] hover:bg-[rgba(255,60,60,0.06)] border border-transparent hover:border-[rgba(255,60,60,0.2)] transition-all cursor-pointer"
+                          >
+                            <LogOut size={13} /> Logout
+                          </button>
+                        </div>
+                      </>
+                    ) : isLoggedIn ? (
                       <>
                         <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(95,255,96,0.08)] bg-[rgba(95,255,96,0.04)]">
                           <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
@@ -269,7 +311,33 @@ const Navbar = () => {
 
               <div className="h-px bg-gradient-to-r from-transparent via-[rgba(95,255,96,0.1)] to-transparent my-2" />
 
-              {isLoggedIn ? (
+              {isAdminVariant ? (
+                <>
+                  <div className="nb-root flex items-center gap-3 px-4 py-3 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
+                    <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
+                      <Shield size={16} className="text-[#5fff60]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="nb-root text-[0.72rem] font-semibold text-white truncate">{adminUser?.adminName || "Admin"}</p>
+                      <p className="nb-root text-[0.58rem] text-[rgba(180,220,180,0.4)] truncate">{adminUser?.email || ""}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleNavigate("/admin")}
+                    className="nb-root w-full inline-flex items-center gap-2 text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border border-transparent text-[rgba(180,220,180,0.55)] hover:text-[#5fff60] hover:bg-[rgba(95,255,96,0.06)] hover:border-[rgba(95,255,96,0.15)] transition-all cursor-pointer"
+                  >
+                    <Shield size={13} className="text-[#5fff60]" /> Admin Profile
+                  </button>
+
+                  <button
+                    onClick={handleAdminLogout}
+                    className="nb-root w-full inline-flex items-center gap-2 text-[0.65rem] tracking-[0.08em] uppercase px-4 py-3 rounded-[3px] border border-transparent text-[rgba(255,80,80,0.55)] hover:text-[#ff6060] hover:bg-[rgba(255,60,60,0.06)] hover:border-[rgba(255,60,60,0.15)] transition-all cursor-pointer"
+                  >
+                    <LogOut size={13} /> Logout
+                  </button>
+                </>
+              ) : isLoggedIn ? (
                 <>
                   <div className="nb-root flex items-center gap-3 px-4 py-3 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
                     <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">

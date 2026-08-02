@@ -71,36 +71,11 @@
 .ad-card {
   position: relative;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 4px;
   backdrop-filter: blur(14px);
   box-shadow: 0 0 28px rgba(95, 255, 96, 0.04),
     inset 0 0 40px rgba(0, 0, 0, 0.25);
-  transition: border-color 0.2s;
-}
-.ad-card:hover {
-  border-color: rgba(95, 255, 96, 0.22);
-}
-
-/* corner bracket accents */
-.ad-card::before,
-.ad-card::after {
-  content: "";
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-color: rgba(95, 255, 96, 0.5);
-  border-style: solid;
-}
-.ad-card::before {
-  top: -1px;
-  left: -1px;
-  border-width: 2px 0 0 2px;
-}
-.ad-card::after {
-  bottom: -1px;
-  right: -1px;
-  border-width: 0 2px 2px 0;
 }
 
 /* ── Section badge (01 / basics style) ── */
@@ -1226,6 +1201,22 @@ select.ad-input option {
   background: rgba(255, 60, 60, 0.06);
   border-color: rgba(255, 60, 60, 0.2);
   color: rgba(255, 100, 100, 0.8);
+}
+
+.ad-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+.ad-inline-link:hover {
+  opacity: 0.8;
 }
 
 /* ── Drop zone (banner upload) ── */

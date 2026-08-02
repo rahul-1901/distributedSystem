@@ -4,7 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
-  Link2,
+  Download,
   Mail,
   Phone as PhoneIcon,
 } from "lucide-react";
@@ -13,6 +13,7 @@ import ChatInterface from "../components/Chat/ChatInterface";
 import Upvote from "./Upvote";
 import Gallery from "./Gallery";
 import { HackathonAPI } from "../api/hackathon.api.js";
+import { getFileMeta, formatBytes } from "../utils/fileType.js";
 
 const FontStyle = () => (
   <style>{`
@@ -610,26 +611,50 @@ export const ContentSection = ({ activeSection, hackathon }) => {
         return (
           <div>
             <SectionHead>Resources</SectionHead>
-            <Card>
-              {resources.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {resources.map((r, i) => (
+            {resources.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {resources.map((r, i) => {
+                  const { icon: Icon, color, label } = getFileMeta(r.format);
+                  return (
                     <a
                       key={i}
                       href={r.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] flex items-center gap-1.5 transition-colors"
+                      download={r.title || undefined}
+                      className="group relative flex items-center gap-3 bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-4 hover:border-[rgba(95,255,96,0.3)] hover:-translate-y-0.5 transition-all"
                     >
-                      <Link2 size={11} className="flex-shrink-0 opacity-60" />
-                      {r.title || r.url}
+                      <span className="absolute top-[-1px] left-[-1px] w-2 h-2 border-t-2 border-l-2 border-[rgba(95,255,96,0.3)]" />
+                      <div
+                        className="w-10 h-10 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                        style={{
+                          backgroundColor: `${color}14`,
+                          borderColor: `${color}33`,
+                        }}
+                      >
+                        <Icon size={18} style={{ color }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-sm truncate">
+                          {r.title || label}
+                        </p>
+                        <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem] text-[rgba(180,220,180,0.4)] tracking-[0.04em] mt-0.5">
+                          {label}
+                          {r.size ? ` · ${formatBytes(r.size)}` : ""}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 rounded-[3px] flex items-center justify-center flex-shrink-0 border border-[rgba(95,255,96,0.15)] text-[rgba(95,255,96,0.5)] group-hover:bg-[rgba(95,255,96,0.1)] group-hover:border-[rgba(95,255,96,0.35)] group-hover:text-[#5fff60] transition-all">
+                        <Download size={14} />
+                      </div>
                     </a>
-                  ))}
-                </div>
-              ) : (
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
                 <Empty label="resource" />
-              )}
-            </Card>
+              </Card>
+            )}
           </div>
         );
       }

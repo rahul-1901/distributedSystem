@@ -118,6 +118,53 @@ export class AdminService {
     return this.adminRepository.getPendingVerificationRequests();
   }
 
+  async getAllAdmins(controllerId) {
+    const controller = await this.adminRepository.getById(controllerId);
+
+    if (!controller || !controller.controller) {
+      throw new ForbiddenError("Unauthorized");
+    }
+
+    return this.adminRepository.getAllAdmins();
+  }
+
+  async deleteAdmin(controllerId, adminId) {
+    const controller = await this.adminRepository.getById(controllerId);
+
+    if (!controller || !controller.controller) {
+      throw new ForbiddenError("Unauthorized");
+    }
+
+    if (adminId.toString() === controllerId.toString()) {
+      throw new ForbiddenError("You cannot delete your own account");
+    }
+
+    const target = await this.adminRepository.getById(adminId);
+
+    if (!target) {
+      throw new NotFoundError("Admin not found");
+    }
+
+    if (target.controller) {
+      throw new ForbiddenError("Controller accounts cannot be deleted");
+    }
+
+    await this.adminRepository.deleteById(adminId);
+
+    this.logger.info(
+      {
+        controllerId,
+        deletedAdminId: adminId,
+      },
+      "Admin account deleted"
+    );
+
+    return {
+      success: true,
+      message: "Admin deleted",
+    };
+  }
+
   async approveVerification({ controllerId, adminId }) {
     const controller = await this.adminRepository.getById(controllerId);
 

@@ -81,7 +81,7 @@ export const useHackathons = () => {
         completed: (completedRes.data.data || []).map(mapHackathon),
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds — Redis already absorbs repeat load
+    refetchOnWindowFocus: true,
   });
 };

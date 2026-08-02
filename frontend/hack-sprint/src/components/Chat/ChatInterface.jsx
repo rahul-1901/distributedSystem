@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Send, MessageSquare, Loader2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { toast } from "react-toastify";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Send, MessageSquare, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import toast from "react-hot-toast";
 import MessageBubble from "./MessageBubble";
 import { DiscussionAPI } from "../../api/discussion.api.js";
 import { useAuth } from "../../hooks/useAuth";
@@ -65,20 +65,44 @@ const ChatInterface = ({ hackathonId }) => {
   const [expanded, setExpanded] = useState(new Set());
   const [replyDrafts, setReplyDrafts] = useState({});
   const [replyRefresh, setReplyRefresh] = useState({});
+  const scrollRef = useRef(null);
 
+  const scrollToBottom = () => {
+    requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    });
+  };
+
+  // Backend returns newest-first pages; page 1 is reversed into chronological
+  // order and older pages are prepended above it, preserving scroll offset.
   const loadMessages = useCallback(
     async (pageNum) => {
       if (!hackathonId) return;
+      const prevScrollHeight = scrollRef.current?.scrollHeight || 0;
       try {
         setIsLoading(true);
         const res = await DiscussionAPI.getMessages(hackathonId, {
           page: pageNum,
           limit: PAGE_SIZE,
         });
-        const batch = res.data.messages || [];
-        setMessages((prev) => (pageNum === 1 ? batch : [...prev, ...batch]));
-        setHasMore(batch.length === PAGE_SIZE);
+        const raw = res.data.messages || [];
+        const chronological = [...raw].reverse();
+        setMessages((prev) =>
+          pageNum === 1 ? chronological : [...chronological, ...prev]
+        );
+        setHasMore(raw.length === PAGE_SIZE);
         setPage(pageNum);
+
+        if (pageNum === 1) {
+          scrollToBottom();
+        } else {
+          requestAnimationFrame(() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTop =
+                scrollRef.current.scrollHeight - prevScrollHeight;
+            }
+          });
+        }
       } catch {
         toast.error("Failed to load discussion");
       } finally {
@@ -104,8 +128,9 @@ const ChatInterface = ({ hackathonId }) => {
       const res = await DiscussionAPI.createMessage(hackathonId, {
         content: newMessage.trim(),
       });
-      setMessages((prev) => [res.data.message, ...prev]);
+      setMessages((prev) => [...prev, res.data.message]);
       setNewMessage("");
+      scrollToBottom();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to post message");
     } finally {
@@ -163,7 +188,97 @@ const ChatInterface = ({ hackathonId }) => {
           </span>
         </div>
 
-        <div className="px-4 py-3 border-b border-[rgba(95,255,96,0.08)] flex-shrink-0">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-1 h-[65vh]"
+        >
+          {isLoading && messages.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center gap-2 text-[rgba(95,255,96,0.35)]">
+              <Loader2 size={20} className="animate-spin" />
+              <span className="text-[0.6rem] tracking-[0.1em] uppercase">Loading…</span>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-[rgba(95,255,96,0.25)]">
+              <MessageSquare size={32} />
+              <p className="text-[0.6rem] tracking-[0.08em] uppercase">
+                No messages yet. Start the conversation!
+              </p>
+            </div>
+          ) : (
+            <>
+              {hasMore && (
+                <button
+                  onClick={() => loadMessages(page + 1)}
+                  disabled={isLoading}
+                  className="self-center mb-2 text-[0.58rem] tracking-[0.08em] uppercase text-[rgba(95,255,96,0.45)] hover:text-[#5fff60] transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {isLoading ? "Loading…" : "Load earlier messages"}
+                </button>
+              )}
+
+              {messages.map((msg) => {
+                const isOpen = expanded.has(msg._id);
+                const isMe = String(msg.sender?._id || msg.sender) === String(user?._id);
+                return (
+                  <div key={msg._id} className="mb-2">
+                    <MessageBubble message={msg} isMe={isMe} onDelete={handleDelete} />
+                    <div className={`flex ${isMe ? "justify-end" : "justify-start"} pl-9 -mt-1`}>
+                      <button
+                        onClick={() => toggleExpanded(msg._id)}
+                        className="flex items-center gap-1 text-[0.55rem] tracking-[0.08em] uppercase text-[rgba(95,255,96,0.4)] hover:text-[#5fff60] transition-colors cursor-pointer"
+                      >
+                        {isOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                        Replies
+                      </button>
+                    </div>
+
+                    {isOpen && (
+                      <div className="mt-2 pl-9 flex flex-col gap-2">
+                        <Replies
+                          messageId={msg._id}
+                          currentUserId={user?._id}
+                          onDelete={handleDelete}
+                          refreshKey={replyRefresh[msg._id] || 0}
+                        />
+                        {isAuthenticated && (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={replyDrafts[msg._id] || ""}
+                              onChange={(e) =>
+                                setReplyDrafts((prev) => ({
+                                  ...prev,
+                                  [msg._id]: e.target.value,
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleReply(msg._id);
+                                }
+                              }}
+                              placeholder="Write a reply…"
+                              className="flex-1 bg-[rgba(18,22,18,0.7)] border border-[rgba(95,255,96,0.1)] rounded-[3px] px-3 py-2 text-[0.65rem] text-[#e8ffe8] placeholder-[rgba(95,255,96,0.2)] focus:outline-none focus:border-[rgba(95,255,96,0.32)] [color-scheme:dark]"
+                            />
+                            <button
+                              onClick={() => handleReply(msg._id)}
+                              disabled={!(replyDrafts[msg._id] || "").trim()}
+                              className="px-3 py-2 rounded-[3px] border border-[rgba(95,255,96,0.2)] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.4)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <Send size={11} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t border-[rgba(95,255,96,0.08)] flex-shrink-0">
           <form onSubmit={handlePost} className="flex gap-2">
             <input
               type="text"
@@ -184,90 +299,6 @@ const ChatInterface = ({ hackathonId }) => {
               <span className="hidden sm:inline">Post</span>
             </button>
           </form>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-1 max-h-[65vh]">
-          {isLoading && messages.length === 0 ? (
-            <div className="flex items-center justify-center py-16 gap-2 text-[rgba(95,255,96,0.35)]">
-              <Loader2 size={20} className="animate-spin" />
-              <span className="text-[0.6rem] tracking-[0.1em] uppercase">Loading…</span>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-2 text-[rgba(95,255,96,0.25)]">
-              <MessageSquare size={32} />
-              <p className="text-[0.6rem] tracking-[0.08em] uppercase">
-                No messages yet. Start the conversation!
-              </p>
-            </div>
-          ) : (
-            messages.map((msg) => {
-              const isOpen = expanded.has(msg._id);
-              const isMe = String(msg.sender?._id || msg.sender) === String(user?._id);
-              return (
-                <div key={msg._id} className="mb-2">
-                  <MessageBubble message={msg} isMe={isMe} onDelete={handleDelete} />
-                  <div className={`flex ${isMe ? "justify-end" : "justify-start"} pl-9 -mt-1`}>
-                    <button
-                      onClick={() => toggleExpanded(msg._id)}
-                      className="flex items-center gap-1 text-[0.55rem] tracking-[0.08em] uppercase text-[rgba(95,255,96,0.4)] hover:text-[#5fff60] transition-colors cursor-pointer"
-                    >
-                      {isOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                      Replies
-                    </button>
-                  </div>
-
-                  {isOpen && (
-                    <div className="mt-2 pl-9 flex flex-col gap-2">
-                      <Replies
-                        messageId={msg._id}
-                        currentUserId={user?._id}
-                        onDelete={handleDelete}
-                        refreshKey={replyRefresh[msg._id] || 0}
-                      />
-                      {isAuthenticated && (
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={replyDrafts[msg._id] || ""}
-                            onChange={(e) =>
-                              setReplyDrafts((prev) => ({
-                                ...prev,
-                                [msg._id]: e.target.value,
-                              }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                handleReply(msg._id);
-                              }
-                            }}
-                            placeholder="Write a reply…"
-                            className="flex-1 bg-[rgba(18,22,18,0.7)] border border-[rgba(95,255,96,0.1)] rounded-[3px] px-3 py-2 text-[0.65rem] text-[#e8ffe8] placeholder-[rgba(95,255,96,0.2)] focus:outline-none focus:border-[rgba(95,255,96,0.32)] [color-scheme:dark]"
-                          />
-                          <button
-                            onClick={() => handleReply(msg._id)}
-                            disabled={!(replyDrafts[msg._id] || "").trim()}
-                            className="px-3 py-2 rounded-[3px] border border-[rgba(95,255,96,0.2)] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.4)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            <Send size={11} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-
-          {hasMore && !isLoading && (
-            <button
-              onClick={() => loadMessages(page + 1)}
-              className="self-center mt-2 text-[0.58rem] tracking-[0.08em] uppercase text-[rgba(95,255,96,0.45)] hover:text-[#5fff60] transition-colors cursor-pointer"
-            >
-              Load more
-            </button>
-          )}
         </div>
       </div>
     </div>

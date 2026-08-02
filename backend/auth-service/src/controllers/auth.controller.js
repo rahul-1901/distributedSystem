@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { env } from "../config/env.js";
 import authService from "../services/auth.service.js";
-import oauthservice from "../services/oauth.service.js";
+import oauthService from "../services/oauth.service.js";
 dotenv.config();
 
 export const signup = async (req, res, next) => {

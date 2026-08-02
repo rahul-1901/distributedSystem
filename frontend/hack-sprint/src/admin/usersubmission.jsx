@@ -17,7 +17,7 @@ import {
   getAdminHackathonDetail,
   updateSubmissionPoints,
 } from "../backendApis/api";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 
 /* ── Fonts + pseudo-element helpers (can't do in Tailwind) ── */
 const FontStyle = () => (

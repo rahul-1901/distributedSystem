@@ -125,6 +125,9 @@ export const HackathonAPI = {
   getPendingHackathons() {
     return client.get(`${API.HACKATHON}/admin/pendingHackathon`);
   },
+  getAllHackathonsForController() {
+    return client.get(`${API.HACKATHON}/admin/all-hackathons`);
+  },
   approveHackathon(id) {
     return client.post(`${API.HACKATHON}/admin/${id}/approveHackathon`);
   },

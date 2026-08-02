@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, FileText, Loader2 } from "lucide-react";
 import { MediaAPI } from "../api/media.api.js";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 
 const inputCls =
   "font-[family-name:'JetBrains_Mono',monospace] w-full bg-[rgba(18,22,18,0.7)] border border-[rgba(95,255,96,0.15)] rounded-[3px] px-3 py-2.5 text-[0.72rem] text-[#e8ffe8] placeholder-[rgba(95,255,96,0.28)] focus:outline-none focus:border-[rgba(95,255,96,0.45)] focus:shadow-[0_0_0_2px_rgba(95,255,96,0.07)] transition-all";

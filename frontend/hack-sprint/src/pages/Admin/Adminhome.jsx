@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -6,13 +6,10 @@ import {
   Trophy,
   Target,
   Code,
-  Sparkles,
   ArrowRight,
   Building,
   Megaphone,
   BarChart3,
-  Menu,
-  X,
 } from "lucide-react";
 
 const Styles = () => (
@@ -90,69 +87,6 @@ const Styles = () => (
     .oh-mobile-menu { animation: oh-drop .18s ease forwards; }
   `}</style>
 );
-
-const Navbar = ({ navigate }) => {
-  const [open, setOpen] = useState(false);
-  const isAdmin = !!localStorage.getItem("adminToken");
-
-  const NavBtn = ({ onClick, children }) => (
-    <button
-      onClick={onClick}
-      className="font-jb inline-flex items-center gap-[0.4rem] text-[0.65rem] tracking-[0.1em] uppercase px-[0.9rem] py-[0.45rem] rounded-[3px] border cursor-pointer transition-all duration-150 bg-[rgba(95,255,96,0.1)] border-[rgba(95,255,96,0.3)] text-[#5fff60] hover:bg-[rgba(95,255,96,0.18)] hover:border-[rgba(95,255,96,0.55)] hover:shadow-[0_0_14px_rgba(95,255,96,0.15)]"
-    >
-      {children}
-    </button>
-  );
-
-  return (
-    <header className="oh-nav relative z-50 p-1 sticky top-0 font-jb bg-[rgba(8,10,8,0.93)] border-b border-[rgba(95,255,96,0.1)] backdrop-blur-xl">
-      <div className="max-w-[1200px] mx-auto px-5 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-[0.6rem] bg-transparent border-none cursor-pointer"
-        >
-          <img
-            src="hackSprint.webp"
-            alt="HackSprint"
-            className="w-7 h-7 object-contain"
-          />
-          <span className="font-syne font-extrabold text-[1.1rem] tracking-tight text-white">
-            Hack<span className="text-[#5fff60]">Sprint</span>
-          </span>
-        </button>
-
-        <nav className="hidden md:flex items-center gap-2">
-          <NavBtn onClick={() => navigate(isAdmin ? "/admin" : "/adminlogin")}>
-            {isAdmin ? "Dashboard" : "Organize Now"}
-            <ArrowRight size={12} />
-          </NavBtn>
-        </nav>
-
-        <button
-          className="md:hidden flex items-center justify-center p-1.5 rounded-[3px] border border-[rgba(95,255,96,0.12)] text-[rgba(95,255,96,0.55)] hover:border-[rgba(95,255,96,0.35)] hover:text-[#5fff60] transition-all cursor-pointer"
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <X size={18} /> : <Menu size={18} />}
-        </button>
-      </div>
-
-      {open && (
-        <div className="oh-mobile-menu md:hidden flex flex-col gap-2 px-5 py-4 border-t border-[rgba(95,255,96,0.08)] bg-[rgba(8,10,8,0.97)]">
-          <button
-            onClick={() => {
-              navigate(isAdmin ? "/admin" : "/adminlogin");
-              setOpen(false);
-            }}
-            className="font-jb w-full inline-flex items-center justify-between text-[0.65rem] tracking-[0.1em] uppercase px-4 py-2.5 rounded-[3px] border cursor-pointer bg-[rgba(95,255,96,0.1)] border-[rgba(95,255,96,0.3)] text-[#5fff60] hover:bg-[rgba(95,255,96,0.18)] transition-all"
-          >
-            <span>{isAdmin ? "Dashboard" : "Organize Now"}</span>
-            <ArrowRight size={13} />
-          </button>
-        </div>
-      )}
-    </header>
-  );
-};
 
 const HowItWorks = () => {
   const steps = [
@@ -275,7 +209,7 @@ const HowItWorks = () => {
   );
 };
 
-const Benefits = ({ navigate }) => {
+const Benefits = () => {
   const benefits = [
     {
       icon: Users,
@@ -430,14 +364,12 @@ const Benefits = ({ navigate }) => {
 
 export default function OrganizerHome() {
   const navigate = useNavigate();
+  const isAdmin = !!localStorage.getItem("adminToken");
 
   return (
     <>
       <Styles />
       <div className="oh-bg font-jb min-h-screen bg-[#0a0a0a] text-[#e8ffe8] overflow-hidden">
-        {/* Navbar */}
-        <Navbar navigate={navigate} />
-
         {/* ── Hero ── */}
         <section className="relative z-10 pt-35 pb-20 text-center overflow-hidden">
           {/* large ambient glow blobs */}
@@ -476,18 +408,10 @@ export default function OrganizerHome() {
             {/* CTA row */}
             <div className="oh-reveal-4 flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() =>
-                  navigate(
-                    localStorage.getItem("adminToken")
-                      ? "/admin"
-                      : "/adminlogin"
-                  )
-                }
+                onClick={() => navigate(isAdmin ? "/admin" : "/adminlogin")}
                 className="oh-cta font-jb inline-flex items-center gap-[0.5rem] text-[0.7rem] tracking-[0.12em] uppercase px-8 py-[0.85rem] rounded-[3px] border cursor-pointer transition-all duration-200 bg-[#5fff60] border-[#5fff60] text-[#050905] font-bold hover:bg-[#7fff80]"
               >
-                {localStorage.getItem("adminToken")
-                  ? "Dashboard"
-                  : "Get Started"}
+                {isAdmin ? "Dashboard" : "Get Started"}
                 <ArrowRight size={14} />
               </button>
               <button
@@ -518,7 +442,7 @@ export default function OrganizerHome() {
         </div>
 
         {/* Benefits */}
-        <Benefits navigate={navigate} />
+        <Benefits />
       </div>
     </>
   );

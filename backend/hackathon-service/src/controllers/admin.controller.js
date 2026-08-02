@@ -54,6 +54,32 @@ export const getPendingVerificationRequests = async (req, res, next) => {
   }
 };
 
+export const getAllAdmins = async (req, res, next) => {
+  try {
+    const admins = await adminService.getAllAdmins(req.admin._id);
+
+    return res.status(200).json({
+      success: true,
+      admins,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdmin = async (req, res, next) => {
+  try {
+    const result = await adminService.deleteAdmin(
+      req.admin._id,
+      req.params.adminId
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const approveVerification = async (req, res, next) => {
   try {
     const admin = await adminService.approveVerification({

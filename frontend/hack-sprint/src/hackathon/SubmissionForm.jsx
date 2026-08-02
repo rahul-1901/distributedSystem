@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Clock, Users, Code } from "lucide-react";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { HackathonAPI } from "../api/hackathon.api.js";
 import { SubmissionAPI } from "../api/submission.api.js";
 import DynamicFieldsForm from "../components/DynamicFieldsForm.jsx";
@@ -148,10 +148,10 @@ const SubmissionForm = ({ isOpen, onClose, hackathonId }) => {
           existingSubmissionId,
           payload
         );
-        toast.success("Submission updated!", { autoClose: 1000 });
+        toast.success("Submission updated!", { duration: 1000 });
       } else {
         await SubmissionAPI.createSubmission(hackathonId, payload);
-        toast.success("Submission successful!", { autoClose: 1000 });
+        toast.success("Submission successful!", { duration: 1000 });
       }
       setTimeout(onClose, 1200);
     } catch (err) {

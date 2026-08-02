@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { ProfileAPI } from "../api/profile.api.js";
 import { TeamAPI } from "../api/team.api.js";
 import {

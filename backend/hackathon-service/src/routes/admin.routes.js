@@ -22,6 +22,8 @@ import {
   getPendingVerificationRequests,
   approveVerification,
   rejectVerification,
+  getAllAdmins,
+  deleteAdmin,
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
@@ -60,7 +62,9 @@ router.get("/profile", adminAuth, getProfile);
 router.patch("/profile", adminAuth, updateProfile);
 router.post("/verification-request", adminAuth, submitVerificationRequest);
 router.get("/verification-requests", adminAuth, getPendingVerificationRequests);
+router.get("/admins", adminAuth, getAllAdmins);
 router.post("/admins/:adminId/approve", adminAuth, approveVerification);
 router.post("/admins/:adminId/reject", adminAuth, rejectVerification);
+router.delete("/admins/:adminId", adminAuth, deleteAdmin);
 
 export default router;

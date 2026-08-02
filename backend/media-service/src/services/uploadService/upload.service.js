@@ -34,8 +34,8 @@ const ALLOWED_EXTENSIONS = [
 ];
 
 export class UploadService {
-  constructor(s3Client, logger) {
-    this.s3Client = s3Client;
+  constructor(getS3Client, logger) {
+    this.getS3Client = getS3Client;
     this.logger = logger;
   }
 
@@ -90,7 +90,7 @@ export class UploadService {
         ContentType: file.mimetype,
       });
 
-      await this.s3Client.send(command);
+      await this.getS3Client().send(command);
 
       const url = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 
@@ -137,7 +137,7 @@ export class UploadService {
         Key: key,
       });
 
-      await this.s3Client.send(command);
+      await this.getS3Client().send(command);
 
       this.logger.info(
         {

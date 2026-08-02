@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { VotingAPI } from "../api/voting.api.js";
 
 const PAGE_SIZE = 5;
@@ -70,16 +70,17 @@ const SubmissionCard = ({
 
   const handleVote = () => {
     if (isVotingClosed) {
-      toast.info("Voting period has ended.");
+      toast("Voting period has ended.", { icon: "ℹ️" });
       return;
     }
     if (!localStorage.getItem("token")) {
-      toast.info("Please log in to vote.", { autoClose: 1300 });
+      toast("Please log in to vote.", { icon: "ℹ️", duration: 1300 });
       return;
     }
     if (!isLiked && !canVote) {
-      toast.info("Open the submission first to vote for it.", {
-        autoClose: 1300,
+      toast("Open the submission first to vote for it.", {
+        icon: "ℹ️",
+        duration: 1300,
       });
       return;
     }
@@ -301,7 +302,7 @@ const Upvote = ({ hackathonId }) => {
 
   const handleLike = async (submissionId) => {
     if (!isLoggedIn) {
-      toast.info("Please log in to vote.");
+      toast("Please log in to vote.", { icon: "ℹ️" });
       return;
     }
     try {
