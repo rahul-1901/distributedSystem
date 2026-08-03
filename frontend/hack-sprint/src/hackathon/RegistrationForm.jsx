@@ -5,9 +5,10 @@ import {
   ChevronRight,
   Users,
   Plus,
-  Link as LinkIcon,
+  KeyRound,
   Copy,
   Check,
+  X,
 } from "lucide-react";
 import { HackathonAPI } from "../api/hackathon.api.js";
 import { RegistrationAPI } from "../api/registration.api.js";
@@ -77,19 +78,40 @@ const SubTabBtn = ({ active, onClick, children }) => (
   </button>
 );
 
-const TeamInfoModal = ({ details, onClose }) => {
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+const StepIndicator = ({ steps, current }) => {
+  const currentIndex = steps.indexOf(current);
+  return (
+    <div className="flex items-center justify-center gap-2 mb-4">
+      {steps.map((s, i) => (
+        <React.Fragment key={s}>
+          <div
+            className={`w-2 h-2 rounded-full transition-all ${
+              i <= currentIndex ? "bg-[#5fff60]" : "bg-[rgba(95,255,96,0.15)]"
+            }`}
+          />
+          {i < steps.length - 1 && (
+            <div
+              className={`w-8 h-px transition-all ${
+                i < currentIndex ? "bg-[#5fff60]" : "bg-[rgba(95,255,96,0.15)]"
+              }`}
+            />
+          )}
+        </React.Fragment>
+      ))}
+      <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] tracking-[0.1em] uppercase text-[rgba(95,255,96,0.4)] ml-2">
+        Step {currentIndex + 1} of {steps.length}
+      </span>
+    </div>
+  );
+};
 
-  const copy = (text, type) => {
-    navigator.clipboard.writeText(text);
-    if (type === "code") {
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
-    } else {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    }
+const TeamInfoModal = ({ details, onClose }) => {
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(details.code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -103,49 +125,26 @@ const TeamInfoModal = ({ details, onClose }) => {
           Team Created!
         </h2>
         <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.55)] mb-6 leading-relaxed">
-          Share the code or link below so teammates can join.
+          Share the code below so teammates can join.
         </p>
 
         <div className="flex flex-col gap-4 mb-7">
-          {[
-            {
-              label: "Invite Code",
-              value: details.code,
-              type: "code",
-              copied: copiedCode,
-              mono: true,
-            },
-            {
-              label: "Invite Link",
-              value: details.link,
-              type: "link",
-              copied: copiedLink,
-              mono: false,
-            },
-          ].map(({ label, value, type, copied, mono }) => (
-            <div key={type}>
-              <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.52rem] tracking-[0.14em] uppercase text-[rgba(95,255,96,0.45)] mb-1.5">
-                {label}
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`flex-1 bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.15)] rounded-[3px] px-3 py-2 text-[#5fff60] truncate ${
-                    mono
-                      ? "font-[family-name:'JetBrains_Mono',monospace] text-sm tracking-widest"
-                      : "font-[family-name:'JetBrains_Mono',monospace] text-[0.62rem]"
-                  }`}
-                >
-                  {value}
-                </div>
-                <button
-                  onClick={() => copy(value, type)}
-                  className="w-9 h-9 flex items-center justify-center rounded-[3px] border border-[rgba(95,255,96,0.2)] bg-[rgba(95,255,96,0.06)] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.38)] transition-all cursor-pointer flex-shrink-0"
-                >
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
+          <div>
+            <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.52rem] tracking-[0.14em] uppercase text-[rgba(95,255,96,0.45)] mb-1.5">
+              Invite Code
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-[rgba(95,255,96,0.05)] border border-[rgba(95,255,96,0.15)] rounded-[3px] px-3 py-2 text-[#5fff60] truncate font-[family-name:'JetBrains_Mono',monospace] text-sm tracking-widest">
+                {details.code}
+              </div>
+              <button
+                onClick={copy}
+                className="w-9 h-9 flex items-center justify-center rounded-[3px] border border-[rgba(95,255,96,0.2)] bg-[rgba(95,255,96,0.06)] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.38)] transition-all cursor-pointer flex-shrink-0"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
         </div>
 
         <PrimaryBtn onClick={onClose} className="w-full">
@@ -173,7 +172,9 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
   const [teamName, setTeamName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [showTeamInfo, setShowTeamInfo] = useState(false);
-  const [teamDetails, setTeamDetails] = useState({ code: "", link: "" });
+  const [teamDetails, setTeamDetails] = useState({ code: "" });
+  const [pendingTeam, setPendingTeam] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -185,14 +186,22 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
         if (cancelled) return;
         setHackathon(h);
 
-        const regPhase = h.phases?.find((p) => p.phaseType === "REGISTRATION");
-        const fields = normalizeFields(regPhase?.submissionForm || [], "submission");
+        const fields = normalizeFields(h.registrationForm || [], "registration");
         setRegFields(fields);
         setRegValues(buildInitialValues(fields));
 
-        const statusRes = await RegistrationAPI.getRegistrationStatus(h._id);
-        if (!cancelled && statusRes.data.isRegistered) {
-          setStep("team");
+        try {
+          const regRes = await RegistrationAPI.getMyRegistration(h._id);
+          if (cancelled) return;
+          const registration = regRes.data.registration;
+          if (h.participationType === "TEAM" && !registration.team) {
+            setStep("team");
+          } else {
+            setStep("done");
+          }
+        } catch (err) {
+          if (err.response?.status !== 404) throw err;
+          // not registered yet — stay on the register step
         }
       } catch (err) {
         toast.error(
@@ -226,7 +235,7 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
       await RegistrationAPI.register(hackathon._id, regValues);
       toast.success("Registered successfully!");
       onSubmit(regValues);
-      setStep("team");
+      setStep(hackathon.participationType === "TEAM" ? "team" : "done");
     } catch (err) {
       toast.error(
         err.response?.data?.message || err.message || "Registration failed"
@@ -242,10 +251,7 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
     try {
       const res = await TeamAPI.createTeam(hackathon._id, { teamName });
       toast.success(res.data.message || "Team created!");
-      setTeamDetails({
-        code: res.data.team.secretCode,
-        link: res.data.team.secretLink,
-      });
+      setTeamDetails({ code: res.data.team.secretCode });
       setShowTeamInfo(true);
     } catch (err) {
       toast.error(
@@ -260,17 +266,42 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await TeamAPI.joinTeam({ secretCode: joinCode.trim() });
-      toast.success(
-        res.data.message || "Join request sent to the team leader!"
-      );
-      navigate(`/hackathon/${slug}`);
+      const code = joinCode.trim();
+      await TeamAPI.joinTeam({ secretCode: code });
+
+      try {
+        const searchRes = await TeamAPI.searchTeam(code);
+        setPendingTeam({ id: searchRes.data.team.id, name: searchRes.data.team.name });
+      } catch {
+        setPendingTeam({ id: null, name: null });
+      }
+
+      toast.success("Join request sent to the team leader!");
+      setStep("done");
     } catch (err) {
       toast.error(
         err.response?.data?.message || err.message || "Failed to join team"
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!pendingTeam?.id) return;
+    setCancelling(true);
+    try {
+      await TeamAPI.cancelJoinRequest(pendingTeam.id);
+      toast.success("Join request cancelled.");
+      setPendingTeam(null);
+      setJoinCode("");
+      setStep("team");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || err.message || "Failed to cancel request"
+      );
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -316,8 +347,16 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
             <div className="font-[family-name:'JetBrains_Mono',monospace] text-[0.55rem] tracking-[0.2em] uppercase text-[rgba(95,255,96,0.45)] mb-2">
               HackSprint
             </div>
+            <StepIndicator
+              steps={hackathon.participationType === "TEAM" ? ["register", "team", "done"] : ["register", "done"]}
+              current={step}
+            />
             <h1 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-2xl sm:text-3xl md:text-4xl tracking-tight">
-              {step === "register" ? "Hackathon Registration" : "Join or Create a Team"}
+              {step === "register"
+                ? "Hackathon Registration"
+                : step === "team"
+                ? "Join or Create a Team"
+                : "You're All Set"}
             </h1>
           </div>
 
@@ -366,7 +405,7 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
                   active={teamOption === "join"}
                   onClick={() => setTeamOption("join")}
                 >
-                  <LinkIcon size={11} /> Join with Code
+                  <KeyRound size={11} /> Join with Code
                 </SubTabBtn>
               </div>
 
@@ -428,6 +467,50 @@ export const RegistrationForm = ({ onSubmit = () => {} }) => {
                   </div>
                 </form>
               )}
+            </div>
+          )}
+
+          {step === "done" && pendingTeam && (
+            <div className="text-center py-6">
+              <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-[rgba(255,184,77,0.1)] border border-[rgba(255,184,77,0.3)] flex items-center justify-center">
+                <KeyRound size={24} className="text-[#ffb84d]" />
+              </div>
+              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.75rem] text-[rgba(220,240,220,0.85)] mb-1">
+                Request sent{pendingTeam.name ? ` to "${pendingTeam.name}"` : ""}.
+              </p>
+              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.65rem] text-[rgba(180,220,180,0.5)] mb-6">
+                Waiting for the team leader to respond.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                {pendingTeam.id && (
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={cancelling}
+                    className="font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center justify-center gap-2 text-[0.65rem] tracking-[0.1em] uppercase px-5 py-3 rounded-[3px] border cursor-pointer transition-all duration-150 bg-transparent border-[rgba(255,100,100,0.3)] text-[rgba(255,140,140,0.85)] hover:bg-[rgba(255,60,60,0.08)] disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <X size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
+                  </button>
+                )}
+                <PrimaryBtn onClick={() => navigate(`/hackathon/${slug}`)}>
+                  Back to Hackathon <ChevronRight size={14} />
+                </PrimaryBtn>
+              </div>
+            </div>
+          )}
+
+          {step === "done" && !pendingTeam && (
+            <div className="text-center py-6">
+              <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-[rgba(95,255,96,0.1)] border border-[rgba(95,255,96,0.3)] flex items-center justify-center">
+                <Check size={24} className="text-[#5fff60]" />
+              </div>
+              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.75rem] text-[rgba(220,240,220,0.85)] mb-6">
+                {hackathon.participationType === "TEAM"
+                  ? "You're registered and part of a team for this hackathon."
+                  : "You're registered for this hackathon."}
+              </p>
+              <PrimaryBtn onClick={() => navigate(`/hackathon/${slug}`)}>
+                Back to Hackathon <ChevronRight size={14} />
+              </PrimaryBtn>
             </div>
           )}
         </div>

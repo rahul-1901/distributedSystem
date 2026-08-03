@@ -20,4 +20,10 @@ export const AuthAPI = {
   resetPassword(data) {
     return client.post(`${API.AUTH}/reset-password`, data);
   },
+  refreshToken() {
+    return client.post(`${API.AUTH}/refresh-token`);
+  },
+  logout() {
+    return client.post(`${API.AUTH}/logout`);
+  },
 };

@@ -5,7 +5,9 @@ import {
   resetPassword,
   sendResetLink,
   signup,
-  verifyEmail
+  verifyEmail,
+  refreshToken,
+  logout
 } from "../controllers/auth.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { signupSchema, loginSchema, resetPasswordSchema, sendResetLinkSchema } from "../validations/auth.validation.js";
@@ -46,5 +48,7 @@ router.post("/send-reset-link", authLimiter, validate(sendResetLinkSchema), send
 router.post("/reset-password", authLimiter, validate(resetPasswordSchema), resetPassword);
 router.post("/login", authLimiter, validate(loginSchema), login);
 router.get("/google", authLimiter, googleLogin);
+router.post("/refresh-token", limiter, refreshToken);
+router.post("/logout", limiter, logout);
 
 export default router;

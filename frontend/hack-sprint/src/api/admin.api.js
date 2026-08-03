@@ -2,8 +2,8 @@ import client from "./client";
 import { API } from "./endpoints";
 
 export const AdminAPI = {
-  getProfile() {
-    return client.get(`${API.ADMIN}/profile`);
+  getProfile(config = {}) {
+    return client.get(`${API.ADMIN}/profile`, config);
   },
 
   updateProfile(data) {
@@ -20,9 +20,10 @@ export const AdminAPI = {
     );
   },
 
-  getPendingVerificationRequests() {
+  getPendingVerificationRequests(config = {}) {
     return client.get(
-      `${API.ADMIN}/verification-requests`
+      `${API.ADMIN}/verification-requests`,
+      config
     );
   },
 
@@ -39,8 +40,8 @@ export const AdminAPI = {
     );
   },
 
-  getAllAdmins() {
-    return client.get(`${API.ADMIN}/admins`);
+  getAllAdmins(config = {}) {
+    return client.get(`${API.ADMIN}/admins`, config);
   },
 
   deleteAdmin(adminId) {

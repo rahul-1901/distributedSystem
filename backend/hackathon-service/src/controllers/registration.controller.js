@@ -54,7 +54,7 @@ export const updateMyRegistration = async (req, res, next) => {
 
       hackathonId: req.params.hackathonId,
 
-      updateData: req.body,
+      registrationData: req.body.registrationData,
     });
 
     return res.status(200).json({

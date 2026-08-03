@@ -33,6 +33,7 @@ export const env = {
 
   SECRET_KEY: process.env.SECRET_KEY,
   JWT_EXPIRE_TIME: process.env.JWT_EXPIRE_TIME || "7d",
+  REFRESH_TOKEN_EXPIRE_TIME: process.env.REFRESH_TOKEN_EXPIRE_TIME || "30d",
 
   FRONTEND_URL: process.env.FRONTEND_URL,
 

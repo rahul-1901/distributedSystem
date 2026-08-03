@@ -21,10 +21,10 @@ export const RegistrationAPI = {
     );
   },
 
-  updateMyRegistration(hackathonId, data) {
+  updateMyRegistration(hackathonId, registrationData) {
     return client.patch(
       `${API.REGISTRATION}/${hackathonId}/my-registration`,
-      data
+      { registrationData }
     );
   },
 };

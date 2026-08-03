@@ -85,6 +85,11 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     resetPasswordExpiresAt: Date,
+    refreshTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
     verificationToken: {
       type: String,
       default: "",
@@ -101,6 +106,10 @@ const userSchema = new mongoose.Schema(
         },
         message: (props) => `${props.value} is not a valid phone number!`,
       },
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other", "prefer_not_to_say"],
     },
     badges: {
       type: [String],

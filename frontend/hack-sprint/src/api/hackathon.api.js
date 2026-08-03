@@ -122,11 +122,11 @@ export const HackathonAPI = {
   submitForApproval(id) {
     return client.post(`${API.HACKATHON}/admin/${id}/submitHackathon`);
   },
-  getPendingHackathons() {
-    return client.get(`${API.HACKATHON}/admin/pendingHackathon`);
+  getPendingHackathons(config = {}) {
+    return client.get(`${API.HACKATHON}/admin/pendingHackathon`, config);
   },
-  getAllHackathonsForController() {
-    return client.get(`${API.HACKATHON}/admin/all-hackathons`);
+  getAllHackathonsForController(config = {}) {
+    return client.get(`${API.HACKATHON}/admin/all-hackathons`, config);
   },
   approveHackathon(id) {
     return client.post(`${API.HACKATHON}/admin/${id}/approveHackathon`);
@@ -137,8 +137,8 @@ export const HackathonAPI = {
   deleteHackathon(id) {
     return client.delete(`${API.HACKATHON}/admin/${id}/deleteHackathon`);
   },
-  getMyHackathons() {
-    return client.get(`${API.HACKATHON}/admin/my-hackathons`);
+  getMyHackathons(config = {}) {
+    return client.get(`${API.HACKATHON}/admin/my-hackathons`, config);
   },
   getHackathonAdminOverview(id) {
     return client.get(`${API.HACKATHON}/admin/hackathons/${id}/overview`);

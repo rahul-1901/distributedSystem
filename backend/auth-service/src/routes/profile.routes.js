@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getMyProfile,
   getPublicProfile,
+  searchProfiles,
   updateProfile,
   addEducation,
   updateEducation,
@@ -19,6 +20,7 @@ const router = Router();
 
 router.get("/me", verifyAuth, getMyProfile);
 router.patch("/me", verifyAuth, updateProfile);
+router.get("/search", searchProfiles);
 router.get("/:userName", getPublicProfile);
 router.post("/me/education", verifyAuth, addEducation);
 router.patch("/me/education/:id", verifyAuth, updateEducation);

@@ -21,9 +21,10 @@ export const JudgeAPI = {
     );
   },
 
-  getAssignedHackathons() {
+  getAssignedHackathons(config = {}) {
     return client.get(
-      `${API.JUDGE}/judges/assigned-hackathons`
+      `${API.JUDGE}/judges/assigned-hackathons`,
+      config
     );
   },
 

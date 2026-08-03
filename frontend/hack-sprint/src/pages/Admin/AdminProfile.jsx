@@ -862,49 +862,58 @@ const AdminProfile = () => {
   const [showAllHackathons, setShowAllHackathons] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     const run = async () => {
       try {
-        const res = await AdminAPI.getProfile();
+        const res = await AdminAPI.getProfile({ signal: controller.signal });
         setAdminData(res.data.admin);
-      } catch {
+      } catch (err) {
+        if (err.code === "ERR_CANCELED") return;
         navigate("/adminlogin");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
     run();
+    return () => controller.abort();
   }, [navigate]);
 
   useEffect(() => {
     if (!adminData) return;
+    const controller = new AbortController();
     const run = async () => {
       try {
         setHackathonsLoading(true);
-        const res = await HackathonAPI.getMyHackathons();
+        const res = await HackathonAPI.getMyHackathons({ signal: controller.signal });
         setMyHackathons(res.data.hackathons || []);
-      } catch {
+      } catch (err) {
+        if (err.code === "ERR_CANCELED") return;
         toast.error("Could not load your hackathons.");
       } finally {
-        setHackathonsLoading(false);
+        if (!controller.signal.aborted) setHackathonsLoading(false);
       }
     };
     run();
+    return () => controller.abort();
   }, [adminData]);
 
   useEffect(() => {
     if (!adminData) return;
+    const controller = new AbortController();
     const run = async () => {
       try {
         setAssignedLoading(true);
-        const res = await JudgeAPI.getAssignedHackathons();
+        const res = await JudgeAPI.getAssignedHackathons({ signal: controller.signal });
         setAssignedHackathons(res.data.hackathons || []);
-      } catch {
+      } catch (err) {
+        if (err.code === "ERR_CANCELED") return;
         // Not every admin has judge assignments — fail quietly.
       } finally {
-        setAssignedLoading(false);
+        if (!controller.signal.aborted) setAssignedLoading(false);
       }
     };
     run();
+    return () => controller.abort();
   }, [adminData]);
 
   useEffect(() => {
@@ -912,26 +921,30 @@ const AdminProfile = () => {
       setPendingLoading(false);
       return;
     }
+    const controller = new AbortController();
     const run = async () => {
       try {
         setPendingLoading(true);
+        const { signal } = controller;
         const [hackRes, verifyRes, adminsRes, allHackRes] = await Promise.all([
-          HackathonAPI.getPendingHackathons(),
-          AdminAPI.getPendingVerificationRequests(),
-          AdminAPI.getAllAdmins(),
-          HackathonAPI.getAllHackathonsForController(),
+          HackathonAPI.getPendingHackathons({ signal }),
+          AdminAPI.getPendingVerificationRequests({ signal }),
+          AdminAPI.getAllAdmins({ signal }),
+          HackathonAPI.getAllHackathonsForController({ signal }),
         ]);
         setPendingHackathons(hackRes.data.hackathons || []);
         setPendingVerifications(verifyRes.data.requests || []);
         setAllAdmins(adminsRes.data.admins || []);
         setAllHackathonsPlatform(allHackRes.data.hackathons || []);
-      } catch {
+      } catch (err) {
+        if (err.code === "ERR_CANCELED") return;
         toast.error("Could not load pending approvals.");
       } finally {
-        setPendingLoading(false);
+        if (!controller.signal.aborted) setPendingLoading(false);
       }
     };
     run();
+    return () => controller.abort();
   }, [adminData]);
 
   const handleApproveHackathon = async (id) => {

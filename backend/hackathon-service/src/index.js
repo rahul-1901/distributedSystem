@@ -4,6 +4,7 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import multer from "multer";
 import { connectDB } from "./config/db.js";
@@ -32,6 +33,7 @@ app.use(
 app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
 app.use(metricsMiddleware);
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));

@@ -38,6 +38,12 @@ const adminSchema = new mongoose.Schema(
       default: true,
     },
 
+    refreshTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+
     isVerified: {
       type: Boolean,
       default: false,

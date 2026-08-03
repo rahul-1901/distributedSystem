@@ -12,13 +12,18 @@ import {
   Copy,
   User,
   Clock,
-  LinkIcon,
+  KeyRound,
+  Pencil,
+  Save,
+  LogOut,
+  Trash2,
+  UserMinus,
 } from "lucide-react";
 
 const mono = "font-[family-name:'JetBrains_Mono',monospace]";
 const syne = "font-[family-name:'Syne',sans-serif]";
 
-const IconBtn = ({ onClick, disabled, color = "green", children }) => {
+const IconBtn = ({ onClick, disabled, color = "green", title, children }) => {
   const c = {
     green:
       "border-[rgba(95,255,96,0.2)] bg-[rgba(95,255,96,0.07)] text-[rgba(95,255,96,0.65)] hover:bg-[rgba(95,255,96,0.14)] hover:text-[#5fff60]",
@@ -28,6 +33,7 @@ const IconBtn = ({ onClick, disabled, color = "green", children }) => {
     <button
       onClick={onClick}
       disabled={disabled}
+      title={title}
       className={`${mono} w-8 h-8 flex items-center justify-center rounded-[3px] border cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed ${c}`}
     >
       {children}
@@ -56,40 +62,52 @@ const CopyRow = ({ label, value, copyKey, copiedItem, onCopy }) => (
   </div>
 );
 
-const MemberCard = ({ member, isLeader }) => (
+const MemberCard = ({ member, isLeader, canRemove, onRemove, removing }) => (
   <div className="relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-4 hover:border-[rgba(95,255,96,0.25)] transition-all">
     <span className="absolute top-[-1px] left-[-1px] w-2 h-2 border-t-2 border-l-2 border-[rgba(95,255,96,0.35)]" />
     <span className="absolute bottom-[-1px] right-[-1px] w-2 h-2 border-b-2 border-r-2 border-[rgba(95,255,96,0.35)]" />
-    <div className="flex items-center gap-3 mb-3">
-      <div
-        className={`w-9 h-9 rounded-full flex items-center justify-center border flex-shrink-0 ${
-          isLeader
-            ? "bg-[rgba(255,184,77,0.1)] border-[rgba(255,184,77,0.3)]"
-            : "bg-[rgba(95,255,96,0.07)] border-[rgba(95,255,96,0.2)]"
-        }`}
-      >
-        {isLeader ? (
-          <Crown size={14} className="text-[#ffb84d]" />
-        ) : (
-          <User size={14} className="text-[rgba(95,255,96,0.6)]" />
-        )}
-      </div>
-      <div>
-        <h3
-          className={`${syne} font-extrabold text-white text-sm tracking-tight`}
-        >
-          {member.name}
-        </h3>
-        <p
-          className={`${mono} text-[0.55rem] tracking-[0.08em] ${
+    <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className={`w-9 h-9 rounded-full flex items-center justify-center border flex-shrink-0 ${
             isLeader
-              ? "text-[rgba(255,184,77,0.6)]"
-              : "text-[rgba(180,220,180,0.4)]"
+              ? "bg-[rgba(255,184,77,0.1)] border-[rgba(255,184,77,0.3)]"
+              : "bg-[rgba(95,255,96,0.07)] border-[rgba(95,255,96,0.2)]"
           }`}
         >
-          {isLeader ? "Team Leader" : "Member"}
-        </p>
+          {isLeader ? (
+            <Crown size={14} className="text-[#ffb84d]" />
+          ) : (
+            <User size={14} className="text-[rgba(95,255,96,0.6)]" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <h3
+            className={`${syne} font-extrabold text-white text-sm tracking-tight truncate`}
+          >
+            {member.name}
+          </h3>
+          <p
+            className={`${mono} text-[0.55rem] tracking-[0.08em] ${
+              isLeader
+                ? "text-[rgba(255,184,77,0.6)]"
+                : "text-[rgba(180,220,180,0.4)]"
+            }`}
+          >
+            {isLeader ? "Team Leader" : "Member"}
+          </p>
+        </div>
       </div>
+      {canRemove && (
+        <IconBtn
+          color="red"
+          title="Remove from team"
+          disabled={removing}
+          onClick={() => onRemove(member._id, member.name)}
+        >
+          <UserMinus size={13} />
+        </IconBtn>
+      )}
     </div>
     <div
       className={`${mono} flex items-center gap-1.5 text-[0.62rem] text-[rgba(180,220,180,0.55)]`}
@@ -147,7 +165,7 @@ const PendingCard = ({ request, onAction, actionLoading, formatDate }) => (
 );
 
 const TeamDetails = () => {
-  const { hackathonId, teamId } = useParams();
+  const { slug, teamId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [isLeader, setIsLeader] = useState(false);
@@ -156,6 +174,13 @@ const TeamDetails = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedItem, setCopiedItem] = useState(null);
+
+  const [renaming, setRenaming] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
 
   const getCode = useCallback(
     () => teamId || localStorage.getItem("teamDetails_code"),
@@ -191,7 +216,7 @@ const TeamDetails = () => {
         toast.error("You must be logged in.");
         navigate("/account/login");
       });
-  }, [hackathonId, teamId, navigate, fetchTeam, location.state]);
+  }, [slug, teamId, navigate, fetchTeam, location.state]);
 
   useEffect(() => {
     if (currentUser && teamData)
@@ -216,6 +241,74 @@ const TeamDetails = () => {
       toast.error(err.response?.data?.message || `Error ${action}ing request.`);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const startRename = () => {
+    setNewTeamName(teamData.name);
+    setRenaming(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!newTeamName.trim()) {
+      toast.error("Team name cannot be empty.");
+      return;
+    }
+    setSavingName(true);
+    try {
+      await TeamAPI.updateTeam(teamData._id, { teamName: newTeamName.trim() });
+      toast.success("Team renamed.");
+      setRenaming(false);
+      fetchTeam();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to rename team.");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId, name) => {
+    if (!window.confirm(`Remove ${name} from the team?`)) return;
+    setRemovingId(userId);
+    try {
+      await TeamAPI.removeMember(teamData._id, userId);
+      toast.success(`${name} was removed from the team.`);
+      fetchTeam();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove member.");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleLeaveTeam = async () => {
+    if (!window.confirm("Are you sure you want to leave this team?")) return;
+    setLeaving(true);
+    try {
+      await TeamAPI.leaveTeam(teamData._id);
+      toast.success("You left the team.");
+      navigate(`/hackathon/${slug}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to leave team.");
+      setLeaving(false);
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (
+      !window.confirm(
+        "Delete this team permanently? Every member will be removed. This cannot be undone."
+      )
+    )
+      return;
+    setDeleting(true);
+    try {
+      await TeamAPI.deleteTeam(teamData._id);
+      toast.success("Team deleted.");
+      navigate(`/hackathon/${slug}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete team.");
+      setDeleting(false);
     }
   };
 
@@ -268,23 +361,69 @@ const TeamDetails = () => {
         />
 
         <div className="relative z-10 max-w-[1100px] mx-auto px-4 sm:px-6 py-10">
-          <div className="mb-8">
-            <div
-              className={`${mono} text-[0.52rem] tracking-[0.2em] uppercase text-[rgba(95,255,96,0.4)] mb-2`}
-            >
-              Team Dashboard
+          <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div
+                className={`${mono} text-[0.52rem] tracking-[0.2em] uppercase text-[rgba(95,255,96,0.4)] mb-2`}
+              >
+                Team Dashboard
+              </div>
+              {renaming ? (
+                <div className="flex items-center gap-2 mb-1.5">
+                  <input
+                    autoFocus
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    className={`${mono} bg-[rgba(18,22,18,0.7)] border border-[rgba(95,255,96,0.25)] rounded-[3px] px-3 py-1.5 text-white text-xl sm:text-2xl focus:outline-none focus:border-[rgba(95,255,96,0.5)]`}
+                  />
+                  <IconBtn onClick={handleSaveName} disabled={savingName} title="Save">
+                    <Save size={13} />
+                  </IconBtn>
+                  <IconBtn color="red" onClick={() => setRenaming(false)} title="Cancel">
+                    <X size={13} />
+                  </IconBtn>
+                </div>
+              ) : (
+                <h1
+                  className={`${syne} font-extrabold text-white text-3xl sm:text-4xl tracking-tight mb-1.5 flex items-center gap-3`}
+                >
+                  {teamData.name}
+                  {isLeader && (
+                    <button
+                      onClick={startRename}
+                      title="Rename team"
+                      className="text-[rgba(95,255,96,0.4)] hover:text-[#5fff60] transition-colors cursor-pointer"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  )}
+                </h1>
+              )}
+              <p
+                className={`${mono} text-[0.65rem] text-[rgba(180,220,180,0.5)] tracking-[0.04em]`}
+              >
+                Created {formatDate(teamData.createdAt)} · {allMembers.length}/
+                {teamData.maxTeamSize} members
+              </p>
             </div>
-            <h1
-              className={`${syne} font-extrabold text-white text-3xl sm:text-4xl tracking-tight mb-1.5`}
-            >
-              {teamData.name}
-            </h1>
-            <p
-              className={`${mono} text-[0.65rem] text-[rgba(180,220,180,0.5)] tracking-[0.04em]`}
-            >
-              Created {formatDate(teamData.createdAt)} · {allMembers.length}/
-              {teamData.maxTeamSize} members
-            </p>
+
+            {isLeader ? (
+              <button
+                onClick={handleDeleteTeam}
+                disabled={deleting}
+                className={`${mono} inline-flex items-center gap-2 text-[0.62rem] tracking-[0.08em] uppercase px-4 py-2.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(255,60,60,0.25)] bg-[rgba(255,60,60,0.06)] text-[rgba(255,120,120,0.75)] hover:bg-[rgba(255,60,60,0.12)] hover:text-[#ff9090] disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                <Trash2 size={13} /> {deleting ? "Deleting…" : "Delete Team"}
+              </button>
+            ) : (
+              <button
+                onClick={handleLeaveTeam}
+                disabled={leaving}
+                className={`${mono} inline-flex items-center gap-2 text-[0.62rem] tracking-[0.08em] uppercase px-4 py-2.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(255,60,60,0.25)] bg-[rgba(255,60,60,0.06)] text-[rgba(255,120,120,0.75)] hover:bg-[rgba(255,60,60,0.12)] hover:text-[#ff9090] disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                <LogOut size={13} /> {leaving ? "Leaving…" : "Leave Team"}
+              </button>
+            )}
           </div>
 
           {isLeader && (
@@ -294,7 +433,7 @@ const TeamDetails = () => {
                   <span className="absolute top-[-1px] left-[-1px] w-2.5 h-2.5 border-t-2 border-l-2 border-[rgba(95,255,96,0.45)]" />
                   <span className="absolute bottom-[-1px] right-[-1px] w-2.5 h-2.5 border-b-2 border-r-2 border-[rgba(95,255,96,0.45)]" />
                   <div className="flex items-center gap-2 mb-5">
-                    <LinkIcon
+                    <KeyRound
                       size={14}
                       className="text-[rgba(95,255,96,0.55)]"
                     />
@@ -312,13 +451,6 @@ const TeamDetails = () => {
                       copiedItem={copiedItem}
                       onCopy={handleCopy}
                     />
-                    {/* <CopyRow
-                      label="Invite Link"
-                      value={teamData.secretLink}
-                      copyKey="link"
-                      copiedItem={copiedItem}
-                      onCopy={handleCopy}
-                    /> */}
                   </div>
                 </div>
               )}
@@ -379,7 +511,14 @@ const TeamDetails = () => {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <MemberCard member={teamData.leader} isLeader />
               {teamData.members.map((m) => (
-                <MemberCard key={m._id} member={m} isLeader={false} />
+                <MemberCard
+                  key={m._id}
+                  member={m}
+                  isLeader={false}
+                  canRemove={isLeader}
+                  onRemove={handleRemoveMember}
+                  removing={removingId === m._id}
+                />
               ))}
               {spotsLeft > 0 && (
                 <div className="border border-dashed border-[rgba(95,255,96,0.15)] rounded-[4px] p-6 flex flex-col items-center justify-center gap-1">

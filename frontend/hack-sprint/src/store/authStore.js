@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { AuthAPI } from "../api/auth.api.js";
+import { AdminAuthAPI } from "../api/admin-auth.api.js";
 
 export const useAuthStore = create((set) => ({
   user: null,
@@ -21,6 +23,25 @@ export const useAuthStore = create((set) => ({
       isAuthenticated: false,
       loading: false,
     }),
+
+  // Revokes the session server-side (clears the refresh-token hash + cookie),
+  // then clears local state. Prefer this over calling `logout()` directly.
+  logoutAndClear: async (isAdmin = false) => {
+    try {
+      await (isAdmin ? AdminAuthAPI.logout() : AuthAPI.logout());
+    } catch {
+      // best-effort — still clear local state even if the network call fails
+    }
+
+    localStorage.removeItem(isAdmin ? "adminToken" : "token");
+
+    set({
+      user: null,
+      role: null,
+      isAuthenticated: false,
+      loading: false,
+    });
+  },
 
   finishLoading: () =>
     set({

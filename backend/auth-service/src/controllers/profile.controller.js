@@ -26,6 +26,19 @@ export const getPublicProfile = async (req, res, next) => {
   }
 };
 
+export const searchProfiles = async (req, res, next) => {
+  try {
+    const results = await profileService.searchProfiles(req.query.q);
+
+    return res.status(200).json({
+      success: true,
+      results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateProfile = async (req, res, next) => {
   try {
     const profile = await profileService.updateProfile(req.user._id, req.body);

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
@@ -29,6 +30,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(metricsMiddleware)
 app.use(requestIdMiddleware);
 app.use((req, res, next) => {

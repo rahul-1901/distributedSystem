@@ -8,8 +8,11 @@ export const ProfileAPI = {
   updateProfile(data) {
     return client.patch(`${API.PROFILE}/me`, data);
   },
-  getPublicProfile(userName) {
-    return client.get(`${API.PROFILE}/${userName}`);
+  getPublicProfile(userName, config = {}) {
+    return client.get(`${API.PROFILE}/${userName}`, config);
+  },
+  searchProfiles(query, config = {}) {
+    return client.get(`${API.PROFILE}/search`, { params: { q: query }, ...config });
   },
   addEducation(payload) {
     return client.post(`${API.PROFILE}/me/education`, payload);

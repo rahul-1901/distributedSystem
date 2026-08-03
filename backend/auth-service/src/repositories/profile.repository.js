@@ -15,6 +15,16 @@ export class ProfileRepository {
     });
   }
 
+  async searchByUsername(query, limit) {
+    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    return UserModel.find({
+      userName: { $regex: `^${safe}`, $options: "i" },
+    })
+      .select("_id name userName image")
+      .limit(limit);
+  }
+
   async updateProfile(userId, data) {
     return UserModel.findByIdAndUpdate(
       userId,

@@ -7,7 +7,8 @@ export function useAuth() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
+  const logoutAndClear = useAuthStore((state) => state.logoutAndClear);
   const finishLoading = useAuthStore((state) => state.finishLoading);
 
-  return { user, role, loading, isAuthenticated, login, logout, finishLoading };
+  return { user, role, loading, isAuthenticated, login, logout, logoutAndClear, finishLoading };
 }

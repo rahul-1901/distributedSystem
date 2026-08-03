@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProfileAPI } from "../../api/profile.api.js";
+import { AuthAPI } from "../../api/auth.api.js";
 import { HackathonAPI } from "../../api/hackathon.api.js";
 import { MediaAPI } from "../../api/media.api.js";
 import { useNavigate } from "react-router-dom";
@@ -117,6 +118,8 @@ const Tag = ({ children, onDelete, color = "green" }) => {
 const EditProfileModal = ({ data, onClose, onSaved }) => {
   const [form, setForm] = useState({
     name: data.name || "",
+    userName: data.userName || "",
+    gender: data.gender || "",
     bio: data.bio || "",
     location: data.location || "",
     contactNumber: data.contactNumber || "",
@@ -164,6 +167,8 @@ const EditProfileModal = ({ data, onClose, onSaved }) => {
 
       const profileRes = await ProfileAPI.updateProfile({
         name: form.name.trim(),
+        userName: form.userName.trim(),
+        gender: form.gender,
         bio: form.bio.trim(),
         location: form.location.trim(),
         contactNumber: form.contactNumber.trim(),
@@ -239,6 +244,38 @@ const EditProfileModal = ({ data, onClose, onSaved }) => {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Your name"
             />
+          </div>
+          <div>
+            <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
+              Username
+            </label>
+            <input
+              className={inputCls}
+              value={form.userName}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  userName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20),
+                })
+              }
+              placeholder="e.g. jane_doe"
+            />
+          </div>
+          <div>
+            <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
+              Gender
+            </label>
+            <select
+              className={selectCls}
+              value={form.gender}
+              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+            >
+              <option value="">Select...</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
           </div>
           <div>
             <label className="text-[0.6rem] tracking-[0.06em] uppercase text-[rgba(180,220,180,0.45)] mb-1 block">
@@ -320,7 +357,7 @@ export const UserDashboard = () => {
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
   const [registrationsError, setRegistrationsError] = useState(false);
   const navigate = useNavigate();
-  const { logout, login } = useAuth();
+  const { logoutAndClear, login } = useAuth();
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const availableLanguages = [
@@ -350,8 +387,7 @@ export const UserDashboard = () => {
       setData(res.data.profile);
     } catch (err) {
       if (err.response?.status === 401) {
-        logout();
-        localStorage.removeItem("token");
+        await logoutAndClear(false);
         navigate("/account/login", { replace: true });
         return;
       }
@@ -366,18 +402,22 @@ export const UserDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const check = () => {
+    const check = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
         const decoded = jwtDecode(token);
         if (decoded.exp < Math.floor(Date.now() / 1000)) {
-          logout();
-          localStorage.removeItem("token");
-          toast.success("Session expired", { duration: 800 });
-          setTimeout(() => {
-            navigate("/account/login");
-          }, 2000);
+          try {
+            const res = await AuthAPI.refreshToken();
+            localStorage.setItem("token", res.data.token);
+          } catch {
+            await logoutAndClear(false);
+            toast.success("Session expired", { duration: 800 });
+            setTimeout(() => {
+              navigate("/account/login");
+            }, 2000);
+          }
         }
       } catch {}
     };
@@ -560,9 +600,8 @@ export const UserDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    await logoutAndClear(false);
     toast.success("Logged out", { duration: 1000 });
     setTimeout(() => navigate("/"), 1700);
   };
@@ -615,6 +654,11 @@ export const UserDashboard = () => {
                   <h2 className="font-[family-name:'Syne',sans-serif] font-extrabold text-white text-[1.05rem] tracking-tight">
                     {data.name || "Unnamed"}
                   </h2>
+                  {data.userName && (
+                    <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.62rem] text-[rgba(180,220,180,0.5)] mt-0.5">
+                      @{data.userName}
+                    </p>
+                  )}
                   <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(95,255,96,0.45)] tracking-[0.1em] uppercase mt-0.5">
                     Student
                   </p>

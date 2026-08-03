@@ -34,11 +34,6 @@ const teamSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    secretLink: {
-      type: String,
-      required: true,
-      trim: true,
-    },
     maxTeamSize: {
       type: Number,
       required: true,

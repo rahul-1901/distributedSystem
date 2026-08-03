@@ -3,6 +3,7 @@ import userRepository from "../repositories/user.repository.js";
 import tokenService from "./token.service.js";
 import { addEmailJob } from "../jobs/email.job.js";
 import { oauth2client } from "../utils/googleAuth.utils.js";
+import { sha256 } from "../utils/hash.utils.js";
 
 export class OAuthService {
   async googleLogin(code) {
@@ -47,6 +48,9 @@ export class OAuthService {
     }
 
     const jwtToken = tokenService.generateAccessToken(user);
+    const refreshToken = tokenService.generateRefreshToken(user);
+
+    await userRepository.setRefreshTokenHash(user._id, sha256(refreshToken));
 
     if (isFirstTime) {
       await addEmailJob({
@@ -64,6 +68,7 @@ export class OAuthService {
       success: true,
       message: "Login successful",
       token: jwtToken,
+      refreshToken,
       email,
       name: user.name,
     };

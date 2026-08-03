@@ -48,4 +48,16 @@ export class AdminRepository {
   async deleteById(adminId) {
     return Admin.findByIdAndDelete(adminId);
   }
+
+  async getByIdWithRefreshHash(id) {
+    return Admin.findById(id).select("+refreshTokenHash");
+  }
+
+  async setRefreshTokenHash(id, hash) {
+    return Admin.findByIdAndUpdate(id, { refreshTokenHash: hash });
+  }
+
+  async clearRefreshTokenHash(id) {
+    return Admin.findByIdAndUpdate(id, { refreshTokenHash: null });
+  }
 }

@@ -31,6 +31,7 @@ export const HeroSection = ({
   hackathonId,
   slug,
   phases = [],
+  participationType = "INDIVIDUAL",
 }) => {
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -216,6 +217,16 @@ export const HeroSection = ({
         </button>
       );
     }
+
+    if (participationType === "TEAM" && !isLeader && !isTeamMember)
+      return (
+        <button
+          onClick={handleRegister}
+          className={`${actionCls} bg-[#5fff60] border-[#5fff60] text-[#050905] font-bold hover:bg-[#7fff80] hover:shadow-[0_0_20px_rgba(95,255,96,0.3)]`}
+        >
+          Create/Join Team <ChevronRight size={14} />
+        </button>
+      );
 
     if (isTeamMember && !isLeader)
       return (

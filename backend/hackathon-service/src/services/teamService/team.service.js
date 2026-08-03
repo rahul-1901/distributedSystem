@@ -102,12 +102,10 @@ export class TeamService {
     }
 
     let secretCode;
-    let secretLink;
     let codeExists = true;
 
     while (codeExists) {
       secretCode = this.generateCode();
-      secretLink = `${process.env.FRONTEND_URL}/join/${secretCode}`;
       codeExists = await this.teamRepository.findByCode(secretCode);
     }
 
@@ -124,7 +122,6 @@ export class TeamService {
           members: [],
           pendingMembers: [],
           secretCode,
-          secretLink,
           maxTeamSize: hackathon.maxTeamSize,
         },
         session

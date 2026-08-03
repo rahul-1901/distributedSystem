@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import userRepository from "../repositories/user.repository.js";
 import tokenService from "./token.service.js";
 import { addEmailJob } from "../jobs/email.job.js";
+import { sha256 } from "../utils/hash.utils.js";
 
 export class AuthService {
   async signup({ email, password, name }) {
@@ -117,7 +118,9 @@ export class AuthService {
     }
 
     const jwtToken = tokenService.generateAccessToken(user);
+    const refreshToken = tokenService.generateRefreshToken(user);
 
+    await userRepository.setRefreshTokenHash(user._id, sha256(refreshToken));
     await userRepository.updateLastLogin(user._id);
 
     return {
@@ -125,6 +128,7 @@ export class AuthService {
       success: true,
       message: "User logged in successfully",
       token: jwtToken,
+      refreshToken,
       email: user.email,
       name: user.name,
     };
@@ -283,6 +287,72 @@ export class AuthService {
       statusCode: 200,
       success: true,
       message: "Password reset successful",
+    };
+  }
+
+  async refreshAccessToken(refreshToken) {
+    if (!refreshToken) {
+      return {
+        statusCode: 401,
+        success: false,
+        message: "No refresh token provided",
+      };
+    }
+
+    let decoded;
+
+    try {
+      decoded = tokenService.verifyRefreshToken(refreshToken);
+    } catch {
+      return {
+        statusCode: 401,
+        success: false,
+        message: "Invalid or expired refresh token",
+      };
+    }
+
+    const user = await userRepository.findByIdWithRefreshHash(decoded._id);
+
+    if (!user || !user.refreshTokenHash || sha256(refreshToken) !== user.refreshTokenHash) {
+      if (user) {
+        await userRepository.clearRefreshTokenHash(user._id);
+      }
+
+      return {
+        statusCode: 401,
+        success: false,
+        message: "Invalid refresh token",
+      };
+    }
+
+    const newAccessToken = tokenService.generateAccessToken(user);
+    const newRefreshToken = tokenService.generateRefreshToken(user);
+
+    await userRepository.setRefreshTokenHash(user._id, sha256(newRefreshToken));
+
+    return {
+      statusCode: 200,
+      success: true,
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  async logout(refreshToken) {
+    if (refreshToken) {
+      try {
+        const decoded = tokenService.decodeIgnoringExpiry(refreshToken);
+
+        await userRepository.clearRefreshTokenHash(decoded._id);
+      } catch {
+        // malformed/tampered cookie — nothing to clear server-side
+      }
+    }
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Logged out",
     };
   }
 }

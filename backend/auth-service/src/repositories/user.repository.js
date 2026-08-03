@@ -86,6 +86,18 @@ export class UserRepository {
     user.password = hashedPassword;
     return await user.save();
   }
+
+  async findByIdWithRefreshHash(id) {
+    return await UserModel.findById(id).select("+refreshTokenHash");
+  }
+
+  async setRefreshTokenHash(id, hash) {
+    return await UserModel.findByIdAndUpdate(id, { refreshTokenHash: hash });
+  }
+
+  async clearRefreshTokenHash(id) {
+    return await UserModel.findByIdAndUpdate(id, { refreshTokenHash: null });
+  }
 }
 
 export default new UserRepository();

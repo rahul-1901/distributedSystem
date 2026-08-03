@@ -20,6 +20,7 @@ import HackathonDetails from "../pages/Hackathon.jsx";
 import { RegistrationForm } from "../hackathon/RegistrationForm.jsx";
 import TeamDetails from "../pages/TeamDetails.jsx";
 import ForgotPassword from "../pages/Student/forgotPassword.jsx";
+import PublicProfile from "../pages/Student/PublicProfile.jsx";
 
 import Studenthome from "../pages/Student/Studenthome.jsx";
 
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="/organizer-ruleBook" element={<OrganizerPlaybookPage />} />
         <Route path="/terms-and-condition" element={<LegalSupportPage />} />
         <Route path="/adminhome" element={<Adminhome />} />
+        <Route path="/u/:userName" element={<PublicProfile />} />
       </Route>
 
       <Route element={<GuestRoute />}>

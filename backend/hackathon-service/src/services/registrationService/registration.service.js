@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { getNowUTC } from "../../utils/dateUtils.js";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
+import { validateRegistrationData } from "../../utils/validateRegistrationData.js";
 
 export class RegistrationService {
   constructor(
@@ -79,13 +80,16 @@ export class RegistrationService {
       "Registering participant"
     );
 
-    const { name, email, ...customFields } = registrationData;
+    const { name, email, gender, ...customFields } = registrationData;
+
+    validateRegistrationData(customFields, hackathon.registrationForm || []);
 
     const registrationPayload = {
       ...customFields,
 
       name: user.name,
       email: user.email,
+      gender: user.gender,
     };
 
     const session = await mongoose.startSession();
@@ -176,13 +180,14 @@ export class RegistrationService {
       formData: {
         name: user.name,
         email: user.email,
+        gender: user.gender,
 
         ...registration.formData,
       },
     };
   }
 
-  async updateMyRegistration({ userId, hackathonId, updateData }) {
+  async updateMyRegistration({ userId, hackathonId, registrationData }) {
     const registration = await this.registrationRepository.getMyRegistration(
       userId,
       hackathonId
@@ -202,49 +207,47 @@ export class RegistrationService {
 
     const registrationPhase = this.getRegistrationPhase(hackathon, now);
 
-    if (now < registrationPhase.startDate) {
-      throw new BadRequestError("Registration has not started yet");
-    }
-
     if (!registrationPhase) {
       throw new BadRequestError("Registration phase is not configured");
+    }
+
+    if (now < registrationPhase.startDate) {
+      throw new BadRequestError("Registration has not started yet");
     }
 
     if (now > registrationPhase.endDate) {
       throw new BadRequestError("Registration is closed");
     }
 
-    let allowedFields = [];
-
-    if (hackathon.registrationForm && hackathon.registrationForm.length) {
-      allowedFields = hackathon.registrationForm
-        .filter((field) => field.editable)
-        .map((field) => field.fieldName);
-    }
+    const editableFields = (hackathon.registrationForm || []).filter(
+      (field) => field.editable
+    );
+    const allowedFieldNames = new Set(editableFields.map((field) => field.fieldName));
 
     const sanitizedUpdate = {};
 
     const protectedFields = ["name", "email"];
 
-    for (const key of Object.keys(updateData)) {
+    for (const key of Object.keys(registrationData)) {
       if (protectedFields.includes(key.toLowerCase())) {
         continue;
       }
 
-      if (allowedFields.length === 0 || allowedFields.includes(key)) {
-        sanitizedUpdate[key] = updateData[key];
+      if (allowedFieldNames.has(key)) {
+        sanitizedUpdate[key] = registrationData[key];
       }
     }
+
+    validateRegistrationData(
+      sanitizedUpdate,
+      editableFields.filter((field) => sanitizedUpdate[field.fieldName] !== undefined)
+    );
 
     const updatedFormData = {
       ...registration.formData,
       ...sanitizedUpdate,
     };
 
-    console.log("Allowed:", allowedFields);
-    console.log("Incoming:", updateData);
-    console.log("Sanitized:", sanitizedUpdate);
-    console.log("Final:", updatedFormData);
     return this.registrationRepository.updateRegistration(
       registration._id,
       updatedFormData

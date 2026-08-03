@@ -106,8 +106,7 @@ export class RegistrationRepository {
     })
       .populate({
         path: "hackathon",
-        select:
-          "title subTitle slug image banner startDate endDate registrationDeadline status mode location phases",
+        select: "title subTitle slug image status participationType phases",
       })
       .populate({
         path: "team",

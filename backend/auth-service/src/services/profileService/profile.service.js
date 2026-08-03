@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
+import { ConflictError } from "../../errors/ConflictError.js";
 
 export class ProfileService {
   constructor(profileRepository, mediaServiceClient, logger) {
@@ -30,15 +31,39 @@ export class ProfileService {
   }
 
   async updateProfile(userId, payload) {
-    const { name, userName, bio, location, contactNumber } = payload;
+    const { name, userName, bio, location, contactNumber, gender } = payload;
 
-    const updatedUser = await this.profileRepository.updateProfile(userId, {
-      name,
-      userName,
-      bio,
-      location,
-      contactNumber,
-    });
+    const updateData = { name, bio, location, contactNumber };
+
+    if (gender) {
+      updateData.gender = gender;
+    }
+
+    if (userName !== undefined) {
+      const normalized = userName.trim().toLowerCase();
+
+      if (normalized) {
+        if (!/^[a-z0-9_]{3,20}$/.test(normalized)) {
+          throw new BadRequestError(
+            "Username must be 3-20 characters: letters, numbers, and underscores only"
+          );
+        }
+
+        updateData.userName = normalized;
+      }
+    }
+
+    let updatedUser;
+
+    try {
+      updatedUser = await this.profileRepository.updateProfile(userId, updateData);
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ConflictError("Username already taken");
+      }
+
+      throw error;
+    }
 
     if (!updatedUser) {
       throw new NotFoundError("User not found");
@@ -52,6 +77,16 @@ export class ProfileService {
     );
 
     return updatedUser;
+  }
+
+  async searchProfiles(query) {
+    const trimmed = (query || "").trim().toLowerCase();
+
+    if (trimmed.length < 2) {
+      return [];
+    }
+
+    return this.profileRepository.searchByUsername(trimmed, 8);
   }
 
   async addEducation(userId, payload) {

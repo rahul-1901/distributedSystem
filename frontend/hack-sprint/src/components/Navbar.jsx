@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileAPI } from "../api/profile.api.js";
 import { useAuth } from "../hooks/useAuth.js";
 import NotificationBell from "./NotificationBell.jsx";
+import UserSearch from "./UserSearch.jsx";
 import {
   Menu, X, User, Trophy, LogOut,
   LogIn, Github, GitBranch, ArrowRight, Shield,
@@ -13,7 +14,7 @@ const Navbar = ({ variant = "student" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminVariant = variant === "admin";
-  const { user: adminUser, logout: authLogout } = useAuth();
+  const { user: adminUser, logoutAndClear } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -29,14 +30,14 @@ const Navbar = ({ variant = "student" }) => {
   ];
 
   const handleNavigate = (link) => { navigate(link); setIsOpen(false); setShowProfileMenu(false); };
-  const handleLogout = () => {
-    localStorage.removeItem("token"); localStorage.removeItem("email");
+  const handleLogout = async () => {
+    await logoutAndClear(false);
+    localStorage.removeItem("email");
     setUserInfo(null); setIsLoggedIn(false);
     navigate("/"); setIsOpen(false); setShowProfileMenu(false);
   };
-  const handleAdminLogout = () => {
-    localStorage.removeItem("adminToken");
-    authLogout();
+  const handleAdminLogout = async () => {
+    await logoutAndClear(true);
     navigate("/adminhome"); setIsOpen(false); setShowProfileMenu(false);
   };
 
@@ -142,6 +143,8 @@ const Navbar = ({ variant = "student" }) => {
                   Admin Panel <ArrowRight size={11} />
                 </button>
               )}
+
+              {!isAdminVariant && <UserSearch />}
 
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[rgba(95,255,96,0.1)]">
                 {isAdminVariant && adminLoggedIn && <NotificationBell asAdmin />}
@@ -269,6 +272,12 @@ const Navbar = ({ variant = "student" }) => {
         {isOpen && (
           <div className="nb-mobile md:hidden bg-[rgba(8,10,8,0.98)] border-t border-[rgba(95,255,96,0.08)]">
             <div className="max-w-[1200px] mx-auto px-5 py-4 flex flex-col gap-1">
+
+              {!isAdminVariant && (
+                <div className="mb-2">
+                  <UserSearch fullWidth />
+                </div>
+              )}
 
               {navItems.map(({ name, pageLink, icon: Icon }) => (
                 <button
