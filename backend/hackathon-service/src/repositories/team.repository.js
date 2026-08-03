@@ -83,4 +83,14 @@ export class TeamRepository {
       session,
     });
   }
+
+  async getTeamsByHackathon(hackathonId) {
+    return TeamModel.find({
+      hackathon: hackathonId,
+    })
+      .populate("leader", "name email userName")
+      .populate("members", "name email userName")
+      .sort({ createdAt: -1 })
+      .lean();
+  }
 }

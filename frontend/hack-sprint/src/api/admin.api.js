@@ -46,4 +46,8 @@ export const AdminAPI = {
   deleteAdmin(adminId) {
     return client.delete(`${API.ADMIN}/admins/${adminId}`);
   },
+
+  lookupAdminByEmail(email) {
+    return client.get(`${API.ADMIN}/admins/lookup`, { params: { email } });
+  },
 };

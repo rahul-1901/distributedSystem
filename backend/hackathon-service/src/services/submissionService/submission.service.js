@@ -4,6 +4,7 @@ import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import { calculateFinalScore } from "../../utils/scoreCalculator.js";
 import { validateSubmissionData } from "../../utils/validateSubmissionData.js";
+import { getNowUTC } from "../../utils/dateUtils.js";
 
 export class SubmissionService {
   constructor(

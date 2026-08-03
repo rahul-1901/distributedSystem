@@ -18,8 +18,9 @@ export class JudgeAssignmentRepository {
     return JudgeAssignmentModel.find({
       hackathon: hackathonId,
     })
-      .populate("judge", "name email")
-      .populate("assignedBy", "name email")
+      .populate("judge", "adminName email avatar")
+      .populate("assignedBy", "adminName email")
+      .sort({ createdAt: -1 })
       .lean();
   }
 
@@ -27,7 +28,11 @@ export class JudgeAssignmentRepository {
     return JudgeAssignmentModel.find({
       judge: judgeId,
     })
-      .populate("hackathon", "title slug lifecycleStatus image")
+      .populate(
+        "hackathon",
+        "title subTitle slug image status phases numParticipants"
+      )
+      .sort({ createdAt: -1 })
       .lean();
   }
 

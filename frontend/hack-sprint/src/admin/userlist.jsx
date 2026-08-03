@@ -1,19 +1,28 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 import {
   Users,
   CheckCircle,
   XCircle,
   ArrowLeft,
   Shield,
-  Images,
   Trophy,
   X,
+  Gavel,
+  Plus,
+  Mail,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { getAdminDetails, getAdminHackathonDetail } from "../backendApis/api";
-import AdminGalleryManager from "./AdminGalleryManager";
+import { HackathonAPI } from "../api/hackathon.api.js";
+import { JudgeAPI } from "../api/judge.api.js";
+import { AdminAPI } from "../api/admin.api.js";
 import "./Userlist.css";
-import { API } from "../backendApis/api";
+
+const PAGE_SIZE = 10;
 
 const GridBackground = () => <div className="hu-bg" />;
 
@@ -51,15 +60,211 @@ const SubmissionBadge = ({ submitted }) =>
     </span>
   );
 
+const Pagination = ({ page, totalPages, onChange }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="hu-pagination">
+      <button
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="hu-page-btn"
+      >
+        <ChevronLeft size={13} />
+      </button>
+      <span className="hu-page-label">
+        Page {page} of {totalPages}
+      </span>
+      <button
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page === totalPages}
+        className="hu-page-btn"
+      >
+        <ChevronRight size={13} />
+      </button>
+    </div>
+  );
+};
+
+/* ── Excel export ── */
+const exportParticipantsToExcel = (hackathon, teams, individualParticipants) => {
+  const title = hackathon.title || "Hackathon";
+  const wb = XLSX.utils.book_new();
+
+  if (teams.length > 0) {
+    const rows = teams.map((team, i) => ({
+      "#": i + 1,
+      "Team Name": team.name,
+      Leader: team.leader?.name || "",
+      "Leader Email": team.leader?.email || "",
+      Members: (team.members || []).map((m) => m.name).join(", "),
+      "Member Count": (team.members || []).length,
+      Submission: team.hasSubmitted ? "Submitted" : "Not Submitted",
+      "Registered At": team.createdAt
+        ? new Date(team.createdAt).toLocaleString("en-IN")
+        : "",
+    }));
+    const ws = XLSX.utils.aoa_to_sheet([[`${title} — Teams`], []]);
+    XLSX.utils.sheet_add_json(ws, rows, { origin: "A3" });
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+    ws["!cols"] = [
+      { wch: 4 }, { wch: 24 }, { wch: 20 }, { wch: 26 },
+      { wch: 34 }, { wch: 12 }, { wch: 14 }, { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, "Teams");
+  }
+
+  if (individualParticipants.length > 0) {
+    const rows = individualParticipants.map((p, i) => ({
+      "#": i + 1,
+      Name: p.user?.name || "",
+      Email: p.user?.email || "",
+      Submission: p.hasSubmitted ? "Submitted" : "Not Submitted",
+      "Registered At": p.createdAt
+        ? new Date(p.createdAt).toLocaleString("en-IN")
+        : "",
+    }));
+    const ws = XLSX.utils.aoa_to_sheet([[`${title} — Individual Participants`], []]);
+    XLSX.utils.sheet_add_json(ws, rows, { origin: "A3" });
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+    ws["!cols"] = [{ wch: 4 }, { wch: 24 }, { wch: 28 }, { wch: 14 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Individual Participants");
+  }
+
+  if (wb.SheetNames.length === 0) {
+    toast.error("No participants to export yet.");
+    return;
+  }
+
+  const safeName = title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+  XLSX.writeFile(wb, `${safeName || "hackathon"}-participants.xlsx`);
+  toast.success("Exported to Excel.");
+};
+
+/* ── Judges section ── */
+const JudgesSection = ({ hackathonId }) => {
+  const [judges, setJudges] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [assigning, setAssigning] = useState(false);
+
+  const loadJudges = async () => {
+    try {
+      setLoading(true);
+      const res = await JudgeAPI.getHackathonJudges(hackathonId);
+      setJudges(res.data.judges || []);
+    } catch {
+      toast.error("Could not load judges.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadJudges();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hackathonId]);
+
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setAssigning(true);
+    try {
+      const lookupRes = await AdminAPI.lookupAdminByEmail(email.trim());
+      const judge = lookupRes.data.admin;
+      await JudgeAPI.assignJudge(hackathonId, { judgeId: judge._id });
+      toast.success(`${judge.adminName} assigned as judge.`);
+      setEmail("");
+      loadJudges();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to assign judge.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleRemove = async (judgeId, name) => {
+    if (!window.confirm(`Remove ${name} as a judge for this hackathon?`)) return;
+    try {
+      await JudgeAPI.removeJudge(hackathonId, judgeId);
+      toast.success("Judge removed.");
+      setJudges((prev) => prev.filter((j) => j.judge?._id !== judgeId));
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove judge.");
+    }
+  };
+
+  return (
+    <div className="hu-card">
+      <div className="hu-section-title">
+        <Gavel size={16} />
+        Judges Assigned
+        <span className="hu-section-count">({judges.length})</span>
+      </div>
+
+      <form onSubmit={handleAssign} className="hu-assign-row">
+        <div className="hu-assign-input-wrap">
+          <Mail size={13} className="hu-assign-input-icon" />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Admin's email address"
+            className="hu-assign-input"
+          />
+        </div>
+        <button type="submit" disabled={assigning || !email.trim()} className="hu-assign-btn">
+          <Plus size={13} /> {assigning ? "Assigning…" : "Assign Judge"}
+        </button>
+      </form>
+
+      {loading ? (
+        <div className="hu-empty">
+          <div className="hu-spinner" />
+          <span>Loading judges…</span>
+        </div>
+      ) : judges.length > 0 ? (
+        <div className="hu-judge-list">
+          {judges.map((j) => (
+            <div key={j._id} className="hu-judge-row">
+              <div className="hu-judge-avatar">
+                {j.judge?.avatar ? (
+                  <img src={j.judge.avatar} alt="" />
+                ) : (
+                  <Gavel size={14} />
+                )}
+              </div>
+              <div className="hu-judge-info">
+                <div className="hu-judge-name">{j.judge?.adminName || "Unknown"}</div>
+                <div className="hu-judge-email">{j.judge?.email}</div>
+              </div>
+              <div className="hu-judge-meta">
+                Assigned by {j.assignedBy?.adminName || "—"}
+                {j.createdAt ? ` · ${new Date(j.createdAt).toLocaleDateString("en-IN")}` : ""}
+              </div>
+              <button
+                onClick={() => handleRemove(j.judge?._id, j.judge?.adminName)}
+                className="hu-judge-remove"
+                title="Remove judge"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState message="No judges assigned yet." />
+      )}
+    </div>
+  );
+};
+
 const HackathonUsersPage = () => {
-  const { slug } = useParams();
+  const { slug: hackathonId } = useParams();
   const navigate = useNavigate();
 
-  const [hackathon, setHackathon] = useState(null);
-  const [individualParticipants, setIndividualParticipants] = useState([]);
-  const [teams, setTeams] = useState([]);
+  const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [adminData, setAdminData] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [result, setResult] = useState(null);
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [activeTab, setActiveTab] = useState("participants");
@@ -68,92 +273,94 @@ const HackathonUsersPage = () => {
   const [participantFilter, setParticipantFilter] = useState("all");
   const [teamSearch, setTeamSearch] = useState("");
   const [participantSearch, setParticipantSearch] = useState("");
-
-  const hasTeamSubmitted = (team) => !!team.submission;
-  const hasUserSubmitted = (participant) => !!participant.submission;
-
-  const filteredTeams = teams.filter((team) => {
-    const submitted = hasTeamSubmitted(team);
-    if (teamFilter === "submitted" && !submitted) return false;
-    if (teamFilter === "not_submitted" && submitted) return false;
-    if (teamSearch.trim()) {
-      const q = teamSearch.toLowerCase();
-      const nameMatch = team.name?.toLowerCase().includes(q);
-      const leaderMatch = team.leader?.name?.toLowerCase().includes(q);
-      const memberMatch = team.members?.some((m) =>
-        m.name?.toLowerCase().includes(q)
-      );
-      if (!nameMatch && !leaderMatch && !memberMatch) return false;
-    }
-    return true;
-  });
-
-  const filteredParticipants = individualParticipants.filter((p) => {
-    const submitted = hasUserSubmitted(p);
-    if (participantFilter === "submitted" && !submitted) return false;
-    if (participantFilter === "not_submitted" && submitted) return false;
-    if (participantSearch.trim()) {
-      const q = participantSearch.toLowerCase();
-      const nameMatch = p.user?.name?.toLowerCase().includes(q);
-      const emailMatch = p.user?.email?.toLowerCase().includes(q);
-      if (!nameMatch && !emailMatch) return false;
-    }
-    return true;
-  });
-
-  const navigateToSubmission = (hasSubmitted, path) => {
-    if (hasSubmitted) navigate(path);
-  };
+  const [teamPage, setTeamPage] = useState(1);
+  const [participantPage, setParticipantPage] = useState(1);
 
   useEffect(() => {
-    const fetchResult = async () => {
+    const load = async () => {
       try {
-        const adminToken = localStorage.getItem("adminToken");
-        const response = await API.get(`/api/submit/hackathon/${slug}`, {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        });
-        setResult(response.data);
-      } catch {}
-    };
-    fetchResult();
-  }, [slug]);
-
-  console.log("Fetched results:", result);
-
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        const response = await getAdminDetails();
-        setAdminData(response.data.admin);
-      } catch {
-        navigate("/adminlogin");
-      }
-    };
-    fetchAdminData();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (!adminData || !slug) return;
-    const fetchHackathonData = async () => {
-      try {
-        const response = await getAdminHackathonDetail({
-          adminId: adminData.id,
-          hackathonId: slug,
-        });
-        const { hackathon, participantsWithoutTeam, teams } = response.data;
-        setHackathon(hackathon);
-        setIndividualParticipants(participantsWithoutTeam);
-        setTeams(teams);
-      } catch {
-        /* silent */
+        setLoading(true);
+        const res = await HackathonAPI.getHackathonAdminOverview(hackathonId);
+        setOverview(res.data);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          navigate("/adminlogin");
+          return;
+        }
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
     };
-    fetchHackathonData();
-  }, [adminData, slug]);
+    load();
+  }, [hackathonId, navigate]);
+
+  const isJudgeViewer = overview?.viewerRole === "judge";
+  const hackathon = overview?.hackathon;
+  const teams = useMemo(() => overview?.teams || [], [overview]);
+  const individualParticipants = useMemo(
+    () => overview?.individualParticipants || [],
+    [overview]
+  );
+
+  const goToTeamSubmission = (teamId) => {
+    navigate(`/admin/hackathon/${hackathon._id}/submission/team/${teamId}`);
+  };
+
+  const goToParticipantSubmission = (userId) => {
+    if (!userId) return;
+    navigate(`/admin/hackathon/${hackathon._id}/submission/participant/${userId}`);
+  };
+
+  const filteredTeams = useMemo(() => {
+    return teams.filter((team) => {
+      if (teamFilter === "submitted" && !team.hasSubmitted) return false;
+      if (teamFilter === "not_submitted" && team.hasSubmitted) return false;
+      if (teamSearch.trim()) {
+        const q = teamSearch.toLowerCase();
+        const nameMatch = team.name?.toLowerCase().includes(q);
+        const leaderMatch = team.leader?.name?.toLowerCase().includes(q);
+        const memberMatch = team.members?.some((m) => m.name?.toLowerCase().includes(q));
+        if (!nameMatch && !leaderMatch && !memberMatch) return false;
+      }
+      return true;
+    });
+  }, [teams, teamFilter, teamSearch]);
+
+  const filteredParticipants = useMemo(() => {
+    return individualParticipants.filter((p) => {
+      if (participantFilter === "submitted" && !p.hasSubmitted) return false;
+      if (participantFilter === "not_submitted" && p.hasSubmitted) return false;
+      if (participantSearch.trim()) {
+        const q = participantSearch.toLowerCase();
+        const nameMatch = p.user?.name?.toLowerCase().includes(q);
+        const emailMatch = p.user?.email?.toLowerCase().includes(q);
+        if (!nameMatch && !emailMatch) return false;
+      }
+      return true;
+    });
+  }, [individualParticipants, participantFilter, participantSearch]);
+
+  useEffect(() => setTeamPage(1), [teamSearch, teamFilter]);
+  useEffect(() => setParticipantPage(1), [participantSearch, participantFilter]);
+
+  const teamTotalPages = Math.max(1, Math.ceil(filteredTeams.length / PAGE_SIZE));
+  const participantTotalPages = Math.max(1, Math.ceil(filteredParticipants.length / PAGE_SIZE));
+  const pagedTeams = filteredTeams.slice((teamPage - 1) * PAGE_SIZE, teamPage * PAGE_SIZE);
+  const pagedParticipants = filteredParticipants.slice(
+    (participantPage - 1) * PAGE_SIZE,
+    participantPage * PAGE_SIZE
+  );
+
+  const openScoreboard = async () => {
+    setShowScoreboard(true);
+    try {
+      const res = await HackathonAPI.getResults(hackathon._id);
+      setResult(res.data || []);
+    } catch {
+      setResult([]);
+    }
+  };
 
   if (loading) {
     return (
@@ -164,7 +371,7 @@ const HackathonUsersPage = () => {
     );
   }
 
-  if (!hackathon) {
+  if (notFound || !hackathon) {
     return (
       <div className="hu-notfound">
         <div>
@@ -202,41 +409,58 @@ const HackathonUsersPage = () => {
 
           <h1 className="hu-page-title">{hackathon.title}</h1>
 
+          <div className="hu-stats-row">
+            <span className="hu-page-badge">
+              <Users size={11} /> {overview.totalRegistrations} registered
+            </span>
+            <span className="hu-page-badge">
+              <Shield size={11} /> {overview.totalTeams} teams
+            </span>
+            <span className="hu-page-badge">
+              <Trophy size={11} /> {overview.totalSubmissions} submissions
+            </span>
+          </div>
+
           <div className="hu-tabs">
             <button
               onClick={() => setActiveTab("participants")}
               className={`hu-tab ${
-                activeTab === "participants"
-                  ? "hu-tab--active"
-                  : "hu-tab--inactive"
+                activeTab === "participants" ? "hu-tab--active" : "hu-tab--inactive"
               }`}
             >
               <Users size={13} /> Participants
             </button>
-            <button
-              onClick={() => setActiveTab("gallery")}
-              className={`hu-tab ${
-                activeTab === "gallery" ? "hu-tab--active" : "hu-tab--inactive"
-              }`}
-            >
-              <Images size={13} /> Gallery
-            </button>
+            {!isJudgeViewer && (
+              <button
+                onClick={() => setActiveTab("judges")}
+                className={`hu-tab ${
+                  activeTab === "judges" ? "hu-tab--active" : "hu-tab--inactive"
+                }`}
+              >
+                <Gavel size={13} /> Judges
+              </button>
+            )}
           </div>
 
           {activeTab === "participants" && (
-            <button
-              onClick={() => setShowScoreboard(true)}
-              className="hu-results-btn"
-            >
-              <Trophy size={13} /> View Results
-            </button>
+            <div className="hu-header-actions">
+              <button onClick={openScoreboard} className="hu-results-btn">
+                <Trophy size={13} /> View Results
+              </button>
+              <button
+                onClick={() =>
+                  exportParticipantsToExcel(hackathon, teams, individualParticipants)
+                }
+                className="hu-export-btn"
+              >
+                <Download size={13} /> Export to Excel
+              </button>
+            </div>
           )}
         </header>
 
-        <main
-          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
-        >
-          {activeTab === "participants" ? (
+        <main style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {activeTab === "participants" && (
             <>
               <div className="hu-card">
                 <div className="hu-section-title">
@@ -244,10 +468,7 @@ const HackathonUsersPage = () => {
                   Teams
                   <span className="hu-section-count">
                     ({filteredTeams.length}
-                    {teamSearch.trim() || teamFilter !== "all"
-                      ? ` of ${teams.length}`
-                      : ""}
-                    )
+                    {teamSearch.trim() || teamFilter !== "all" ? ` of ${teams.length}` : ""})
                   </span>
                 </div>
 
@@ -270,51 +491,42 @@ const HackathonUsersPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredTeams.map((team) => {
-                          const submitted = hasTeamSubmitted(team);
-                          return (
-                            <tr
-                              key={team._id}
-                              onClick={() =>
-                                navigateToSubmission(
-                                  submitted,
-                                  `/hackathon/${slug}/submission/${team._id}`
-                                )
-                              }
-                              className={submitted ? "clickable" : ""}
-                            >
-                              <td className="hu-td-name">{team.name}</td>
-                              <td>
-                                {team.leader && (
-                                  <div className="hu-leader">
-                                    <Shield
-                                      size={11}
-                                      style={{ color: "var(--amber)" }}
-                                    />
-                                    {team.leader.name}
-                                    <span
-                                      style={{
-                                        fontSize: "0.58rem",
-                                        color: "var(--amber)",
-                                        opacity: 0.7,
-                                      }}
-                                    >
-                                      (Leader)
-                                    </span>
-                                  </div>
-                                )}
-                                {team.members.map((member) => (
+                        {pagedTeams.map((team) => (
+                          <tr
+                            key={team._id}
+                            onClick={() => goToTeamSubmission(team._id)}
+                            className="clickable"
+                          >
+                            <td className="hu-td-name">{team.name}</td>
+                            <td>
+                              {team.leader && (
+                                <div className="hu-leader">
+                                  <Shield size={11} style={{ color: "var(--amber)" }} />
+                                  {team.leader.name}
+                                  <span
+                                    style={{
+                                      fontSize: "0.58rem",
+                                      color: "var(--amber)",
+                                      opacity: 0.7,
+                                    }}
+                                  >
+                                    (Leader)
+                                  </span>
+                                </div>
+                              )}
+                              {(team.members || [])
+                                .filter((m) => m._id !== team.leader?._id)
+                                .map((member) => (
                                   <div key={member._id} className="hu-member">
                                     {member.name}
                                   </div>
                                 ))}
-                              </td>
-                              <td className="hu-td-center">
-                                <SubmissionBadge submitted={submitted} />
-                              </td>
-                            </tr>
-                          );
-                        })}
+                            </td>
+                            <td className="hu-td-center">
+                              <SubmissionBadge submitted={team.hasSubmitted} />
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                     {filteredTeams.length === 0 && (
@@ -328,6 +540,7 @@ const HackathonUsersPage = () => {
                     )}
                   </div>
                 </div>
+                <Pagination page={teamPage} totalPages={teamTotalPages} onChange={setTeamPage} />
               </div>
 
               <div className="hu-card">
@@ -349,10 +562,7 @@ const HackathonUsersPage = () => {
                   value={participantSearch}
                   onChange={(e) => setParticipantSearch(e.target.value)}
                 />
-                <FilterButtons
-                  value={participantFilter}
-                  onChange={setParticipantFilter}
-                />
+                <FilterButtons value={participantFilter} onChange={setParticipantFilter} />
 
                 <div className="hu-table-wrap">
                   <div className="hu-table-scroll">
@@ -365,31 +575,19 @@ const HackathonUsersPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredParticipants.map((participant) => {
-                          const submitted = hasUserSubmitted(participant);
-                          return (
-                            <tr
-                              key={participant._id}
-                              onClick={() =>
-                                navigateToSubmission(
-                                  submitted,
-                                  `/hackathon/${slug}/submission/${participant.user?._id}`
-                                )
-                              }
-                              className={submitted ? "clickable" : ""}
-                            >
-                              <td className="hu-td-name">
-                                {participant.user?.name || "N/A"}
-                              </td>
-                              <td className="hu-td-muted">
-                                {participant.user?.email || "N/A"}
-                              </td>
-                              <td className="hu-td-center">
-                                <SubmissionBadge submitted={submitted} />
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {pagedParticipants.map((participant) => (
+                          <tr
+                            key={participant._id}
+                            onClick={() => goToParticipantSubmission(participant.user?._id)}
+                            className="clickable"
+                          >
+                            <td className="hu-td-name">{participant.user?.name || "N/A"}</td>
+                            <td className="hu-td-muted">{participant.user?.email || "N/A"}</td>
+                            <td className="hu-td-center">
+                              <SubmissionBadge submitted={participant.hasSubmitted} />
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                     {filteredParticipants.length === 0 && (
@@ -403,12 +601,17 @@ const HackathonUsersPage = () => {
                     )}
                   </div>
                 </div>
+                <Pagination
+                  page={participantPage}
+                  totalPages={participantTotalPages}
+                  onChange={setParticipantPage}
+                />
               </div>
             </>
-          ) : (
-            <div className="hu-gallery-wrap">
-              <AdminGalleryManager hackathonId={slug} />
-            </div>
+          )}
+
+          {activeTab === "judges" && !isJudgeViewer && (
+            <JudgesSection hackathonId={hackathon._id} canManage={overview.viewerRole !== "judge"} />
           )}
         </main>
       </div>
@@ -416,46 +619,33 @@ const HackathonUsersPage = () => {
       {showScoreboard && (
         <div
           className="hu-modal-overlay"
-          onClick={(e) =>
-            e.target === e.currentTarget && setShowScoreboard(false)
-          }
+          onClick={(e) => e.target === e.currentTarget && setShowScoreboard(false)}
         >
           <div className="hu-modal">
             <div className="hu-modal-topline" />
 
             <div className="hu-modal-header">
-              <Trophy
-                size={18}
-                style={{ color: "var(--amber)", flexShrink: 0 }}
-              />
+              <Trophy size={18} style={{ color: "var(--amber)", flexShrink: 0 }} />
               <div className="hu-modal-title">Scoreboard</div>
-              <button
-                onClick={() => setShowScoreboard(false)}
-                className="hu-modal-close"
-              >
+              <button onClick={() => setShowScoreboard(false)} className="hu-modal-close">
                 <X size={15} />
               </button>
             </div>
 
-            {result?.totalSubmissions > 0 ? (
+            {result === null ? (
+              <div className="hu-modal-empty">
+                <div className="hu-spinner" />
+              </div>
+            ) : result.length > 0 ? (
               <div className="hu-modal-list">
-                {result.submissions?.map((sub, idx) => {
-                  const name =
-                    sub.team?.name || sub.participant?.name || "Unknown";
-                  const points = sub.hackathonPoints || 0;
+                {result.map((sub, idx) => {
+                  const name = sub.team?.name || sub.participant?.name || "Unknown";
+                  const points = sub.finalScore?.toFixed?.(1) ?? sub.finalScore ?? 0;
                   const { row, rank } = rankClass(idx);
                   return (
                     <div key={sub._id || idx} className={`hu-score-row ${row}`}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.6rem",
-                        }}
-                      >
-                        <span className={`hu-score-rank ${rank}`}>
-                          #{idx + 1}
-                        </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                        <span className={`hu-score-rank ${rank}`}>#{idx + 1}</span>
                         <span className="hu-score-name">{name}</span>
                       </div>
                       <span className="hu-score-pts">{points} pts</span>
@@ -466,7 +656,7 @@ const HackathonUsersPage = () => {
             ) : (
               <div className="hu-modal-empty">
                 <Trophy size={36} />
-                <span>No submissions yet.</span>
+                <span>No submissions yet, or results aren't public.</span>
               </div>
             )}
           </div>

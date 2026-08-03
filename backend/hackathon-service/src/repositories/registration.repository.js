@@ -25,6 +25,15 @@ export class RegistrationRepository {
       .lean();
   }
 
+  async getParticipantByUser(hackathonId, userId) {
+    return RegisteredParticipantsModel.findOne({
+      user: userId,
+      hackathon: hackathonId,
+    })
+      .populate("user", "name email avatar")
+      .lean();
+  }
+
   async getMyRegistration(userId, hackathonId) {
     return RegisteredParticipantsModel.findOne({
       user: userId,

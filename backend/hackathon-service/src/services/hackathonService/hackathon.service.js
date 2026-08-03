@@ -12,7 +12,10 @@ export class HackathonService {
     adminRepository,
     logger,
     cacheService,
-    mediaServiceClient
+    mediaServiceClient,
+    teamRepository,
+    judgeAssignmentRepository,
+    submissionReviewRepository
   ) {
     this.hackathonRepository = hackathonRepository;
     this.submissionRepository = submissionRepository;
@@ -21,6 +24,9 @@ export class HackathonService {
     this.logger = logger;
     this.cacheService = cacheService;
     this.mediaServiceClient = mediaServiceClient;
+    this.teamRepository = teamRepository;
+    this.judgeAssignmentRepository = judgeAssignmentRepository;
+    this.submissionReviewRepository = submissionReviewRepository;
   }
 
   async deleteHackathonImage(hackathon, payload) {
@@ -470,7 +476,11 @@ export class HackathonService {
     return rejected;
   }
 
-  async getOrganizerHackathon({ hackathonId, adminId }) {
+  async getHackathonAdminOverview({ hackathonId, adminId }) {
+    if (!mongoose.Types.ObjectId.isValid(hackathonId)) {
+      throw new BadRequestError("Invalid hackathon id");
+    }
+
     const hackathon = await this.hackathonRepository.getById(hackathonId);
 
     if (!hackathon) {
@@ -481,11 +491,277 @@ export class HackathonService {
 
     const admin = await this.adminRepository.getById(adminId);
 
-    if (!isOwner && !admin?.controller) {
+    const isAssignedJudge = !isOwner
+      ? !!(await this.judgeAssignmentRepository.exists(hackathonId, adminId))
+      : false;
+
+    if (!isOwner && !admin?.controller && !isAssignedJudge) {
       throw new ForbiddenError("Unauthorized");
     }
 
-    return hackathon;
+    const viewerRole = isOwner
+      ? "owner"
+      : admin?.controller
+      ? "controller"
+      : "judge";
+
+    const [registrations, teams, submissions] = await Promise.all([
+      this.registrationRepository.getParticipants(hackathonId),
+      this.teamRepository.getTeamsByHackathon(hackathonId),
+      this.submissionRepository.getHackathonSubmissions(hackathonId),
+    ]);
+
+    const submittedParticipantIds = new Set(
+      submissions
+        .filter((s) => s.participant)
+        .map((s) => s.participant._id.toString())
+    );
+
+    const submittedTeamIds = new Set(
+      submissions.filter((s) => s.team).map((s) => s.team._id.toString())
+    );
+
+    const teamsWithStatus = teams.map((team) => ({
+      ...team,
+      hasSubmitted: submittedTeamIds.has(team._id.toString()),
+    }));
+
+    const individualParticipants = registrations
+      .filter((r) => !r.team)
+      .map((r) => ({
+        ...r,
+        hasSubmitted: submittedParticipantIds.has(r.user._id.toString()),
+      }));
+
+    return {
+      hackathon,
+      teams: teamsWithStatus,
+      individualParticipants,
+      totalRegistrations: registrations.length,
+      totalTeams: teams.length,
+      totalSubmissions: submissions.length,
+      viewerRole,
+    };
+  }
+
+  async getEntitySubmissions({ hackathonId, adminId, entityType, entityId }) {
+    if (
+      !mongoose.Types.ObjectId.isValid(hackathonId) ||
+      !mongoose.Types.ObjectId.isValid(entityId)
+    ) {
+      throw new BadRequestError("Invalid id");
+    }
+
+    if (!["team", "participant"].includes(entityType)) {
+      throw new BadRequestError("Invalid entity type");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const isOwner = hackathon.createdBy._id.toString() === adminId.toString();
+    const admin = await this.adminRepository.getById(adminId);
+    const isAssignedJudge = !isOwner
+      ? !!(await this.judgeAssignmentRepository.exists(hackathonId, adminId))
+      : false;
+
+    if (!isOwner && !admin?.controller && !isAssignedJudge) {
+      throw new ForbiddenError("Unauthorized");
+    }
+
+    const viewerRole = isOwner
+      ? "owner"
+      : admin?.controller
+      ? "controller"
+      : "judge";
+
+    let entity;
+
+    if (entityType === "team") {
+      const team = await this.teamRepository.getTeamDetails(entityId);
+
+      if (!team) {
+        throw new NotFoundError("Team not found");
+      }
+
+      entity = { type: "team", name: team.name, leader: team.leader, members: team.members };
+    } else {
+      const participant = await this.registrationRepository.getParticipantByUser(
+        hackathonId,
+        entityId
+      );
+
+      if (!participant) {
+        throw new NotFoundError("Participant not found");
+      }
+
+      entity = {
+        type: "participant",
+        name: participant.user?.name,
+        email: participant.user?.email,
+      };
+    }
+
+    const submissions = await this.submissionRepository.getSubmissionsForEntity(
+      hackathonId,
+      entityType === "team" ? { teamId: entityId } : { participantId: entityId }
+    );
+
+    const allReviews = submissions.length
+      ? await this.submissionReviewRepository.getReviewsForSubmissions(
+          submissions.map((s) => s._id)
+        )
+      : [];
+
+    const reviewsBySubmission = new Map();
+    for (const review of allReviews) {
+      const key = review.submission.toString();
+      if (!reviewsBySubmission.has(key)) reviewsBySubmission.set(key, []);
+      reviewsBySubmission.get(key).push({
+        _id: review._id,
+        judge: review.judge
+          ? {
+              _id: review.judge._id,
+              adminName: review.judge.adminName,
+              email: review.judge.email,
+            }
+          : null,
+        score: review.score,
+        feedback: review.feedback,
+        createdAt: review.createdAt,
+      });
+    }
+
+    const serializeSubmission = (submission) => ({
+      _id: submission._id,
+      title: submission.title,
+      description: submission.description,
+      submissionData: submission.submissionData,
+      status: submission.status,
+      resultStatus: submission.resultStatus,
+      hackathonPoints: submission.hackathonPoints,
+      averageScore: submission.averageScore,
+      reviewCount: submission.reviewCount,
+      submittedAt: submission.submittedAt,
+      reviews: reviewsBySubmission.get(submission._id.toString()) || [],
+    });
+
+    const submissionPhases = (hackathon.phases || []).filter(
+      (phase) => phase?._id && phase.phaseType === "SUBMISSION"
+    );
+
+    const phaseById = new Map(submissionPhases.map((p) => [p._id.toString(), p]));
+
+    const submissionsByPhase = new Map();
+    const orphanedSubmissions = [];
+
+    for (const submission of submissions) {
+      const key = submission.phaseId ? submission.phaseId.toString() : null;
+
+      if (key && phaseById.has(key)) {
+        submissionsByPhase.set(key, submission);
+      } else {
+        orphanedSubmissions.push(submission);
+      }
+    }
+
+    // Best-effort field-definition lookup for orphaned submissions, whose
+    // originating phase no longer exists (edited/removed) or was never set.
+    const fieldDefsByName = new Map();
+    for (const phase of submissionPhases) {
+      for (const field of phase.submissionForm || []) {
+        if (!fieldDefsByName.has(field.fieldName)) {
+          fieldDefsByName.set(field.fieldName, field);
+        }
+      }
+    }
+
+    const phases = submissionPhases.map((phase) => {
+      const submission = submissionsByPhase.get(phase._id.toString()) || null;
+
+      return {
+        phaseId: phase._id,
+        phaseName: phase.phaseName,
+        startDate: phase.startDate,
+        endDate: phase.endDate,
+        submissionForm: phase.submissionForm || [],
+        submission: submission ? serializeSubmission(submission) : null,
+      };
+    });
+
+    const inferOrphanField = (fieldName, value) => {
+      const looksLikeUrl = (v) => typeof v === "string" && /^https?:\/\//i.test(v);
+      const looksLikeImage = (v) =>
+        typeof v === "string" && /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(v);
+
+      if (Array.isArray(value)) {
+        const urls = value.map((v) => (typeof v === "string" ? v : v?.url)).filter(Boolean);
+
+        if (urls.length === 0) return null;
+
+        return {
+          fieldName,
+          label: fieldName,
+          fieldType: urls.some(looksLikeImage) ? "MULTI_IMAGE" : "MULTI_DOCUMENT",
+        };
+      }
+
+      if (typeof value === "object") {
+        // A plain object with no url (e.g. cached repo stats) isn't something
+        // the user submitted — it's derived metadata, so skip it.
+        if (!value.url) return null;
+
+        return {
+          fieldName,
+          label: fieldName,
+          fieldType: looksLikeImage(value.url) ? "IMAGE" : "DOCUMENT",
+        };
+      }
+
+      return {
+        fieldName,
+        label: fieldName,
+        fieldType: looksLikeUrl(value) ? "URL" : "TEXT",
+      };
+    };
+
+    const orphaned = orphanedSubmissions.map((submission) => {
+      const submissionForm = Object.entries(submission.submissionData || {})
+        .map(([fieldName, value]) => {
+          const isEmpty =
+            value === null ||
+            value === undefined ||
+            value === "" ||
+            (Array.isArray(value) && value.length === 0);
+
+          if (isEmpty) return null;
+
+          return fieldDefsByName.get(fieldName) || inferOrphanField(fieldName, value);
+        })
+        .filter(Boolean);
+
+      return {
+        phaseId: null,
+        phaseName: "Additional Submission",
+        submissionForm,
+        submission: serializeSubmission(submission),
+      };
+    });
+
+    return {
+      hackathon: {
+        _id: hackathon._id,
+        title: hackathon.title,
+        slug: hackathon.slug,
+        judgingConfig: hackathon.judgingConfig,
+      },
+      entity,
+      viewerRole,
+      phases: [...phases, ...orphaned],
+    };
   }
 
   async deleteHackathon({ hackathonId, adminId }) {

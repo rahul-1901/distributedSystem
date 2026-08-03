@@ -249,16 +249,34 @@ export const getHackathonBySlug = async (req, res, next) => {
   }
 };
 
-export const getOrganizerHackathon = async (req, res, next) => {
+export const getHackathonAdminOverview = async (req, res, next) => {
   try {
-    const hackathon = await hackathonService.getOrganizerHackathon({
+    const overview = await hackathonService.getHackathonAdminOverview({
       hackathonId: req.params.id,
       adminId: req.admin._id,
     });
 
     return res.status(200).json({
       success: true,
-      hackathon,
+      ...overview,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEntitySubmissions = async (req, res, next) => {
+  try {
+    const overview = await hackathonService.getEntitySubmissions({
+      hackathonId: req.params.id,
+      adminId: req.admin._id,
+      entityType: req.params.entityType,
+      entityId: req.params.entityId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      ...overview,
     });
   } catch (error) {
     next(error);

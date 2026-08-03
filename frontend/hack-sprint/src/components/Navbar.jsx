@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileAPI } from "../api/profile.api.js";
 import { useAuth } from "../hooks/useAuth.js";
+import NotificationBell from "./NotificationBell.jsx";
 import {
   Menu, X, User, Trophy, LogOut,
   LogIn, Github, GitBranch, ArrowRight, Shield,
@@ -143,6 +144,7 @@ const Navbar = ({ variant = "student" }) => {
               )}
 
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[rgba(95,255,96,0.1)]">
+                {isAdminVariant && adminLoggedIn && <NotificationBell asAdmin />}
                 <button
                   onClick={() => window.open("https://github.com/devlup-labs/HackSprint", "_blank")}
                   title="GitHub"
@@ -321,6 +323,7 @@ const Navbar = ({ variant = "student" }) => {
                       <p className="nb-root text-[0.72rem] font-semibold text-white truncate">{adminUser?.adminName || "Admin"}</p>
                       <p className="nb-root text-[0.58rem] text-[rgba(180,220,180,0.4)] truncate">{adminUser?.email || ""}</p>
                     </div>
+                    <NotificationBell asAdmin />
                   </div>
 
                   <button

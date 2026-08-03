@@ -19,9 +19,10 @@ import {
   deleteHackathon,
   getPublicHackathons,
   getHackathonBySlug,
-  getOrganizerHackathon,
   getMyHackathons,
-  getAllHackathonsForController
+  getAllHackathonsForController,
+  getHackathonAdminOverview,
+  getEntitySubmissions
 } from "../controllers/hackathon.controller.js";
 
 import { 
@@ -136,7 +137,12 @@ router.get("/admin/all-hackathons", adminAuth, getAllHackathonsForController);
 router.post("/admin/:id/approveHackathon", adminAuth, approveHackathon);
 router.post("/admin/:id/rejectHackathon", adminAuth, rejectHackathon);
 router.delete("/admin/:id/deleteHackathon", adminAuth, deleteHackathon);
-router.get("/admin/hackathons/:id", adminAuth, getOrganizerHackathon);
+router.get("/admin/hackathons/:id/overview", adminAuth, getHackathonAdminOverview);
+router.get(
+  "/admin/hackathons/:id/submissions/:entityType/:entityId",
+  adminAuth,
+  getEntitySubmissions
+);
 router.get("/admin/my-hackathons", adminAuth, getMyHackathons);
 
 export default router;

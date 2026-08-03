@@ -160,6 +160,15 @@ export class SubmissionRepository {
     });
   }
 
+  async getSubmissionsForEntity(hackathonId, { participantId, teamId }) {
+    const filter = { hackathon: hackathonId };
+
+    if (participantId) filter.participant = participantId;
+    if (teamId) filter.team = teamId;
+
+    return SubmissionModel.find(filter).lean({ flattenMaps: true });
+  }
+
   async getHackathonSubmissions(hackathonId) {
     return SubmissionModel.find({
       hackathon: hackathonId,

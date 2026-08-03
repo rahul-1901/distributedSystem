@@ -20,7 +20,7 @@ const submissionReviewSchema =
       judge: {
         type:
           mongoose.Schema.Types.ObjectId,
-        ref: "Admin",
+        ref: "admins",
         required: true,
       },
 

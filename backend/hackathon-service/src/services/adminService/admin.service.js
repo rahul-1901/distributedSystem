@@ -3,10 +3,12 @@ import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 
 export class AdminService {
-  constructor(adminRepository, logger) {
+  constructor(adminRepository, logger, notificationClient) {
     this.adminRepository = adminRepository;
 
     this.logger = logger;
+
+    this.notificationClient = notificationClient;
   }
 
   async getProfile(adminId) {
@@ -17,6 +19,30 @@ export class AdminService {
     }
 
     return admin;
+  }
+
+  // Open to any authenticated admin (not controller-gated) — organizers need
+  // this to look up a fellow admin by email before assigning them as a judge.
+  async lookupAdminByEmail(email) {
+    if (!email) {
+      throw new BadRequestError("Email is required");
+    }
+
+    const admin = await this.adminRepository.getByEmail(
+      email.toLowerCase().trim()
+    );
+
+    if (!admin) {
+      throw new NotFoundError("No admin found with that email");
+    }
+
+    return {
+      _id: admin._id,
+      adminName: admin.adminName,
+      email: admin.email,
+      avatar: admin.avatar,
+      organizationName: admin.organizationName,
+    };
   }
 
   async updateProfile(adminId, payload) {
@@ -182,7 +208,7 @@ export class AdminService {
       throw new BadRequestError("No pending verification request");
     }
 
-    return this.adminRepository.updateVerificationStatus(adminId, {
+    const updated = await this.adminRepository.updateVerificationStatus(adminId, {
       isVerified: true,
 
       verificationStatus: "APPROVED",
@@ -191,6 +217,16 @@ export class AdminService {
 
       verifiedBy: controllerId,
     });
+
+    await this.notificationClient.createNotification({
+      userId: adminId,
+      title: "Verification Approved",
+      message: "Your organizer verification has been approved. You can now create hackathons.",
+      type: "SYSTEM",
+      actionUrl: "/admin",
+    });
+
+    return updated;
   }
 
   async rejectVerification({ controllerId, adminId, remarks }) {
@@ -210,7 +246,7 @@ export class AdminService {
       throw new BadRequestError("No pending verification request");
     }
 
-    return this.adminRepository.updateVerificationStatus(adminId, {
+    const updated = await this.adminRepository.updateVerificationStatus(adminId, {
       isVerified: false,
 
       verificationStatus: "REJECTED",
@@ -221,5 +257,17 @@ export class AdminService {
 
       verifiedBy: null,
     });
+
+    await this.notificationClient.createNotification({
+      userId: adminId,
+      title: "Verification Rejected",
+      message: remarks
+        ? `Your organizer verification was rejected: ${remarks}`
+        : "Your organizer verification was rejected.",
+      type: "SYSTEM",
+      actionUrl: "/admin",
+    });
+
+    return updated;
   }
 }

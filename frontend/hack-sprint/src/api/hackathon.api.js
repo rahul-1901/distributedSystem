@@ -137,10 +137,15 @@ export const HackathonAPI = {
   deleteHackathon(id) {
     return client.delete(`${API.HACKATHON}/admin/${id}/deleteHackathon`);
   },
-  getOrganizerHackathon(id) {
-    return client.get(`${API.HACKATHON}/admin/hackathons/${id}`);
-  },
   getMyHackathons() {
     return client.get(`${API.HACKATHON}/admin/my-hackathons`);
+  },
+  getHackathonAdminOverview(id) {
+    return client.get(`${API.HACKATHON}/admin/hackathons/${id}/overview`);
+  },
+  getEntitySubmissions(hackathonId, entityType, entityId) {
+    return client.get(
+      `${API.HACKATHON}/admin/hackathons/${hackathonId}/submissions/${entityType}/${entityId}`
+    );
   },
 };

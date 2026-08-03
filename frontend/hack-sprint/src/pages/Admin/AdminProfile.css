@@ -384,6 +384,14 @@
   border-color: rgba(95, 255, 96, 0.4);
   box-shadow: 0 0 14px rgba(95, 255, 96, 0.1);
 }
+.ad-create-btn--locked {
+  opacity: 0.55;
+}
+.ad-create-btn--locked:hover {
+  background: var(--green-faint);
+  border-color: rgba(95, 255, 96, 0.22);
+  box-shadow: none;
+}
 
 /* ── Hackathon card ── */
 .ad-hack-card {

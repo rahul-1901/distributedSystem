@@ -29,7 +29,7 @@ import AdminSignup from "../pages/Admin/AdminSignup.jsx";
 import AdminProfile from "../pages/Admin/AdminProfile.jsx";
 
 import HackathonUsersPage from "../admin/userlist.jsx";
-import UserSubmissionDetailPage from "../admin/usersubmission.jsx";
+import AdminSubmissionDetail from "../admin/AdminSubmissionDetail.jsx";
 
 import ParticipantPoliciesPage from "../pages/Participation.jsx";
 import OrganizerPlaybookPage from "../pages/Organiser.jsx";
@@ -72,10 +72,6 @@ function AppRoutes() {
             path="/hackathon/:slug/team/:teamId"
             element={<TeamDetails />}
           />
-          <Route
-            path="/hackathon/:slug/submission/:id"
-            element={<UserSubmissionDetailPage />}
-          />
         </Route>
       </Route>
 
@@ -90,6 +86,10 @@ function AppRoutes() {
           <Route
             path="/admin/:slug/usersubmissions"
             element={<HackathonUsersPage />}
+          />
+          <Route
+            path="/admin/hackathon/:hackathonId/submission/:entityType/:entityId"
+            element={<AdminSubmissionDetail />}
           />
         </Route>
       </Route>

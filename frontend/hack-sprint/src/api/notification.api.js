@@ -2,33 +2,38 @@ import client from "./client";
 import { API } from "./endpoints";
 
 export const NotificationAPI = {
-  getNotifications(params = {}) {
+  getNotifications(params = {}, asAdmin = false) {
     return client.get(API.NOTIFICATION, {
       params,
+      adminRequest: asAdmin,
     });
   },
 
-  getUnreadCount() {
-    return client.get(
-      `${API.NOTIFICATION}/unread-count`
-    );
+  getUnreadCount(asAdmin = false) {
+    return client.get(`${API.NOTIFICATION}/unread-count`, {
+      adminRequest: asAdmin,
+    });
   },
 
-  markAsRead(notificationId) {
+  markAsRead(notificationId, asAdmin = false) {
     return client.patch(
-      `${API.NOTIFICATION}/${notificationId}/read`
+      `${API.NOTIFICATION}/${notificationId}/read`,
+      {},
+      { adminRequest: asAdmin }
     );
   },
 
-  markAllAsRead() {
+  markAllAsRead(asAdmin = false) {
     return client.patch(
-      `${API.NOTIFICATION}/read-all`
+      `${API.NOTIFICATION}/read-all`,
+      {},
+      { adminRequest: asAdmin }
     );
   },
 
-  deleteNotification(notificationId) {
-    return client.delete(
-      `${API.NOTIFICATION}/${notificationId}`
-    );
+  deleteNotification(notificationId, asAdmin = false) {
+    return client.delete(`${API.NOTIFICATION}/${notificationId}`, {
+      adminRequest: asAdmin,
+    });
   },
 };

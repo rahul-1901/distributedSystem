@@ -10,13 +10,13 @@ const judgeAssignmentSchema = new mongoose.Schema(
 
     judge: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: "admins",
       required: true,
     },
 
     assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: "admins",
       required: true,
     },
   },

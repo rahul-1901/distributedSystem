@@ -67,6 +67,19 @@ export const getAllAdmins = async (req, res, next) => {
   }
 };
 
+export const lookupAdminByEmail = async (req, res, next) => {
+  try {
+    const admin = await adminService.lookupAdminByEmail(req.query.email);
+
+    return res.status(200).json({
+      success: true,
+      admin,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const deleteAdmin = async (req, res, next) => {
   try {
     const result = await adminService.deleteAdmin(

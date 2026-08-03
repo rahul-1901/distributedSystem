@@ -20,11 +20,12 @@ export class SubmissionReviewRepository {
     });
   }
 
-  async getSubmissionReviews(submissionId) {
+  async getReviewsForSubmissions(submissionIds) {
     return SubmissionReviewModel.find({
-      submission: submissionId,
+      submission: { $in: submissionIds },
     })
-      .populate("judge", "name email")
+      .populate("judge", "adminName email")
+      .sort({ createdAt: -1 })
       .lean();
   }
 
@@ -32,7 +33,7 @@ export class SubmissionReviewRepository {
     return SubmissionReviewModel.find({
       hackathon: hackathonId,
     })
-      .populate("judge", "name email")
+      .populate("judge", "adminName email")
       .populate("submission")
       .lean();
   }

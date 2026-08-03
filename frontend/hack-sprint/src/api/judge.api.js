@@ -27,28 +27,10 @@ export const JudgeAPI = {
     );
   },
 
-  getHackathonSubmissions(hackathonId) {
-    return client.get(
-      `${API.JUDGE}/judges/hackathons/${hackathonId}/submissions`
-    );
-  },
-
-  getSubmissionDetails(submissionId) {
-    return client.get(
-      `${API.JUDGE}/judges/submissions/${submissionId}`
-    );
-  },
-
   reviewSubmission(submissionId, data) {
     return client.post(
       `${API.JUDGE}/judges/submissions/${submissionId}/review`,
       data
-    );
-  },
-
-  getSubmissionReviews(submissionId) {
-    return client.get(
-      `${API.JUDGE}/judges/submissions/${submissionId}/reviews`
     );
   },
 };

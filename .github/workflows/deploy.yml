@@ -19,7 +19,15 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 20m
+          debug: true
           script: |
+            whoami
+            hostname
+            pwd
+            ls -la ~
             cd ~/distributedSystem
             git fetch origin
             git reset --hard origin/main

@@ -33,9 +33,11 @@ import {
   Phone,
   Linkedin,
   Trash2,
+  Gavel,
 } from "lucide-react";
 import { AdminAPI } from "../../api/admin.api.js";
 import { HackathonAPI } from "../../api/hackathon.api.js";
+import { JudgeAPI } from "../../api/judge.api.js";
 import { MediaAPI } from "../../api/media.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import HackathonForm from "./HackathonForm.jsx";
@@ -847,6 +849,8 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [myHackathons, setMyHackathons] = useState([]);
   const [hackathonsLoading, setHackathonsLoading] = useState(true);
+  const [assignedHackathons, setAssignedHackathons] = useState([]);
+  const [assignedLoading, setAssignedLoading] = useState(true);
   const [pendingHackathons, setPendingHackathons] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(true);
   const [pendingVerifications, setPendingVerifications] = useState([]);
@@ -882,6 +886,22 @@ const AdminProfile = () => {
         toast.error("Could not load your hackathons.");
       } finally {
         setHackathonsLoading(false);
+      }
+    };
+    run();
+  }, [adminData]);
+
+  useEffect(() => {
+    if (!adminData) return;
+    const run = async () => {
+      try {
+        setAssignedLoading(true);
+        const res = await JudgeAPI.getAssignedHackathons();
+        setAssignedHackathons(res.data.hackathons || []);
+      } catch {
+        // Not every admin has judge assignments — fail quietly.
+      } finally {
+        setAssignedLoading(false);
       }
     };
     run();
@@ -1011,6 +1031,31 @@ const AdminProfile = () => {
 
   const canCreate = adminData.profileCompleted && adminData.isVerified && adminData.verificationStatus === "APPROVED";
 
+  const handleCreateClick = () => {
+    if (canCreate) {
+      navigate("/createHackathon");
+      return;
+    }
+
+    if (!adminData.profileCompleted) {
+      toast.error("Complete your profile before creating a hackathon.");
+      setShowProfileModal(true);
+      return;
+    }
+
+    if (adminData.verificationStatus === "PENDING") {
+      toast.error("Your verification is still under review. You can create hackathons once approved.");
+      return;
+    }
+
+    if (adminData.verificationStatus === "REJECTED") {
+      toast.error("Your verification was rejected. Please resubmit for verification.");
+      return;
+    }
+
+    toast.error("Submit your verification request before creating a hackathon.");
+  };
+
   return (
     <div className="ad-root">
       <GridBackground />
@@ -1065,9 +1110,8 @@ const AdminProfile = () => {
               </p>
             </div>
             <button
-              onClick={() => (canCreate ? navigate("/createHackathon") : setShowProfileModal(!adminData.profileCompleted))}
-              className="ad-create-btn"
-              disabled={!canCreate && adminData.profileCompleted}
+              onClick={handleCreateClick}
+              className={`ad-create-btn ${!canCreate ? "ad-create-btn--locked" : ""}`}
             >
               <Plus size={14} /> Create New Event
             </button>
@@ -1080,6 +1124,57 @@ const AdminProfile = () => {
             <StatCard label="Live Now" value={statLiveNow} icon={Zap} color="green" description="Open now" />
             <StatCard label="Awaiting Review" value={statAwaitingReview} icon={Clock} color="amber" description={adminData.controller ? "Platform-wide" : "Your submissions"} />
             <StatCard label="Concluded" value={statConcluded} icon={BadgeCheck} color="gray" description="Closed" />
+          </div>
+        )}
+
+        {(assignedLoading || assignedHackathons.length > 0) && (
+          <div className="mb-10">
+            <div className="ad-section-title mb-4">
+              <Gavel size={18} />
+              Assigned as Judge
+              <span className="ad-section-count">({assignedHackathons.length})</span>
+            </div>
+            {assignedLoading ? (
+              <div className="ad-empty"><div className="ad-spinner" /> Loading…</div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {assignedHackathons.map((a) => {
+                  const h = a.hackathon;
+                  if (!h) return null;
+                  const lifecycle = derivePhaseLifecycle(h.phases);
+                  return (
+                    <div
+                      key={a._id}
+                      onClick={() => navigate(`/admin/${h._id}/usersubmissions`)}
+                      className="ad-hack-card"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="flex flex-col sm:flex-row">
+                        <div className="w-full sm:w-[220px] lg:w-[260px] h-40 sm:h-auto flex-shrink-0 relative overflow-hidden">
+                          <img
+                            src={h.image?.url || "https://images.unsplash.com/photo-1556740758-90de374c12ad?q=80&w=2070&auto=format&fit=crop"}
+                            alt={h.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(10,10,10,0.1), rgba(10,10,10,0.4))" }} />
+                        </div>
+                        <div className="flex-1 p-4 flex flex-col justify-center">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <Chip color="blue"><Gavel size={9} style={{ display: "inline", marginRight: 4 }} />Judge</Chip>
+                            {h.status === "APPROVED" && <LifecyclePill status={lifecycle} />}
+                          </div>
+                          <div className="ad-hack-title">{h.title}</div>
+                          {h.subTitle && <div className="ad-hack-subtitle">{h.subTitle}</div>}
+                          <div className="ad-hack-meta">
+                            <span><Users size={12} style={{ color: "var(--green)" }} />{h.numParticipants || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
