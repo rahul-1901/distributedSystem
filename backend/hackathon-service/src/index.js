@@ -17,6 +17,7 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsMiddleware, metricsHandler } from "./metrics/metrics.js";
+import { startPhaseReminderJob } from "./jobs/phaseReminder.job.js";
 
 dotenv.config();
 
@@ -82,6 +83,8 @@ const startServer = async () => {
     const server = app.listen(process.env.PORT, () => {
       logger.info(`Hackathon service running on port ${process.env.PORT}`);
     });
+
+    startPhaseReminderJob();
 
     const shutdown = async (signal) => {
       logger.info(`${signal} received. Starting graceful shutdown`);

@@ -60,11 +60,20 @@ export const validateSubmissionData = (submissionData, submissionForm) => {
 
         if (
           !value.url ||
-          !value.public_id ||
+          !value.key ||
           !value.format ||
           value.size === undefined
         ) {
           throw new BadRequestError(`${field.label} is invalid`);
+        }
+
+        if (
+          field.allowedExtensions?.length &&
+          !field.allowedExtensions.includes(value.format?.toLowerCase())
+        ) {
+          throw new BadRequestError(
+            `${field.label} must be one of: ${field.allowedExtensions.join(", ")}`
+          );
         }
 
         break;
@@ -86,11 +95,20 @@ export const validateSubmissionData = (submissionData, submissionForm) => {
         for (const file of value) {
           if (
             !file.url ||
-            !file.public_id ||
+            !file.key ||
             !file.format ||
             file.size === undefined
           ) {
             throw new BadRequestError(`${field.label} contains invalid files`);
+          }
+
+          if (
+            field.allowedExtensions?.length &&
+            !field.allowedExtensions.includes(file.format?.toLowerCase())
+          ) {
+            throw new BadRequestError(
+              `${field.label} must be one of: ${field.allowedExtensions.join(", ")}`
+            );
           }
         }
 

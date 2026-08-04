@@ -306,13 +306,14 @@ export class SubmissionService {
     const submissionMap = new Map();
 
     submissions.forEach((submission) => {
+      if (!submission.phaseId) return;
       submissionMap.set(submission.phaseId.toString(), submission);
     });
 
     const now = new Date();
 
     const phases = hackathon.phases
-      .filter((phase) => phase.phaseType === "SUBMISSION")
+      .filter((phase) => phase?._id && phase.phaseType === "SUBMISSION")
       .map((phase) => {
         const existing = submissionMap.get(phase._id.toString());
 
@@ -405,7 +406,7 @@ export class SubmissionService {
 
     const activePhase = hackathon.phases[0];
 
-    if (submission.phaseId.toString() !== activePhase._id.toString()) {
+    if (String(submission.phaseId) !== String(activePhase?._id)) {
       throw new ForbiddenError("Submission phase is closed");
     }
 

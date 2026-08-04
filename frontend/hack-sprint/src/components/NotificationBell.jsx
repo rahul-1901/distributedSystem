@@ -129,7 +129,6 @@ const NotificationBell = ({ asAdmin = false }) => {
               notifications.map((n) => (
                 <div
                   key={n._id}
-                  onClick={() => handleNotificationClick(n)}
                   className={`px-4 py-3 border-b border-[rgba(95,255,96,0.06)] cursor-pointer transition-colors hover:bg-[rgba(95,255,96,0.05)] ${
                     n.isRead ? "" : "bg-[rgba(95,255,96,0.03)]"
                   }`}

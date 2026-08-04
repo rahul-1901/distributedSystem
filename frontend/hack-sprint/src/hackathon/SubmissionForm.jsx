@@ -17,7 +17,7 @@ const syne = "font-[family-name:'Syne',sans-serif]";
 const inp = `${mono} w-full bg-[rgba(18,22,18,0.7)] border border-[rgba(95,255,96,0.15)] rounded-[3px] px-3 py-2.5 text-[0.7rem] text-[#e8ffe8] placeholder-[rgba(95,255,96,0.25)] focus:outline-none focus:border-[rgba(95,255,96,0.42)] focus:shadow-[0_0_0_2px_rgba(95,255,96,0.06)] transition-all`;
 
 const StatCard = ({ icon: Icon, label, value }) => (
-  <div className="relative bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.12)] rounded-[3px] p-4">
+  <div className="relative bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.12)] rounded-[3px] p-3 sm:p-4 min-w-0">
     <Icon size={13} className="text-[rgba(95,255,96,0.55)] mb-2" />
     <div
       className={`${mono} text-[0.52rem] tracking-[0.12em] uppercase text-[rgba(180,220,180,0.45)] mb-0.5`}
@@ -82,15 +82,29 @@ const SubmissionForm = ({ isOpen, onClose, hackathonId }) => {
         if (cancelled) return;
         setHackathon(h);
 
-        const phase = h.phases?.find((p) => p.phaseType === "SUBMISSION");
+        const statusRes = await SubmissionAPI.getMySubmission(hackathonId);
+        const submissionPhases = statusRes.data.phases || [];
+
+        // Prefer whichever phase is actually open for submission right now;
+        // otherwise fall back to one already submitted (so past work is still
+        // viewable), then finally just the last phase in the list.
+        const current =
+          submissionPhases.find((p) => p.canSubmit) ||
+          [...submissionPhases].reverse().find((p) => p.submitted) ||
+          submissionPhases[submissionPhases.length - 1] ||
+          null;
+
+        // Fields must come from the SAME phase as `current` — matching by
+        // phaseId, not just "the first SUBMISSION-type phase" — otherwise a
+        // hackathon with multiple submission rounds shows the wrong round's
+        // fields.
+        const phase = current
+          ? h.phases?.find((p) => p._id?.toString() === current.phaseId?.toString())
+          : h.phases?.find((p) => p.phaseType === "SUBMISSION");
         setSubmissionPhase(phase || null);
 
         const normalized = normalizeFields(phase?.submissionForm || [], "submission");
         setFields(normalized);
-
-        const statusRes = await SubmissionAPI.getMySubmission(hackathonId);
-        const submissionPhases = statusRes.data.phases || [];
-        const current = submissionPhases[submissionPhases.length - 1];
 
         if (current?.submitted) {
           setExistingSubmissionId(current.submissionId);
@@ -169,11 +183,7 @@ const SubmissionForm = ({ isOpen, onClose, hackathonId }) => {
   if (!isOpen || loading || !hackathon) return null;
 
   const totalPrize =
-    hackathon.rewards?.length > 0
-      ? hackathon.rewards.reduce((s, r) => s + (r.amount || 0), 0)
-      : (hackathon.prizeMoney1 || 0) +
-        (hackathon.prizeMoney2 || 0) +
-        (hackathon.prizeMoney3 || 0);
+    hackathon.prizes?.reduce((s, p) => s + (p.amount || 0), 0) || 0;
   const daysLeft = submissionPhase
     ? Math.ceil((new Date(submissionPhase.endDate) - new Date()) / 86400000)
     : null;
@@ -184,11 +194,11 @@ const SubmissionForm = ({ isOpen, onClose, hackathonId }) => {
   return createPortal(
     <>
       <div
-        className={`${mono} fixed inset-0 bg-black/85 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 overflow-y-auto`}
+        className={`${mono} fixed inset-0 bg-black/85 backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4`}
         onClick={onClose}
       >
         <div
-          className="relative w-full max-w-2xl bg-[rgba(8,10,8,0.98)] border border-[rgba(95,255,96,0.18)] rounded-[4px] p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[90vh] [scrollbar-width:thin] [scrollbar-color:rgba(95,255,96,0.2)_transparent]"
+          className="relative w-full max-w-2xl bg-[rgba(8,10,8,0.98)] border border-[rgba(95,255,96,0.18)] rounded-[4px] p-4 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto overflow-x-hidden max-h-[90vh] [scrollbar-width:thin] [scrollbar-color:rgba(95,255,96,0.2)_transparent]"
           onClick={(e) => e.stopPropagation()}
         >
           <span className="absolute top-[-1px] left-[-1px] w-3 h-3 border-t-2 border-l-2 border-[rgba(95,255,96,0.55)]" />

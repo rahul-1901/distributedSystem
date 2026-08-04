@@ -115,6 +115,44 @@ export class HackathonRepository {
     );
   }
 
+  async getPhasesEndingSoon(withinHours) {
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() + withinHours * 60 * 60 * 1000);
+
+    // Same $elemMatch-as-filter-and-projection shape as getActiveSubmissionPhase
+    // above, just across every hackathon instead of one. Note: like that
+    // method, $elemMatch projection only surfaces the first matching phase per
+    // document — if a single hackathon somehow had both a REGISTRATION and a
+    // SUBMISSION phase ending in the same window, only one would be returned
+    // per run; the other would still be caught on a later tick since its own
+    // endDate keeps it inside the window until reminderSent is set.
+    const matchStage = {
+      phaseType: { $in: ["REGISTRATION", "SUBMISSION"] },
+      isActive: true,
+      reminderSent: { $ne: true },
+      endDate: { $gte: now, $lte: windowEnd },
+    };
+
+    return hackathonModel
+      .find(
+        { phases: { $elemMatch: matchStage } },
+        {
+          phases: { $elemMatch: matchStage },
+          participationType: 1,
+          title: 1,
+          slug: 1,
+        }
+      )
+      .lean();
+  }
+
+  async markPhaseReminderSent(hackathonId, phaseId) {
+    return hackathonModel.updateOne(
+      { _id: hackathonId, "phases._id": phaseId },
+      { $set: { "phases.$.reminderSent": true } }
+    );
+  }
+
   async getPhases(hackathonId) {
     return hackathonModel
       .findById(hackathonId)

@@ -173,7 +173,7 @@ export class VoteService {
 
     const finalPhase = hackathon.phases[hackathon.phases.length - 1];
 
-    if (submission.phaseId.toString() !== finalPhase._id.toString()) {
+    if (String(submission.phaseId) !== String(finalPhase?._id)) {
       throw new ForbiddenError("Submission not available for voting");
     }
 

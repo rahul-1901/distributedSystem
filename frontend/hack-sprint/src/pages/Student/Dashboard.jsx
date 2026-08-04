@@ -32,7 +32,6 @@ import {
   Camera,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
-import SubmissionForms from "../../hackathon/DashboardSubmission";
 import "../Styles/Dashboard.css";
 
 const inputCls = [
@@ -349,8 +348,6 @@ export const UserDashboard = () => {
   const [isAddingLanguage, setIsAddingLanguage] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState("");
   const [isAddingSkill, setIsAddingSkill] = useState(false);
-  const [isSubmissionOpen, setIsSubmissionOpen] = useState(false);
-  const [selectedHackathonId, setSelectedHackathonId] = useState(null);
   const [likedHackathons, setLikedHackathons] = useState([]);
   const [loadingWishlist, setLoadingWishlist] = useState(false);
   const [myRegistrations, setMyRegistrations] = useState([]);
@@ -556,7 +553,7 @@ export const UserDashboard = () => {
       setData({ ...data, languages: res.data.languages });
       setSelectedLanguage("");
       setIsAddingLanguage(false);
-      toast.success("Language added");
+      // toast.success("Language added");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add language");
     }
@@ -566,7 +563,7 @@ export const UserDashboard = () => {
       const updated = (data.languages || []).filter((l) => l !== langName);
       const res = await ProfileAPI.updateLanguages(updated);
       setData({ ...data, languages: res.data.languages });
-      toast.success("Language removed");
+      // toast.success("Language removed");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove language");
     }
@@ -584,7 +581,7 @@ export const UserDashboard = () => {
       setData({ ...data, skills: res.data.skills });
       setSelectedSkill("");
       setIsAddingSkill(false);
-      toast.success("Skill added");
+      // toast.success("Skill added");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add skill");
     }
@@ -594,7 +591,7 @@ export const UserDashboard = () => {
       const updated = (data.skills || []).filter((s) => s !== skillName);
       const res = await ProfileAPI.updateSkills(updated);
       setData({ ...data, skills: res.data.skills });
-      toast.success("Skill removed");
+      // toast.success("Skill removed");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove skill");
     }
@@ -943,17 +940,6 @@ export const UserDashboard = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex-shrink-0 self-center">
-                          <Btn
-                            color="amber"
-                            onClick={() => {
-                              setSelectedHackathonId(hack._id);
-                              setIsSubmissionOpen(true);
-                            }}
-                          >
-                            <Upload size={10} /> Submit
-                          </Btn>
-                        </div>
                       </div>
                     );
                   })}
@@ -1263,17 +1249,6 @@ export const UserDashboard = () => {
             </Card>
           </main>
         </div>
-
-        {isSubmissionOpen && (
-          <SubmissionForms
-            isOpen={isSubmissionOpen}
-            onClose={() => {
-              setSelectedHackathonId(null);
-              setIsSubmissionOpen(false);
-            }}
-            hackathonId={selectedHackathonId}
-          />
-        )}
 
         {showEditProfile && (
           <EditProfileModal

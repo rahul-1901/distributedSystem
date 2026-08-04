@@ -398,8 +398,16 @@ const RegistrationFormEditor = ({ values, onChange }) => {
 const SUB_FIELD_TYPES = ["TEXT", "TEXTAREA", "URL", "DOCUMENT", "IMAGE", "VIDEO", "MULTI_DOCUMENT", "MULTI_IMAGE", "MULTI_VIDEO"];
 const isFileType = (t) => t !== "TEXT" && t !== "TEXTAREA" && t !== "URL";
 
+const DEFAULT_DRAFT = { fieldName: "", label: "", fieldType: "TEXT", required: true, maxFiles: 1, maxSizeMB: 50, allowedExtensions: "" };
+
+const parseExtensions = (raw) =>
+  raw
+    .split(",")
+    .map((ext) => ext.trim().toLowerCase().replace(/^\./, ""))
+    .filter(Boolean);
+
 const SubmissionFormEditor = ({ values, onChange }) => {
-  const [draft, setDraft] = useState({ fieldName: "", label: "", fieldType: "TEXT", required: true, maxFiles: 1, maxSizeMB: 50 });
+  const [draft, setDraft] = useState(DEFAULT_DRAFT);
   const add = () => {
     if (!draft.fieldName.trim() || !draft.label.trim()) return;
     const field = {
@@ -412,9 +420,11 @@ const SubmissionFormEditor = ({ values, onChange }) => {
     if (isFileType(draft.fieldType)) {
       field.maxFiles = Number(draft.maxFiles) || 1;
       field.maxSizeMB = Number(draft.maxSizeMB) || 50;
+      const extensions = parseExtensions(draft.allowedExtensions);
+      if (extensions.length) field.allowedExtensions = extensions;
     }
     onChange([...values, field]);
-    setDraft({ fieldName: "", label: "", fieldType: "TEXT", required: true, maxFiles: 1, maxSizeMB: 50 });
+    setDraft(DEFAULT_DRAFT);
   };
   return (
     <div className="hf-nested">
@@ -427,6 +437,9 @@ const SubmissionFormEditor = ({ values, onChange }) => {
                 <div className="hf-list-item-sub">
                   {f.fieldName}
                   {isFileType(f.fieldType) ? ` · max ${f.maxFiles} file(s) · ${f.maxSizeMB}MB` : ""}
+                  {isFileType(f.fieldType) && f.allowedExtensions?.length
+                    ? ` · ${f.allowedExtensions.map((e) => `.${e}`).join(", ")}`
+                    : ""}
                 </div>
               </div>
               <button type="button" onClick={() => onChange(values.filter((_, j) => j !== i))}>
@@ -444,10 +457,18 @@ const SubmissionFormEditor = ({ values, onChange }) => {
         </select>
       </div>
       {isFileType(draft.fieldType) && (
-        <div className="hf-row-2 mt-2">
-          <input className="hf-input" type="number" placeholder="Max files" value={draft.maxFiles} onChange={(e) => setDraft({ ...draft, maxFiles: e.target.value })} />
-          <input className="hf-input" type="number" placeholder="Max size (MB)" value={draft.maxSizeMB} onChange={(e) => setDraft({ ...draft, maxSizeMB: e.target.value })} />
-        </div>
+        <>
+          <div className="hf-row-2 mt-2">
+            <input className="hf-input" type="number" placeholder="Max files" value={draft.maxFiles} onChange={(e) => setDraft({ ...draft, maxFiles: e.target.value })} />
+            <input className="hf-input" type="number" placeholder="Max size (MB)" value={draft.maxSizeMB} onChange={(e) => setDraft({ ...draft, maxSizeMB: e.target.value })} />
+          </div>
+          <input
+            className="hf-input mt-2"
+            placeholder="Allowed file types (e.g. pdf, zip, docx) — leave blank to allow any supported type"
+            value={draft.allowedExtensions}
+            onChange={(e) => setDraft({ ...draft, allowedExtensions: e.target.value })}
+          />
+        </>
       )}
       <label className="hf-checkbox-row mt-2">
         <input type="checkbox" checked={draft.required} onChange={(e) => setDraft({ ...draft, required: e.target.checked })} />

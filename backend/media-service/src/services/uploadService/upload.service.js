@@ -7,7 +7,7 @@ dotenv.config();
 const BUCKET = process.env.AWS_S3_BUCKET_NAME;
 const REGION = process.env.AWS_REGION;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 const ALLOWED_RESOURCE_TYPES = [
   "submission",
@@ -19,18 +19,19 @@ const ALLOWED_RESOURCE_TYPES = [
 ];
 
 const ALLOWED_EXTENSIONS = [
-  "pdf",
-  "doc",
-  "docx",
-  "ppt",
-  "pptx",
-  "jpg",
-  "jpeg",
-  "png",
-  "mp4",
-  "mpeg",
-  "mov",
-  "zip",
+  // documents
+  "pdf", "doc", "docx", "ppt", "pptx", "txt", "md", "rtf",
+  // spreadsheets / data
+  "xls", "xlsx", "csv", "json",
+  // code
+  "py", "ipynb", "js", "jsx", "ts", "tsx", "java", "c", "cpp", "h",
+  "go", "rb", "php", "html", "css", "sql",
+  // images
+  "jpg", "jpeg", "png", "gif", "webp", "svg",
+  // video
+  "mp4", "mpeg", "mov", "webm", "avi", "mkv",
+  // archives
+  "zip", "rar", "7z",
 ];
 
 export class UploadService {
@@ -44,17 +45,12 @@ export class UploadService {
       throw new BadRequestError("File is required");
     }
 
-    console.log({
-      resourceType,
-      allowed: ALLOWED_RESOURCE_TYPES,
-  });
-
     if (!ALLOWED_RESOURCE_TYPES.includes(resourceType)) {
       throw new BadRequestError("Invalid resource type");
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      throw new BadRequestError("File size exceeds 50MB limit");
+      throw new BadRequestError("File size exceeds 100MB limit");
     }
 
     const fileName = file.originalname

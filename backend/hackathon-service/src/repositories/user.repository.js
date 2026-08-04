@@ -19,6 +19,10 @@ export class UserRepository {
     return UserModel.findById(userId).select("wishlist").lean();
   }
 
+  async getWishlistedUserIds(hackathonId) {
+    return UserModel.find({ wishlist: hackathonId }).select("_id").lean();
+  }
+
   async addToWishlist(userId, hackathonId) {
     return UserModel.findByIdAndUpdate(
       userId,

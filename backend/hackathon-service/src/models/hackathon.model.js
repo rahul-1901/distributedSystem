@@ -44,6 +44,10 @@ const submissionFieldSchema = new mongoose.Schema(
       type: Number,
       default: 50,
     },
+    allowedExtensions: {
+      type: [String],
+      default: [],
+    },
   },
   {
     _id: true,
@@ -82,6 +86,11 @@ const phaseSchema = new mongoose.Schema(
     submissionForm: {
       type: [submissionFieldSchema],
       default: [],
+    },
+
+    reminderSent: {
+      type: Boolean,
+      default: false,
     },
   },
   {

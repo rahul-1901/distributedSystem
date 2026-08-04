@@ -43,7 +43,7 @@ function FileInput({ field, value, onChange, error, resourceType, hackathonId })
   return (
     <div>
       <Label required={field.required}>{field.label}</Label>
-      <label className="flex flex-col items-center justify-center w-full h-24 border border-dashed border-[rgba(95,255,96,0.2)] rounded-[3px] cursor-pointer hover:border-[rgba(95,255,96,0.38)] transition-all">
+      <label className="flex flex-col items-center justify-center w-full h-24 border border-dashed border-[rgba(95,255,96,0.2)] rounded-[3px] cursor-pointer hover:border-[rgba(95,255,96,0.38)] transition-all px-3">
         <input
           type="file"
           accept={field.accept}
@@ -54,16 +54,16 @@ function FileInput({ field, value, onChange, error, resourceType, hackathonId })
         {uploading ? (
           <Loader2 size={18} className="animate-spin text-[#5fff60]" />
         ) : value?.url ? (
-          <div className="flex items-center gap-2 text-[0.62rem] text-[rgba(180,220,180,0.6)]">
-            <FileText size={14} className="text-[#5fff60]" />
-            File uploaded
+          <div className="flex items-center gap-2 text-[0.62rem] text-[rgba(180,220,180,0.6)] max-w-full">
+            <FileText size={14} className="text-[#5fff60] flex-shrink-0" />
+            <span className="truncate">{value.originalName || "File uploaded"}</span>
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
                 onChange(field.fieldName, null);
               }}
-              className="ml-2"
+              className="ml-2 flex-shrink-0"
             >
               <X size={12} className="text-[rgba(255,100,100,0.7)]" />
             </button>
@@ -83,21 +83,41 @@ function MultiFileInput({ field, value = [], onChange, error, resourceType, hack
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (value.length >= field.maxFiles) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+
+    const remaining = field.maxFiles - value.length;
+    if (remaining <= 0) {
       toast.error(`Maximum ${field.maxFiles} files allowed`);
       return;
     }
-    if (field.maxSizeMB && file.size > field.maxSizeMB * 1024 * 1024) {
-      toast.error(`File exceeds ${field.maxSizeMB}MB limit`);
-      return;
+
+    let toUpload = files;
+    if (files.length > remaining) {
+      toast.error(`Only ${remaining} more file(s) allowed — uploading the first ${remaining}`);
+      toUpload = files.slice(0, remaining);
     }
+
+    const oversized = toUpload.find(
+      (f) => field.maxSizeMB && f.size > field.maxSizeMB * 1024 * 1024
+    );
+    if (oversized) {
+      toast.error(`${oversized.name} exceeds ${field.maxSizeMB}MB limit`);
+      toUpload = toUpload.filter(
+        (f) => !field.maxSizeMB || f.size <= field.maxSizeMB * 1024 * 1024
+      );
+    }
+    if (!toUpload.length) return;
+
     setUploading(true);
     try {
-      const res = await MediaAPI.uploadFile(file, resourceType, hackathonId);
-      const uploaded = res.data.file || res.data;
-      onChange(field.fieldName, [...value, uploaded]);
+      const uploaded = [];
+      for (const file of toUpload) {
+        const res = await MediaAPI.uploadFile(file, resourceType, hackathonId);
+        uploaded.push(res.data.file || res.data);
+      }
+      onChange(field.fieldName, [...value, ...uploaded]);
     } catch (err) {
       toast.error(err.response?.data?.message || "Upload failed");
     } finally {
@@ -121,7 +141,7 @@ function MultiFileInput({ field, value = [], onChange, error, resourceType, hack
             className="flex items-center justify-between gap-2 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.12)] rounded-[3px] px-3 py-2"
           >
             <span className="text-[0.62rem] text-[rgba(180,220,180,0.6)] truncate">
-              File {i + 1}
+              {f.originalName || `File ${i + 1}`}
             </span>
             <button type="button" onClick={() => removeAt(i)}>
               <X size={12} className="text-[rgba(255,100,100,0.7)]" />
@@ -133,6 +153,7 @@ function MultiFileInput({ field, value = [], onChange, error, resourceType, hack
             <input
               type="file"
               accept={field.accept}
+              multiple
               onChange={handleFile}
               className="hidden"
               disabled={uploading}
@@ -141,7 +162,7 @@ function MultiFileInput({ field, value = [], onChange, error, resourceType, hack
               <Loader2 size={16} className="animate-spin text-[#5fff60]" />
             ) : (
               <span className="text-[0.58rem] text-[rgba(95,255,96,0.3)]">
-                + Add file
+                + Add file{field.maxFiles - value.length > 1 ? "s" : ""}
               </span>
             )}
           </label>

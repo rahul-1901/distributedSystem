@@ -5,9 +5,19 @@
 const FILE_KINDS = new Set(["DOCUMENT", "IMAGE", "VIDEO"]);
 const MULTI_FILE_KINDS = new Set(["MULTI_DOCUMENT", "MULTI_IMAGE", "MULTI_VIDEO"]);
 
+// Kept in sync with backend/media-service's ALLOWED_EXTENSIONS whitelist —
+// this is just the client-side file-picker hint, the server is the real gate.
+const DOCUMENT_ACCEPT = [
+  ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".txt", ".md", ".rtf",
+  ".xls", ".xlsx", ".csv", ".json",
+  ".py", ".ipynb", ".js", ".jsx", ".ts", ".tsx", ".java", ".c", ".cpp", ".h",
+  ".go", ".rb", ".php", ".html", ".css", ".sql",
+  ".zip", ".rar", ".7z",
+].join(",");
+
 const ACCEPT_MAP = {
-  DOCUMENT: ".pdf,.doc,.docx,.ppt,.pptx",
-  MULTI_DOCUMENT: ".pdf,.doc,.docx,.ppt,.pptx",
+  DOCUMENT: DOCUMENT_ACCEPT,
+  MULTI_DOCUMENT: DOCUMENT_ACCEPT,
   IMAGE: "image/*",
   MULTI_IMAGE: "image/*",
   VIDEO: "video/*",
@@ -46,6 +56,8 @@ export function normalizeField(field, kind) {
   else if (FILE_KINDS.has(fieldType)) inputKind = "file";
   else if (MULTI_FILE_KINDS.has(fieldType)) inputKind = "multifile";
 
+  const allowedExtensions = field.allowedExtensions || [];
+
   return {
     fieldName: field.fieldName,
     label: field.label,
@@ -55,7 +67,10 @@ export function normalizeField(field, kind) {
     options: [],
     maxFiles: field.maxFiles || 1,
     maxSizeMB: field.maxSizeMB || 50,
-    accept: ACCEPT_MAP[fieldType] || null,
+    accept: allowedExtensions.length
+      ? allowedExtensions.map((ext) => `.${ext}`).join(",")
+      : ACCEPT_MAP[fieldType] || null,
+    allowedExtensions,
   };
 }
 

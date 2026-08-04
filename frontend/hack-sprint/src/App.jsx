@@ -5,7 +5,11 @@ import React from 'react';
 function App() {
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ style: { zIndex: 100000 } }} />
+      <Toaster
+        position="top-right"
+        containerStyle={{ zIndex: 100000 }}
+        toastOptions={{ style: { zIndex: 100000 } }}
+      />
       <AppRoutes />
     </>
   );

@@ -148,6 +148,7 @@ const Navbar = ({ variant = "student" }) => {
 
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[rgba(95,255,96,0.1)]">
                 {isAdminVariant && adminLoggedIn && <NotificationBell asAdmin />}
+                {!isAdminVariant && isLoggedIn && <NotificationBell />}
                 <button
                   onClick={() => window.open("https://github.com/devlup-labs/HackSprint", "_blank")}
                   title="GitHub"
@@ -361,6 +362,7 @@ const Navbar = ({ variant = "student" }) => {
                       <p className="nb-root text-[0.72rem] font-semibold text-white truncate">{userInfo?.name || "Guest"}</p>
                       <p className="nb-root text-[0.58rem] text-[rgba(180,220,180,0.4)] truncate">{userInfo?.email || ""}</p>
                     </div>
+                    <NotificationBell />
                   </div>
 
                   <button
