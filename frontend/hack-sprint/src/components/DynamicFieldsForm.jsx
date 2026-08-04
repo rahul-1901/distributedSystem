@@ -23,6 +23,7 @@ function FileInput({ field, value, onChange, error, resourceType, hackathonId })
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
+    e.target.value = "";
     if (!file) return;
     if (field.maxSizeMB && file.size > field.maxSizeMB * 1024 * 1024) {
       toast.error(`File exceeds ${field.maxSizeMB}MB limit`);

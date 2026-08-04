@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { getNowUTC } from "../../utils/dateUtils.js";
+import { getLifecycleStatus } from "../../utils/lifecycleStatus.js";
 
 export class TeamService {
   constructor(
@@ -40,7 +41,7 @@ export class TeamService {
   }
 
   ensureTeamModificationAllowed(hackathon) {
-    if (hackathon.lifecycleStatus === "COMPLETED") {
+    if (getLifecycleStatus(hackathon) === "COMPLETED") {
       throw new BadRequestError("Team modifications are no longer allowed");
     }
   }
@@ -52,7 +53,7 @@ export class TeamService {
 
     const hackathon = await this.hackathonRepository.getById(hackathonId);
 
-    if (hackathon.lifecycleStatus === "COMPLETED") {
+    if (getLifecycleStatus(hackathon) === "COMPLETED") {
       throw new BadRequestError("Team modifications are no longer allowed");
     }
 
@@ -309,7 +310,7 @@ export class TeamService {
         title: "Team Join Request Rejected",
         message: `Your request to join ${team.name} was rejected.`,
         type: "TEAM",
-        actionUrl: `/teams/${team._id}`,
+        actionUrl: `/hackathon/${hackathon.slug}`,
         metadata: {
           teamId: team._id.toString(),
         },
@@ -385,7 +386,7 @@ export class TeamService {
 
         type: "TEAM",
 
-        actionUrl: `/teams/${team._id}`,
+        actionUrl: `/hackathon/${hackathon.slug}/team/${team.secretCode}`,
 
         metadata: {
           teamId: team._id.toString(),
@@ -637,9 +638,6 @@ export class TeamService {
   async removeMember({ leaderId, teamId, userId }) {
     const team = await this.teamRepository.findById(teamId);
 
-    const hackathon = await this.hackathonRepository.getById(team.hackathon);
-    this.ensureTeamModificationAllowed(hackathon);
-
     if (!team) {
       throw new NotFoundError("Team not found");
     }
@@ -650,6 +648,22 @@ export class TeamService {
 
     if (team.leader.toString() === userId.toString()) {
       throw new BadRequestError("Leader cannot remove themselves");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(team.hackathon);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    this.ensureTeamModificationAllowed(hackathon);
+
+    const now = getNowUTC();
+
+    const registrationPhase = this.getRegistrationPhase(hackathon, now);
+
+    if (!registrationPhase) {
+      throw new BadRequestError("Registration is closed");
     }
 
     const session = await mongoose.startSession();
@@ -675,7 +689,7 @@ export class TeamService {
         title: "Removed From Team",
         message: `You have been removed from ${team.name}.`,
         type: "TEAM",
-        actionUrl: `/hackathons/${team.hackathon}`,
+        actionUrl: `/hackathon/${hackathon.slug}`,
         metadata: {
           teamId: team._id.toString(),
         },
@@ -833,7 +847,7 @@ export class TeamService {
           title: "Team Deleted",
           message: `${transactionalTeam.name} has been deleted.`,
           type: "TEAM",
-          actionUrl: `/hackathons/${transactionalTeam.hackathon}`,
+          actionUrl: `/hackathon/${hackathon.slug}`,
           metadata: {
             teamId: transactionalTeam._id.toString(),
           },

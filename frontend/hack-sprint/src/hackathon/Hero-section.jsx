@@ -96,32 +96,34 @@ export const HeroSection = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [profileRes, statusRes] = await Promise.all([
+        // getMyRegistration now returns the team (leader/members populated)
+        // in-line, so a single parallel round trip replaces what used to be
+        // a status check + registration fetch + separate team fetch.
+        const [profileRes, regRes] = await Promise.all([
           ProfileAPI.getMyProfile(),
-          HackathonAPI.getRegistrationStatus(hackathonId),
+          HackathonAPI.getMyRegistration(hackathonId).catch((err) => {
+            if (err.response?.status === 404) return null;
+            throw err;
+          }),
         ]);
         const myUserId = profileRes.data.profile._id;
 
-        const isRegistered = !!statusRes.data.isRegistered;
-        setRegistered(isRegistered);
-
-        if (!isRegistered) {
+        if (!regRes) {
+          setRegistered(false);
           setIsLeader(false);
           setIsTeamMember(false);
           return;
         }
 
-        const regRes = await HackathonAPI.getMyRegistration(hackathonId);
-        const teamId = regRes.data.registration?.team;
+        setRegistered(true);
 
-        if (!teamId) {
+        const team = regRes.data.registration?.team;
+
+        if (!team) {
           setIsLeader(false);
           setIsTeamMember(false);
           return;
         }
-
-        const teamRes = await HackathonAPI.getTeamById(teamId);
-        const team = teamRes.data.team;
 
         const leaderId = team.leader?._id || team.leader;
         const amLeader = String(leaderId) === String(myUserId);
@@ -146,7 +148,7 @@ export const HeroSection = ({
     navigate(`/hackathon/RegistrationForm/${slug}`);
   };
 
-  const handleLeaderDashboard = () => {
+  const handleTeamDashboard = () => {
     if (!teamCode) return;
     navigate(`/hackathon/${slug}/team/${teamCode}`);
   };
@@ -476,12 +478,12 @@ export const HeroSection = ({
             </div>
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
-              {isLeader && teamCode && (
+              {(isLeader || isTeamMember) && teamCode && (
                 <button
-                  onClick={handleLeaderDashboard}
+                  onClick={handleTeamDashboard}
                   className={`${actionCls} bg-[rgba(95,255,96,0.1)] border-[rgba(95,255,96,0.3)] text-[#5fff60] hover:bg-[rgba(95,255,96,0.18)]`}
                 >
-                  Leader Dashboard <ChevronRight size={13} />
+                  Team Dashboard <ChevronRight size={13} />
                 </button>
               )}
               {renderActionButton()}

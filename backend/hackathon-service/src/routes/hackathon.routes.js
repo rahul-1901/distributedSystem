@@ -22,7 +22,8 @@ import {
   getMyHackathons,
   getAllHackathonsForController,
   getHackathonAdminOverview,
-  getEntitySubmissions
+  getEntitySubmissions,
+  getAdminResults
 } from "../controllers/hackathon.controller.js";
 
 import { 
@@ -138,6 +139,7 @@ router.post("/admin/:id/approveHackathon", adminAuth, approveHackathon);
 router.post("/admin/:id/rejectHackathon", adminAuth, rejectHackathon);
 router.delete("/admin/:id/deleteHackathon", adminAuth, deleteHackathon);
 router.get("/admin/hackathons/:id/overview", adminAuth, getHackathonAdminOverview);
+router.get("/admin/hackathons/:id/results", adminAuth, getAdminResults);
 router.get(
   "/admin/hackathons/:id/submissions/:entityType/:entityId",
   adminAuth,

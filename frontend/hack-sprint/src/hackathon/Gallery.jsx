@@ -11,6 +11,11 @@ import { HackathonAPI } from "../api/hackathon.api.js";
 
 const isVideo = (url) => /\.(mp4|webm|ogg)$/i.test(url);
 
+// Gallery images rarely change mid-session, but ContentSection fully
+// unmounts this component on every tab switch — without a cache, tabbing
+// away from and back to Gallery re-fetches it from scratch every time.
+const galleryCache = new Map();
+
 const NavBtn = ({ onClick, children, className = "" }) => (
   <button
     onClick={onClick}
@@ -35,12 +40,20 @@ const Gallery = ({ hackathonId }) => {
 
   useEffect(() => {
     if (!hackathonId) return;
+
+    if (galleryCache.has(hackathonId)) {
+      setImages(galleryCache.get(hackathonId));
+      setLoading(false);
+      return;
+    }
+
     HackathonAPI.getGallery(hackathonId)
       .then((r) => {
         if (r.data.success) {
           const urls = (r.data.gallery || []).map((item) =>
             typeof item === "string" ? item : item.url
           );
+          galleryCache.set(hackathonId, urls);
           setImages(urls);
         }
       })

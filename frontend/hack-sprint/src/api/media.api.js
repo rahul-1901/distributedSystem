@@ -15,6 +15,10 @@ export const MediaAPI = {
       },
       onUploadProgress,
       adminRequest: asAdmin,
+      // Uploads (up to 100MB) can easily exceed the client's default 10s
+      // timeout — that would abort the request client-side while the
+      // server keeps uploading to S3 and "succeeds" with no one listening.
+      timeout: 5 * 60 * 1000,
     });
   },
 

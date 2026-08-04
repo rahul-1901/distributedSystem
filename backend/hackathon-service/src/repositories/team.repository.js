@@ -35,7 +35,7 @@ export class TeamRepository {
       .populate("leader", "name email")
       .populate("members", "name email")
       .populate("pendingMembers", "name email")
-      .populate("hackathon", "title participationType maxTeamSize")
+      .populate("hackathon", "title slug participationType maxTeamSize phases")
       .lean();
   }
 

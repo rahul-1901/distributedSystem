@@ -1,9 +1,21 @@
 import client from "./client";
 import { API } from "./endpoints";
 
+// Several components on the same page (Navbar, HeroSection, ...) each fetch
+// the logged-in user's profile independently on mount. Sharing one in-flight
+// request instead of firing a duplicate collapses those into a single call.
+let myProfileRequest = null;
+
 export const ProfileAPI = {
   getMyProfile() {
-    return client.get(`${API.PROFILE}/me`);
+    if (!myProfileRequest) {
+      myProfileRequest = client
+        .get(`${API.PROFILE}/me`)
+        .finally(() => {
+          myProfileRequest = null;
+        });
+    }
+    return myProfileRequest;
   },
   updateProfile(data) {
     return client.patch(`${API.PROFILE}/me`, data);

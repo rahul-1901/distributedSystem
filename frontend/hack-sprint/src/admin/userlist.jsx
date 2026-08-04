@@ -355,8 +355,8 @@ const HackathonUsersPage = () => {
   const openScoreboard = async () => {
     setShowScoreboard(true);
     try {
-      const res = await HackathonAPI.getResults(hackathon._id);
-      setResult(res.data || []);
+      const res = await HackathonAPI.getAdminResults(hackathon._id);
+      setResult(res.data.results || []);
     } catch {
       setResult([]);
     }

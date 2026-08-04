@@ -172,6 +172,19 @@ export class RegistrationService {
       throw new NotFoundError("Registration not found");
     }
 
+    // Populated in-place so the frontend can render leader/team-member state
+    // off this one response instead of a follow-up getTeamById round trip.
+    if (registration.team) {
+      await registration.populate({
+        path: "team",
+        select: "name secretCode maxTeamSize leader members",
+        populate: [
+          { path: "leader", select: "name email" },
+          { path: "members", select: "name email" },
+        ],
+      });
+    }
+
     const user = await this.userRepository.getById(userId);
 
     return {

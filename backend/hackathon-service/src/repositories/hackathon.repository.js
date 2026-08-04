@@ -50,18 +50,19 @@ export class HackathonRepository {
       .findById(id)
       .select(
         `
+        status
         showResult
         publicLeaderboardLimit
         title
-  
+
         phases
-  
+
         votingConfig
-  
+
         judgingConfig
       `
       )
-      .lean();
+      .lean({ virtuals: true });
   }
 
   async incrementParticipant(id, session = null) {

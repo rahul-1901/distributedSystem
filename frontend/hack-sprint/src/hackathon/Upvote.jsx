@@ -9,6 +9,8 @@ import {
   ChevronUp,
   Search,
   X,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -59,6 +61,9 @@ const SubmissionCard = ({
   isVotingClosed,
   onOpenSubmission,
   canVote,
+  phases,
+  fullData,
+  loadingFull,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const name =
@@ -66,7 +71,11 @@ const SubmissionCard = ({
   const isTeam = !!submission.team;
   const medal = MEDALS[rank];
 
-  const hasAssets = !!submission.description;
+  const phase = fullData
+    ? phases.find((p) => String(p._id) === String(fullData.phaseId))
+    : null;
+  const fields = phase?.submissionForm || [];
+  const submissionData = fullData?.submissionData || {};
 
   const handleVote = () => {
     if (isVotingClosed) {
@@ -155,46 +164,111 @@ const SubmissionCard = ({
         </button>
       </div>
 
-      {hasAssets && (
-        <>
-          <button
-            onClick={() => {
-              setExpanded((v) => !v);
-              onOpenSubmission(submission._id);
-            }}
-            className="w-full flex items-center justify-between px-5 py-3 cursor-pointer group hover:bg-[rgba(95,255,96,0.03)] transition-colors"
-          >
-            <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(180,220,180,0.3)] tracking-[0.04em]">
-              View submission
-            </span>
-            {expanded ? (
-              <ChevronUp
-                size={13}
-                className="text-[rgba(95,255,96,0.4)] group-hover:text-[#5fff60] transition-colors"
-              />
-            ) : (
-              <ChevronDown
-                size={13}
-                className="text-[rgba(95,255,96,0.4)] group-hover:text-[#5fff60] transition-colors"
-              />
-            )}
-          </button>
+      <button
+        onClick={() => {
+          setExpanded((v) => !v);
+          onOpenSubmission(submission._id);
+        }}
+        className="w-full flex items-center justify-between px-5 py-3 cursor-pointer group hover:bg-[rgba(95,255,96,0.03)] transition-colors"
+      >
+        <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.58rem] text-[rgba(180,220,180,0.3)] tracking-[0.04em]">
+          View submission
+        </span>
+        {expanded ? (
+          <ChevronUp
+            size={13}
+            className="text-[rgba(95,255,96,0.4)] group-hover:text-[#5fff60] transition-colors"
+          />
+        ) : (
+          <ChevronDown
+            size={13}
+            className="text-[rgba(95,255,96,0.4)] group-hover:text-[#5fff60] transition-colors"
+          />
+        )}
+      </button>
 
-          <div
-            className={`overflow-hidden transition-all duration-300 ${
-              expanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <div className="px-5 pb-5 pt-4 flex flex-col gap-4 border-t border-[rgba(95,255,96,0.07)]">
-              <AssetGroup icon={ClipboardList} label="Description" color="blue">
-                <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.6)] leading-relaxed whitespace-pre-wrap">
-                  {submission.description}
-                </p>
-              </AssetGroup>
+      <div
+        className={`overflow-hidden transition-all duration-300 ${
+          expanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="px-5 pb-5 pt-4 flex flex-col gap-4 border-t border-[rgba(95,255,96,0.07)]">
+          {submission.description && (
+            <AssetGroup icon={ClipboardList} label="Description" color="blue">
+              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.6)] leading-relaxed whitespace-pre-wrap">
+                {submission.description}
+              </p>
+            </AssetGroup>
+          )}
+
+          {loadingFull ? (
+            <div className="flex items-center gap-2 text-[rgba(180,220,180,0.35)]">
+              <Loader2 size={13} className="animate-spin" />
+              <span className="font-[family-name:'JetBrains_Mono',monospace] text-[0.6rem]">
+                Loading submission details…
+              </span>
             </div>
-          </div>
-        </>
-      )}
+          ) : (
+            fields.map((field) => {
+              const value = submissionData[field.fieldName];
+              if (value === undefined || value === null || value === "")
+                return null;
+
+              const isFileField =
+                field.fieldType !== "TEXT" &&
+                field.fieldType !== "TEXTAREA" &&
+                field.fieldType !== "URL";
+              const files = isFileField
+                ? Array.isArray(value)
+                  ? value
+                  : [value]
+                : [];
+
+              return (
+                <AssetGroup
+                  key={field.fieldName}
+                  icon={FileText}
+                  label={field.label}
+                  color="violet"
+                >
+                  {isFileField ? (
+                    <div className="flex flex-col gap-1.5">
+                      {files.map((f, i) => (
+                        <a
+                          key={i}
+                          href={f.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 text-[0.68rem] text-[#5fff60] hover:underline"
+                        >
+                          <ExternalLink size={11} className="flex-shrink-0" />
+                          <span className="truncate">
+                            {f.originalName || "View file"}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : field.fieldType === "URL" ? (
+                    <a
+                      href={value}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-[0.68rem] text-[#5fff60] hover:underline break-all"
+                    >
+                      <ExternalLink size={11} className="flex-shrink-0" />
+                      {value}
+                    </a>
+                  ) : (
+                    <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.68rem] text-[rgba(180,220,180,0.6)] leading-relaxed whitespace-pre-wrap break-words">
+                      {value}
+                    </p>
+                  )}
+                </AssetGroup>
+              );
+            })
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -266,7 +340,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
-const Upvote = ({ hackathonId }) => {
+const Upvote = ({ hackathonId, phases = [] }) => {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -276,6 +350,8 @@ const Upvote = ({ hackathonId }) => {
   const [openedSubmissions, setOpenedSubmissions] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [isVotingClosed, setIsVotingClosed] = useState(false);
+  const [fullSubmissions, setFullSubmissions] = useState({});
+  const [loadingFullIds, setLoadingFullIds] = useState(new Set());
 
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("token"));
@@ -297,6 +373,30 @@ const Upvote = ({ hackathonId }) => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenSubmission = async (submissionId) => {
+    setOpenedSubmissions((prev) => new Set(prev).add(submissionId));
+    if (fullSubmissions[submissionId] || loadingFullIds.has(submissionId))
+      return;
+    setLoadingFullIds((prev) => new Set(prev).add(submissionId));
+    try {
+      const res = await VotingAPI.getVotingSubmission(submissionId);
+      setFullSubmissions((prev) => ({
+        ...prev,
+        [submissionId]: res.data.submission,
+      }));
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to load submission details"
+      );
+    } finally {
+      setLoadingFullIds((prev) => {
+        const n = new Set(prev);
+        n.delete(submissionId);
+        return n;
+      });
     }
   };
 
@@ -483,9 +583,10 @@ const Upvote = ({ hackathonId }) => {
               submission={sub}
               isVotingClosed={isVotingClosed}
               canVote={openedSubmissions.has(sub._id)}
-              onOpenSubmission={(id) =>
-                setOpenedSubmissions((prev) => new Set(prev).add(id))
-              }
+              onOpenSubmission={handleOpenSubmission}
+              phases={phases}
+              fullData={fullSubmissions[sub._id]}
+              loadingFull={loadingFullIds.has(sub._id)}
               isLiked={likedSubmissions.has(sub._id)}
               onLike={handleLike}
               rank={(currentPage - 1) * PAGE_SIZE + i + 1}

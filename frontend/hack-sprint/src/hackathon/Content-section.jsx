@@ -733,7 +733,7 @@ export const ContentSection = ({ activeSection, hackathon }) => {
       }
 
       case "upvote":
-        return <Upvote hackathonId={hackathon._id} />;
+        return <Upvote hackathonId={hackathon._id} phases={hackathon.phases} />;
 
       case "gallery":
         return (

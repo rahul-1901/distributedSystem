@@ -145,11 +145,11 @@ const ScorePanel = ({
   averageScore,
   reviewCount,
   reviews,
-  viewerRole,
+  canScore,
   myAdminId,
   onReviewed,
 }) => {
-  const isJudge = viewerRole === "judge";
+  const isJudge = canScore;
   const myReview = isJudge ? reviews.find((r) => r.judge?._id === myAdminId) : null;
   const otherReviews = isJudge ? reviews.filter((r) => r.judge?._id !== myAdminId) : reviews;
 
@@ -275,11 +275,11 @@ const AdminSubmissionDetail = () => {
   }, [hackathonId, entityType, entityId]);
 
   useEffect(() => {
-    if (data?.viewerRole !== "judge") return;
+    if (!data?.canScore) return;
     AdminAPI.getProfile()
       .then((res) => setMyAdminId(res.data.admin?._id))
       .catch(() => {});
-  }, [data?.viewerRole]);
+  }, [data?.canScore]);
 
   if (loading) {
     return (
@@ -424,7 +424,7 @@ const AdminSubmissionDetail = () => {
                     averageScore={phase.submission.averageScore}
                     reviewCount={phase.submission.reviewCount}
                     reviews={phase.submission.reviews || []}
-                    viewerRole={data.viewerRole}
+                    canScore={data.canScore}
                     myAdminId={myAdminId}
                     onReviewed={load}
                   />

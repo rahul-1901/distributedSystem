@@ -283,6 +283,22 @@ export const getEntitySubmissions = async (req, res, next) => {
   }
 };
 
+export const getAdminResults = async (req, res, next) => {
+  try {
+    const results = await hackathonService.getAdminResults({
+      hackathonId: req.params.id,
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getMyHackathons = async (req, res, next) => {
   try {
     const hackathons = await hackathonService.getMyHackathons(req.admin._id);

@@ -3,6 +3,7 @@ import { NotFoundError } from "../../errors/NotFoundError.js";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { REDIS_KEYS } from "../../config/redisKeys.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
+import { calculateFinalScore } from "../../utils/scoreCalculator.js";
 
 export class HackathonService {
   constructor(
@@ -491,9 +492,14 @@ export class HackathonService {
 
     const admin = await this.adminRepository.getById(adminId);
 
-    const isAssignedJudge = !isOwner
-      ? !!(await this.judgeAssignmentRepository.exists(hackathonId, adminId))
-      : false;
+    // Checked unconditionally (not just for non-owners) so an owner who has
+    // also assigned themselves as a judge can still score submissions —
+    // otherwise being "owner" would silently override an explicit judge
+    // assignment on their own hackathon.
+    const isAssignedJudge = !!(await this.judgeAssignmentRepository.exists(
+      hackathonId,
+      adminId
+    ));
 
     if (!isOwner && !admin?.controller && !isAssignedJudge) {
       throw new ForbiddenError("Unauthorized");
@@ -504,6 +510,8 @@ export class HackathonService {
       : admin?.controller
       ? "controller"
       : "judge";
+
+    const canScore = isAssignedJudge;
 
     const [registrations, teams, submissions] = await Promise.all([
       this.registrationRepository.getParticipants(hackathonId),
@@ -541,6 +549,7 @@ export class HackathonService {
       totalTeams: teams.length,
       totalSubmissions: submissions.length,
       viewerRole,
+      canScore,
     };
   }
 
@@ -564,9 +573,15 @@ export class HackathonService {
 
     const isOwner = hackathon.createdBy._id.toString() === adminId.toString();
     const admin = await this.adminRepository.getById(adminId);
-    const isAssignedJudge = !isOwner
-      ? !!(await this.judgeAssignmentRepository.exists(hackathonId, adminId))
-      : false;
+
+    // Checked unconditionally (not just for non-owners) so an owner who has
+    // also assigned themselves as a judge can still score submissions —
+    // otherwise being "owner" would silently override an explicit judge
+    // assignment on their own hackathon.
+    const isAssignedJudge = !!(await this.judgeAssignmentRepository.exists(
+      hackathonId,
+      adminId
+    ));
 
     if (!isOwner && !admin?.controller && !isAssignedJudge) {
       throw new ForbiddenError("Unauthorized");
@@ -577,6 +592,8 @@ export class HackathonService {
       : admin?.controller
       ? "controller"
       : "judge";
+
+    const canScore = isAssignedJudge;
 
     let entity;
 
@@ -760,8 +777,73 @@ export class HackathonService {
       },
       entity,
       viewerRole,
+      canScore,
       phases: [...phases, ...orphaned],
     };
+  }
+
+  // Admin-facing scoreboard — mirrors submissionService.getHackathonResults'
+  // finalScore ranking (judge average + weighted votes) so the numbers match
+  // what gets published, but isn't gated behind lifecycleStatus/showResult
+  // (an organizer/judge needs to see standings to decide when to publish,
+  // not just after publishing) and returns everyone instead of slicing to
+  // publicLeaderboardLimit.
+  async getAdminResults({ hackathonId, adminId }) {
+    if (!mongoose.Types.ObjectId.isValid(hackathonId)) {
+      throw new BadRequestError("Invalid hackathon id");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const isOwner = hackathon.createdBy._id.toString() === adminId.toString();
+    const admin = await this.adminRepository.getById(adminId);
+    const isAssignedJudge = !!(await this.judgeAssignmentRepository.exists(
+      hackathonId,
+      adminId
+    ));
+
+    if (!isOwner && !admin?.controller && !isAssignedJudge) {
+      throw new ForbiddenError("Unauthorized");
+    }
+
+    const submissionPhases = (hackathon.phases || []).filter(
+      (phase) => phase.phaseType === "SUBMISSION"
+    );
+    const finalPhase = submissionPhases[submissionPhases.length - 1];
+
+    if (!finalPhase) {
+      return [];
+    }
+
+    const submissions = await this.submissionRepository.getLeaderboardSubmissions(
+      hackathonId,
+      finalPhase._id
+    );
+
+    const maxVoteCount = submissions.length
+      ? Math.max(...submissions.map((submission) => submission.voteCount || 0))
+      : 0;
+    const voteWeight = hackathon.votingConfig?.voteWeight || 0;
+    const maxJudgeScore = hackathon.judgingConfig?.maxScore || 100;
+
+    const leaderboard = submissions.map((submission) => ({
+      ...submission,
+      finalScore: calculateFinalScore({
+        averageScore: submission.averageScore,
+        voteCount: submission.voteCount,
+        maxVoteCount,
+        voteWeight,
+        maxJudgeScore,
+      }),
+    }));
+
+    leaderboard.sort((a, b) => b.finalScore - a.finalScore);
+
+    return leaderboard;
   }
 
   async deleteHackathon({ hackathonId, adminId }) {

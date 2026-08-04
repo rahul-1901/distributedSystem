@@ -53,6 +53,8 @@ const Navbar = ({ variant = "student" }) => {
 
   const isActive = (path) => location.pathname === path;
 
+  const avatarUrl = isAdminVariant ? adminUser?.avatar : userInfo?.image?.url;
+
   useEffect(() => {
     if (isAdminVariant) return;
     const token = localStorage.getItem("token");
@@ -168,13 +170,17 @@ const Navbar = ({ variant = "student" }) => {
               <div className="relative ml-1" ref={profileMenuRef}>
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="w-8 h-8 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center hover:border-[rgba(95,255,96,0.6)] hover:shadow-[0_0_12px_rgba(95,255,96,0.2)] transition-all duration-200 cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center overflow-hidden hover:border-[rgba(95,255,96,0.6)] hover:shadow-[0_0_12px_rgba(95,255,96,0.2)] transition-all duration-200 cursor-pointer"
                 >
-                  {isAdminVariant
-                    ? <Shield size={14} className="text-[#5fff60]" />
-                    : isLoggedIn && userInfo?.name
-                    ? <span className="nb-syne font-extrabold text-[#5fff60] text-[0.7rem]">{userInfo.name[0].toUpperCase()}</span>
-                    : <User size={14} className="text-[#5fff60]" />}
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : isAdminVariant ? (
+                    <Shield size={14} className="text-[#5fff60]" />
+                  ) : isLoggedIn && userInfo?.name ? (
+                    <span className="nb-syne font-extrabold text-[#5fff60] text-[0.7rem]">{userInfo.name[0].toUpperCase()}</span>
+                  ) : (
+                    <User size={14} className="text-[#5fff60]" />
+                  )}
                 </button>
 
                 {showProfileMenu && (
@@ -185,8 +191,12 @@ const Navbar = ({ variant = "student" }) => {
                     {isAdminVariant ? (
                       <>
                         <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(95,255,96,0.08)] bg-[rgba(95,255,96,0.04)]">
-                          <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
-                            <Shield size={16} className="text-[#5fff60]" />
+                          <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Shield size={16} className="text-[#5fff60]" />
+                            )}
                           </div>
                           <div className="min-w-0">
                             <p className="nb-root text-[0.75rem] font-semibold text-white truncate">{adminUser?.adminName || "Admin"}</p>
@@ -216,10 +226,14 @@ const Navbar = ({ variant = "student" }) => {
                     ) : isLoggedIn ? (
                       <>
                         <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(95,255,96,0.08)] bg-[rgba(95,255,96,0.04)]">
-                          <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
-                            <span className="nb-syne font-extrabold text-[#5fff60] text-[0.85rem]">
-                              {userInfo?.name ? userInfo.name[0].toUpperCase() : "U"}
-                            </span>
+                          <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="nb-syne font-extrabold text-[#5fff60] text-[0.85rem]">
+                                {userInfo?.name ? userInfo.name[0].toUpperCase() : "U"}
+                              </span>
+                            )}
                           </div>
                           <div className="min-w-0">
                             <p className="nb-root text-[0.75rem] font-semibold text-white truncate">{userInfo?.name || "Guest"}</p>
@@ -326,8 +340,12 @@ const Navbar = ({ variant = "student" }) => {
               {isAdminVariant ? (
                 <>
                   <div className="nb-root flex items-center gap-3 px-4 py-3 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
-                    <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
-                      <Shield size={16} className="text-[#5fff60]" />
+                    <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Shield size={16} className="text-[#5fff60]" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="nb-root text-[0.72rem] font-semibold text-white truncate">{adminUser?.adminName || "Admin"}</p>
@@ -353,10 +371,14 @@ const Navbar = ({ variant = "student" }) => {
               ) : isLoggedIn ? (
                 <>
                   <div className="nb-root flex items-center gap-3 px-4 py-3 bg-[rgba(95,255,96,0.04)] border border-[rgba(95,255,96,0.1)] rounded-[3px]">
-                    <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center flex-shrink-0">
-                      <span className="nb-syne font-extrabold text-[#5fff60] text-[0.85rem]">
-                        {userInfo?.name ? userInfo.name[0].toUpperCase() : "U"}
-                      </span>
+                    <div className="w-9 h-9 rounded-full bg-[rgba(95,255,96,0.12)] border-2 border-[rgba(95,255,96,0.3)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="nb-syne font-extrabold text-[#5fff60] text-[0.85rem]">
+                          {userInfo?.name ? userInfo.name[0].toUpperCase() : "U"}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="nb-root text-[0.72rem] font-semibold text-white truncate">{userInfo?.name || "Guest"}</p>

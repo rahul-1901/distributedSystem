@@ -3,6 +3,7 @@ import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import { calculateFinalScore } from "../../utils/scoreCalculator.js";
+import { getLifecycleStatus } from "../../utils/lifecycleStatus.js";
 import { validateSubmissionData } from "../../utils/validateSubmissionData.js";
 import { getNowUTC } from "../../utils/dateUtils.js";
 
@@ -36,12 +37,12 @@ export class SubmissionService {
       hackathonId
     );
 
-    if (hackathon.lifecycleStatus !== "COMPLETED") {
-      throw new ForbiddenError("Results are not available yet");
-    }
-
     if (!hackathon) {
       throw new NotFoundError("Hackathon not found");
+    }
+
+    if (getLifecycleStatus(hackathon) !== "COMPLETED") {
+      throw new ForbiddenError("Results are not available yet");
     }
 
     if (!hackathon.showResult) {
@@ -155,6 +156,7 @@ export class SubmissionService {
 
     let participant = null;
     let team = null;
+    let teamDoc = null;
 
     if (hackathon.participationType === "TEAM") {
       if (!registration.team) {
@@ -163,7 +165,7 @@ export class SubmissionService {
         );
       }
 
-      const teamDoc = await this.teamRepository.findById(registration.team);
+      teamDoc = await this.teamRepository.findById(registration.team);
 
       if (!teamDoc) {
         throw new NotFoundError(

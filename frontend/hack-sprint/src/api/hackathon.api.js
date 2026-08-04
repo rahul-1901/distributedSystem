@@ -148,4 +148,7 @@ export const HackathonAPI = {
       `${API.HACKATHON}/admin/hackathons/${hackathonId}/submissions/${entityType}/${entityId}`
     );
   },
+  getAdminResults(id) {
+    return client.get(`${API.HACKATHON}/admin/hackathons/${id}/results`);
+  },
 };

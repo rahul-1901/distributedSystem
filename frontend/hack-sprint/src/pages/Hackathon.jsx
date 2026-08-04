@@ -6,6 +6,26 @@ import { SocialShare } from "../hackathon/Social-share";
 import { useParams } from "react-router-dom";
 import { HackathonAPI } from "../api/hackathon.api.js";
 
+// SocialShare was previously kept mounted at all viewport widths and only
+// CSS-hidden below `lg` (`hidden lg:block`), so it still fired its wishlist
+// check on mobile for a panel nobody could see. Mounting it only once the
+// viewport is actually wide enough to show it skips that wasted request.
+const useIsDesktop = () => {
+  const query = "(min-width: 1024px)";
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = (e) => setIsDesktop(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return isDesktop;
+};
+
 const GridBackground = () => (
   <div className="absolute inset-0 pointer-events-none bg-[rgba(8,10,8,0.92)] backdrop-blur-xl"></div>
 );
@@ -32,6 +52,7 @@ export default function HackathonDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState("overview");
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     const loadData = async () => {
@@ -101,9 +122,11 @@ export default function HackathonDetails() {
 
           <ContentSection activeSection={activeSection} hackathon={hackathon} />
 
-          <div className="hidden lg:block">
-            <SocialShare hackathonId={hackathon._id} />
-          </div>
+          {isDesktop && (
+            <div className="hidden lg:block">
+              <SocialShare hackathonId={hackathon._id} />
+            </div>
+          )}
         </div>
       </div>
     </div>

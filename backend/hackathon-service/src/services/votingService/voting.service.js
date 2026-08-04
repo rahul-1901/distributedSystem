@@ -163,15 +163,18 @@ export class VoteService {
       submission.hackathon._id || submission.hackathon
     );
 
-    if (hackathon.lifecycleStatus !== "COMPLETED") {
-      throw new ForbiddenError("Voting is not available yet");
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
     }
 
     if (!hackathon.votingConfig?.enabled) {
       throw new ForbiddenError("Voting is disabled");
     }
 
-    const finalPhase = hackathon.phases[hackathon.phases.length - 1];
+    const submissionPhases = hackathon.phases.filter(
+      (phase) => phase.phaseType === "SUBMISSION"
+    );
+    const finalPhase = submissionPhases[submissionPhases.length - 1];
 
     if (String(submission.phaseId) !== String(finalPhase?._id)) {
       throw new ForbiddenError("Submission not available for voting");

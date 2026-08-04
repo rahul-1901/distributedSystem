@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { ProfileAPI } from "../api/profile.api.js";
 import { TeamAPI } from "../api/team.api.js";
+import { SubmissionAPI } from "../api/submission.api.js";
 import {
   Users,
   Crown,
@@ -18,6 +20,11 @@ import {
   LogOut,
   Trash2,
   UserMinus,
+  FileText,
+  Lock,
+  ExternalLink,
+  Loader2,
+  Eye,
 } from "lucide-react";
 
 const mono = "font-[family-name:'JetBrains_Mono',monospace]";
@@ -181,6 +188,9 @@ const TeamDetails = () => {
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [removingId, setRemovingId] = useState(null);
+  const [submissionPhases, setSubmissionPhases] = useState([]);
+  const [viewingSubmission, setViewingSubmission] = useState(null);
+  const [loadingSubmission, setLoadingSubmission] = useState(false);
 
   const getCode = useCallback(
     () => teamId || localStorage.getItem("teamDetails_code"),
@@ -222,6 +232,14 @@ const TeamDetails = () => {
     if (currentUser && teamData)
       setIsLeader(currentUser._id === teamData.leader._id);
   }, [currentUser, teamData]);
+
+  useEffect(() => {
+    const hackathonId = teamData?.hackathon?._id;
+    if (!hackathonId) return;
+    SubmissionAPI.getMySubmission(hackathonId)
+      .then((res) => setSubmissionPhases(res.data.phases || []))
+      .catch(() => setSubmissionPhases([]));
+  }, [teamData?.hackathon?._id]);
 
   const handleCopy = (text, type) => {
     if (!text) return;
@@ -312,6 +330,21 @@ const TeamDetails = () => {
     }
   };
 
+  const handleViewSubmission = async (submissionId) => {
+    if (!submissionId) return;
+    setLoadingSubmission(true);
+    try {
+      const res = await SubmissionAPI.getSubmission(submissionId);
+      setViewingSubmission(res.data.submission);
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to load submission details"
+      );
+    } finally {
+      setLoadingSubmission(false);
+    }
+  };
+
   const formatDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-US", {
@@ -336,6 +369,15 @@ const TeamDetails = () => {
 
   const allMembers = [teamData.leader, ...teamData.members];
   const spotsLeft = teamData.maxTeamSize - allMembers.length;
+
+  const registrationPhase = (teamData.hackathon?.phases || []).find(
+    (p) => p.phaseType === "REGISTRATION"
+  );
+  const isRegistrationOpen =
+    !!registrationPhase &&
+    new Date() >= new Date(registrationPhase.startDate) &&
+    new Date() <= new Date(registrationPhase.endDate);
+  const lockedReason = "Registration is closed — team changes are locked";
 
   return (
     <>
@@ -410,21 +452,32 @@ const TeamDetails = () => {
             {isLeader ? (
               <button
                 onClick={handleDeleteTeam}
-                disabled={deleting}
+                disabled={deleting || !isRegistrationOpen}
+                title={!isRegistrationOpen ? lockedReason : undefined}
                 className={`${mono} inline-flex items-center gap-2 text-[0.62rem] tracking-[0.08em] uppercase px-4 py-2.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(255,60,60,0.25)] bg-[rgba(255,60,60,0.06)] text-[rgba(255,120,120,0.75)] hover:bg-[rgba(255,60,60,0.12)] hover:text-[#ff9090] disabled:opacity-40 disabled:cursor-not-allowed`}
               >
-                <Trash2 size={13} /> {deleting ? "Deleting…" : "Delete Team"}
+                {isRegistrationOpen ? <Trash2 size={13} /> : <Lock size={13} />}{" "}
+                {deleting ? "Deleting…" : "Delete Team"}
               </button>
             ) : (
               <button
                 onClick={handleLeaveTeam}
-                disabled={leaving}
+                disabled={leaving || !isRegistrationOpen}
+                title={!isRegistrationOpen ? lockedReason : undefined}
                 className={`${mono} inline-flex items-center gap-2 text-[0.62rem] tracking-[0.08em] uppercase px-4 py-2.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(255,60,60,0.25)] bg-[rgba(255,60,60,0.06)] text-[rgba(255,120,120,0.75)] hover:bg-[rgba(255,60,60,0.12)] hover:text-[#ff9090] disabled:opacity-40 disabled:cursor-not-allowed`}
               >
-                <LogOut size={13} /> {leaving ? "Leaving…" : "Leave Team"}
+                {isRegistrationOpen ? <LogOut size={13} /> : <Lock size={13} />}{" "}
+                {leaving ? "Leaving…" : "Leave Team"}
               </button>
             )}
           </div>
+          {!isRegistrationOpen && (
+            <p
+              className={`${mono} text-[0.58rem] text-[rgba(255,184,77,0.6)] -mt-6 mb-6 flex items-center gap-1.5`}
+            >
+              <Lock size={10} /> {lockedReason}
+            </p>
+          )}
 
           {isLeader && (
             <>
@@ -515,7 +568,7 @@ const TeamDetails = () => {
                   key={m._id}
                   member={m}
                   isLeader={false}
-                  canRemove={isLeader}
+                  canRemove={isLeader && isRegistrationOpen}
                   onRemove={handleRemoveMember}
                   removing={removingId === m._id}
                 />
@@ -531,8 +584,180 @@ const TeamDetails = () => {
               )}
             </div>
           </div>
+
+          <div className="mt-10">
+            <div className="flex items-center gap-2 mb-5">
+              <FileText size={15} className="text-[rgba(95,255,96,0.6)]" />
+              <h2
+                className={`${syne} font-extrabold text-white text-lg tracking-tight`}
+              >
+                Team Submission
+              </h2>
+            </div>
+            {submissionPhases.length === 0 ? (
+              <div className="relative bg-[rgba(10,12,10,0.6)] border border-[rgba(95,255,96,0.08)] rounded-[4px] p-6 text-center">
+                <p
+                  className={`${mono} text-[0.65rem] text-[rgba(180,220,180,0.35)] tracking-[0.04em]`}
+                >
+                  No submission phases yet for this hackathon.
+                </p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {submissionPhases.map((phase) => (
+                  <div
+                    key={phase.phaseId}
+                    className="relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h3
+                        className={`${syne} font-extrabold text-white text-sm tracking-tight truncate`}
+                      >
+                        {phase.phaseName}
+                      </h3>
+                      <span
+                        className={`${mono} text-[0.52rem] tracking-[0.1em] uppercase px-2 py-[3px] rounded-[2px] border flex-shrink-0 ${
+                          phase.submitted
+                            ? "bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60]"
+                            : "bg-[rgba(255,184,77,0.08)] border-[rgba(255,184,77,0.25)] text-[#ffb84d]"
+                        }`}
+                      >
+                        {phase.submitted ? "Submitted" : "Not Submitted"}
+                      </span>
+                    </div>
+                    {phase.submitted && phase.submittedAt && (
+                      <p className={`${mono} text-[0.6rem] text-[rgba(180,220,180,0.5)] mb-3`}>
+                        Submitted {formatDate(phase.submittedAt)}
+                      </p>
+                    )}
+                    {phase.submitted ? (
+                      <button
+                        onClick={() => handleViewSubmission(phase.submissionId)}
+                        disabled={loadingSubmission}
+                        className={`${mono} inline-flex items-center gap-1.5 text-[0.58rem] tracking-[0.08em] uppercase px-3 py-1.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(95,255,96,0.2)] bg-[rgba(95,255,96,0.06)] text-[rgba(95,255,96,0.65)] hover:bg-[rgba(95,255,96,0.12)] hover:text-[#5fff60] disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {loadingSubmission ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <Eye size={11} />
+                        )}
+                        View Submission
+                      </button>
+                    ) : (
+                      <p className={`${mono} text-[0.6rem] text-[rgba(180,220,180,0.35)]`}>
+                        {phase.canSubmit
+                          ? "Submission window is open"
+                          : "Submission window is not open"}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {viewingSubmission &&
+        createPortal(
+          <div
+            className={`${mono} fixed inset-0 bg-black/85 backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4`}
+            onClick={() => setViewingSubmission(null)}
+          >
+            <div
+              className="relative w-full max-w-2xl bg-[rgba(8,10,8,0.98)] border border-[rgba(95,255,96,0.18)] rounded-[4px] p-4 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto overflow-x-hidden max-h-[90vh] [scrollbar-width:thin] [scrollbar-color:rgba(95,255,96,0.2)_transparent]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <h2 className={`${syne} font-extrabold text-white text-xl tracking-tight`}>
+                  {viewingSubmission.title}
+                </h2>
+                <button
+                  onClick={() => setViewingSubmission(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-[3px] border border-[rgba(95,255,96,0.15)] text-[rgba(95,255,96,0.45)] hover:text-[#5fff60] hover:border-[rgba(95,255,96,0.35)] transition-all cursor-pointer flex-shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-5">
+                <div>
+                  <div
+                    className={`${mono} text-[0.55rem] tracking-[0.14em] uppercase text-[rgba(95,255,96,0.5)] mb-1.5`}
+                  >
+                    Description
+                  </div>
+                  <p className="text-[0.72rem] text-[#e8ffe8] whitespace-pre-wrap">
+                    {viewingSubmission.description}
+                  </p>
+                </div>
+
+                {(() => {
+                  const phase = (teamData.hackathon?.phases || []).find(
+                    (p) => String(p._id) === String(viewingSubmission.phaseId)
+                  );
+                  const fields = phase?.submissionForm || [];
+                  const submissionData = viewingSubmission.submissionData || {};
+
+                  return fields.map((field) => {
+                    const value = submissionData[field.fieldName];
+                    if (value === undefined || value === null || value === "")
+                      return null;
+
+                    const isMulti = Array.isArray(value);
+                    const files = isMulti ? value : [value];
+                    const isFileField = field.fieldType !== "TEXT" &&
+                      field.fieldType !== "TEXTAREA" &&
+                      field.fieldType !== "URL";
+
+                    return (
+                      <div key={field.fieldName}>
+                        <div
+                          className={`${mono} text-[0.55rem] tracking-[0.14em] uppercase text-[rgba(95,255,96,0.5)] mb-1.5`}
+                        >
+                          {field.label}
+                        </div>
+                        {isFileField ? (
+                          <div className="flex flex-col gap-1.5">
+                            {files.map((f, i) => (
+                              <a
+                                key={i}
+                                href={f.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1.5 text-[0.68rem] text-[#5fff60] hover:underline"
+                              >
+                                <ExternalLink size={11} className="flex-shrink-0" />
+                                <span className="truncate">
+                                  {f.originalName || "View file"}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        ) : field.fieldType === "URL" ? (
+                          <a
+                            href={value}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 text-[0.68rem] text-[#5fff60] hover:underline break-all"
+                          >
+                            <ExternalLink size={11} className="flex-shrink-0" />
+                            {value}
+                          </a>
+                        ) : (
+                          <p className="text-[0.72rem] text-[#e8ffe8] whitespace-pre-wrap break-words">
+                            {value}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 };
