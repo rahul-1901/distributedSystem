@@ -1,93 +1,153 @@
 import React from "react";
+import {
+  FileText,
+  UserCheck,
+  UploadCloud,
+  BarChart3,
+  Trophy,
+  ShieldAlert,
+  Gavel,
+  Users,
+  Lightbulb,
+} from "lucide-react";
+import PolicyLayout, { PolicyList } from "../components/PolicyLayout.jsx";
 
 export default function ParticipantPoliciesPage() {
+  const sections = [
+    {
+      icon: FileText,
+      heading: "User Agreement",
+      body: (
+        <p>
+          Registering on HackSprint means agreeing to follow platform rules
+          and any event-specific guidelines on top of this policy. You're
+          responsible for your account's security and for keeping your
+          contact details accurate — that's what we use for winner
+          notifications and prize fulfillment.
+        </p>
+      ),
+    },
+    {
+      icon: UserCheck,
+      heading: "Eligibility & Registration",
+      body: (
+        <PolicyList
+          items={[
+            "Follow the event's stated eligibility (age, region, student status). If none is specified, the event is open globally.",
+            "Register before the deadline. Team registrations must list every member and confirm each person's consent.",
+            "One account per person — creating multiple accounts to manipulate results leads to disqualification.",
+          ]}
+        />
+      ),
+    },
+    {
+      icon: UploadCloud,
+      heading: "Submissions",
+      body: (
+        <PolicyList
+          items={[
+            "Follow the event's submission instructions exactly (repo link, live demo, documents) — check the required fields before submitting.",
+            "Unless an event explicitly allows pre-existing work, build within the contest window. If you do reuse prior code, declare it in your submission.",
+            "Public and open-source libraries are fine unless an event disallows them — list your dependencies and their licenses.",
+          ]}
+        />
+      ),
+    },
+    {
+      icon: BarChart3,
+      heading: "Scoring & Tiebreakers",
+      body: (
+        <>
+          <p>
+            Each event publishes its own scoring rubric — typically a mix of
+            correctness, design, creativity, and judge scoring. Where an
+            event doesn't specify its own tiebreak rule, we fall back to:
+          </p>
+          <PolicyList
+            ordered
+            items={[
+              "Lower total time / penalty, for timed formats.",
+              "Earliest submission that reached the final score.",
+              "A pre-declared secondary judge metric, or a panel decision.",
+            ]}
+          />
+        </>
+      ),
+    },
+    {
+      icon: Trophy,
+      heading: "Prizes & Rewards",
+      body: (
+        <PolicyList
+          items={[
+            "Organizers declare prize types, quantities, and payout timelines directly on the event page.",
+            "Winners must respond within the stated claim window and provide any verification or payment details requested — missing that window can forfeit the prize.",
+            "Winners are responsible for any local tax obligations on prizes unless the event states otherwise.",
+          ]}
+        />
+      ),
+    },
+    {
+      icon: ShieldAlert,
+      heading: "Fair Play & Enforcement",
+      body: (
+        <p>
+          Plagiarism, sharing answers, impersonation, automated cheating, and
+          attacks on hackathon or platform infrastructure are all prohibited.
+          Reports are reviewed case by case; confirmed violations can mean
+          score removal, disqualification, or account suspension, and severe
+          or repeated violations may be permanently banned.
+        </p>
+      ),
+    },
+    {
+      icon: Gavel,
+      heading: "Appeals & Disputes",
+      body: (
+        <PolicyList
+          items={[
+            "File an appeal within 7 days of results being published, with supporting evidence.",
+            "Organizers and judges are expected to respond within 7–14 days.",
+            "If it's still unresolved, it escalates to HackSprint moderation for a neutral review — our decision is final on platform-policy questions, while organizers remain responsible for prize fulfillment.",
+          ]}
+        />
+      ),
+    },
+    {
+      icon: Users,
+      heading: "Code of Conduct",
+      body: (
+        <p>
+          Treat everyone with respect, on the platform and in person.
+          Harassment, hate speech, doxxing, and threats are never tolerated —
+          keep it professional in discussions, chats, and presentations.
+          Violations can lead to warnings, removal from an event, or a ban.
+        </p>
+      ),
+    },
+    {
+      icon: Lightbulb,
+      heading: "Quick Tips for Participants",
+      body: (
+        <PolicyList
+          items={[
+            "Read an event's specific rules before you start building — this policy covers the platform-wide baseline, not every event's fine print.",
+            "Keep your repo clean with a README, license, and a working deployment link.",
+            "Check your notifications regularly — deadline reminders and judge feedback both come through the platform.",
+          ]}
+        />
+      ),
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white py-12 px-6">
-      <main className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-semibold mb-2">Participant Policies</h1>
-          <p className="text-gray-300">Clear rules and fair-play guarantees for participants: eligibility, submission rules, scoring, prizes, appeals and community standards.</p>
-        </header>
-
-        <article className="space-y-8">
-          <section>
-            <h2 className="text-2xl font-medium mb-2">A. User agreement</h2>
-            <p className="text-gray-200">By registering on HackSprint you agree to follow platform rules, event-specific guidelines, and this Participant Policies summary. You are responsible for the security of your account and for providing accurate contact details used for winner notifications and prize fulfillment.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">B. Eligibility &amp; registration</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Follow event-level eligibility (age, region, student status). If unspecified, the event is open globally.</li>
-              <li>Register before the event deadline. Team registration must list all members and confirm each person’s consent.</li>
-              <li>One account per person. Creating multiple accounts to manipulate results will lead to disqualification.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">C. Submissions — permitted &amp; required</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Submissions must follow event instructions (repo link, ZIP, demo video). Always verify required files before submission.</li>
-              <li>Unless an event explicitly permits pre-work, solutions must be created within the contest period. If pre-existing code is used, declare it in your submission.</li>
-              <li>Use of public/open-source libraries is allowed unless the event disallows them — always list dependencies and licenses.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">D. Scoring &amp; tiebreakers</h2>
-            <p className="text-gray-200">Each event publishes its scoring rubric. Common components: correctness/automated tests, performance, design, creativity, and judge scores.</p>
-            <p className="text-gray-200 mt-2">Standard tiebreakers (if event does not specify otherwise):</p>
-            <ol className="list-decimal list-inside text-gray-200 space-y-1 mt-2">
-              <li>Shorter total time / lower penalty (for timed coding contests).</li>
-              <li>Earliest submission that achieved the final score.</li>
-              <li>Secondary judge metric (pre-declared) or judge panel decision.</li>
-            </ol>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">E. Prizes &amp; rewards</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Organizers declare prize types (cash, vouchers, interviews, swag), quantities and payout timelines on the event page.</li>
-              <li>Winners must respond within the stated window to claim prizes and provide verification/payment details. Failure may forfeit the prize.</li>
-              <li>Taxes and local withholding: winners are responsible for local tax obligations unless otherwise stated.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">F. Fair Play &amp; enforcement</h2>
-            <p className="text-gray-200">Prohibited: plagiarism, sharing answers, impersonation, automated cheating, DDoS or infrastructure attacks.</p>
-            <p className="text-gray-200 mt-2">Reports are reviewed; confirmed violations can lead to score removal, disqualification, and account suspension. Severe or repeated violations may be permanently banned and reported to sponsors or institutions as needed.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">G. Appeals &amp; dispute process</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>File a ticket within 7 days of result publication with evidence.</li>
-              <li>Organizer/judges reply within 7–14 days.</li>
-              <li>If unresolved, escalate to HackSprint moderation for neutral review. HackSprint’s decision is final for platform policy issues; organizers are responsible for prize fulfillment.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">H. Code of Conduct (community expectations)</h2>
-            <p className="text-gray-200">Treat others with respect. No harassment, hate speech, doxxing or threats. Maintain professional behavior in forums, chats and during presentations. Violations can result in warnings, removal or bans.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">I. Quick tips (participants)</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Read the event rules carefully before building.</li>
-              <li>Keep your repo tidy and include a README, license &amp; deployment link.</li>
-              <li>Keep communication channels professional and check notifications frequently.</li>
-            </ul>
-          </section>
-
-        </article>
-
-        <footer className="mt-12 text-sm text-gray-400">
-          <p>Generated for HackSprint — adapt event-level details as needed.</p>
-        </footer>
-      </main>
-    </div>
+    <PolicyLayout
+      eyebrow="Platform Policy"
+      title="Participant"
+      accent="Policies"
+      subtitle="The baseline rules every participant agrees to on HackSprint — eligibility, submissions, scoring, prizes, and how disputes get resolved. Individual events may add their own rules on top of this."
+      meta="Applies platform-wide, alongside any event-specific rules published on that event's page."
+      sections={sections}
+    />
   );
 }

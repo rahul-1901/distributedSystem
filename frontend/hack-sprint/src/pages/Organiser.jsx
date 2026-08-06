@@ -1,84 +1,142 @@
 import React from "react";
+import {
+  ClipboardList,
+  Target,
+  Scale,
+  Wallet,
+  ShieldAlert,
+  Gavel,
+  Sparkles,
+} from "lucide-react";
+import PolicyLayout, { PolicyList } from "../components/PolicyLayout.jsx";
 
 export default function OrganizerPlaybookPage() {
+  const sections = [
+    {
+      icon: ClipboardList,
+      heading: "Event Setup Checklist",
+      body: (
+        <PolicyList
+          items={[
+            "Title & description — a clear theme, target audience, and expected deliverables.",
+            "Timeline — registration, submission, judging, and results dates, with timezones spelled out.",
+            "Eligibility — geographic, student/professional, or age constraints, if any.",
+            "Team rules — team size limits, whether substitutions are allowed, and whether solo entries are permitted.",
+            "Submission format — repo links, live demo, documents — state exactly what's required.",
+            "Scoring rubric — the exact formula and weighting per criterion (functionality, design, originality, documentation), published up front.",
+            "Prizes — types, values, number of winners, and payout timeline.",
+            "Tiebreakers & penalties — decide and publish these before the event starts, not after.",
+            "Contact & support — a clear channel for participants to reach you during the event.",
+          ]}
+        />
+      ),
+    },
+    {
+      icon: Target,
+      heading: "Recommended Scoring Model",
+      body: (
+        <>
+          <p>
+            For coding-format events, combine automatic verification
+            (correctness) with secondary metrics like time or memory, and be
+            explicit about which test cases are public versus hidden.
+          </p>
+          <p>
+            For project-style hackathons, score idea, execution, demo
+            quality, and impact separately, and use 2–3 judges so subjective
+            scores get averaged rather than resting on one opinion.
+          </p>
+          <p>
+            If you add an audience vote, disclose its weight up front and
+            take steps to prevent duplicate voting.
+          </p>
+        </>
+      ),
+    },
+    {
+      icon: Scale,
+      heading: "Tiebreaker Examples",
+      body: (
+        <>
+          <PolicyList
+            ordered
+            items={[
+              "Time-based — lower cumulative time penalty wins (ICPC-style).",
+              "Earliest correct — the earlier timestamp on the final accepted submission wins.",
+              "Judge secondary metric — a pre-declared metric (e.g. execution quality) breaks the tie.",
+              "Panel review — if still tied, the organizing panel decides and documents its reasoning.",
+            ]}
+          />
+          <p>
+            Whichever you choose, publish it on the event page before the
+            contest opens — not after judging starts.
+          </p>
+        </>
+      ),
+    },
+    {
+      icon: Wallet,
+      heading: "Prize Disbursement & Verification",
+      body: (
+        <PolicyList
+          items={[
+            "Aim to disburse cash prizes within 30 days of winner confirmation, and state that timeline on the event page.",
+            "Ask winners for identification or payment details within a stated window, and handle that data securely.",
+            "If a winner doesn't respond within the window, the prize may be forfeited per your published rules.",
+          ]}
+        />
+      ),
+    },
+    {
+      icon: ShieldAlert,
+      heading: "Anti-Cheat & Integrity",
+      body: (
+        <p>
+          Combine automated checks (plagiarism detection, unusual submission
+          patterns) with manual review where it matters. Log submission
+          metadata — timestamps, IPs — for audits, and disclose that logging
+          in your event's privacy notice. Keep the appeals process
+          evidence-based, not a judgment call made from memory.
+        </p>
+      ),
+    },
+    {
+      icon: Gavel,
+      heading: "Disputes & Moderation",
+      body: (
+        <p>
+          Aim to resolve organizer-level disputes within 7–14 days.
+          HackSprint moderation is available for anything that escalates
+          beyond your event — so keep judging comments and scores archived,
+          since that record is what any review will be based on.
+        </p>
+      ),
+    },
+    {
+      icon: Sparkles,
+      heading: "Running a Premium Event",
+      body: (
+        <PolicyList
+          items={[
+            "Publish a sample submission and, for coding tasks, a public test set.",
+            "Hold office hours or a live Q&A, and keep an FAQ updated.",
+            "Share sample rubrics and scoring examples so participants know what 'good' looks like.",
+            "Run a judge calibration pass before scoring starts, so standards are consistent across judges.",
+            "Communicate timelines, support channels, and your data-retention policy clearly and early.",
+          ]}
+        />
+      ),
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white py-12 px-6">
-      <main className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-semibold mb-2">Organizer Playbook</h1>
-          <p className="text-gray-300">Everything an organizer needs: event setup checklist, scoring & tiebreakers, payout guidance, and dispute handling to run trustworthy contests.</p>
-          <p className="text-sm text-gray-400 mt-2">Contact (organizers): <a href="mailto:hacksprint@iitj.ac.in" className="underline">hacksprint@iitj.ac.in</a> — or use the organizer dashboard Support link</p>
-        </header>
-
-        <article className="space-y-8">
-          <section>
-            <h2 className="text-2xl font-medium mb-2">A. Event setup checklist (must include)</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Title & Description: Clear theme, target audience and expected deliverables.</li>
-              <li>Timeline: Start / submission / judging / result dates and timezones.</li>
-              <li>Eligibility: Geographic, student/pro/employment constraints, age limits.</li>
-              <li>Team rules: Team size, substitutions, single-person entries permitted?</li>
-              <li>Submission format: Repo links, zipped source, binaries, demo video requirements.</li>
-              <li>Scoring rubric: Exact scoring formula and weight for each metric (functionality, design, originality, documentation). Publish verbatim.</li>
-              <li>Prizes: Types, values, number of winners, payout timeline and required docs.</li>
-              <li>Tiebreakers & penalties: Pre-declare tiebreak rules and any late/format penalties.</li>
-              <li>Contact & Support: Organizer contact and dispute channel.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">B. Recommended scoring model</h2>
-            <p className="text-gray-200">For coding problems: Use a mix of automatic verification (correctness) and secondary metrics (time, memory). Provide sample test IO and whether tests are public/hidden.</p>
-            <p className="text-gray-200 mt-2">For project hackathons: Define points for idea, execution, demo, user experience and impact. Use 2–3 judges to average subjective scores.</p>
-            <p className="text-gray-200 mt-2">Add an “audience vote” only if you disclose weight and prevent duplicate votes.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">C. Tiebreaker examples (pick &amp; publish one)</h2>
-            <ol className="list-decimal list-inside text-gray-200 space-y-1">
-              <li>Time-based: Lower cumulative time penalty wins (ICPC-style).</li>
-              <li>Earliest correct: Earlier timestamp for the final accepted submission.</li>
-              <li>Judge secondary metric: Pre-declared (e.g., “execution quality”) used to break ties.</li>
-              <li>Panel review: If still tied, the organizing panel provides a final decision (document rationale).</li>
-            </ol>
-            <p className="text-gray-200 mt-2">Publish the chosen tiebreak steps on the event page before the contest starts.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">D. Prize disbursement &amp; verification</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Timeline: Recommended: organizers disburse cash prizes within 30 days of winner confirmation. Declare this on the event page.</li>
-              <li>Verification: Require winners to provide identification/payment details within a stated window; keep sensitive data secure.</li>
-              <li>Failure to claim: If winners fail to respond within the window, prize may be forfeited per event rules.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">E. Anti-cheat &amp; integrity guidelines</h2>
-            <p className="text-gray-200">Use a mix of automatic detection (plagiarism checks, abnormal submission patterns) and manual review. Log submission meta (timestamps, IP addresses) for audits (notify participants in privacy policy). Maintain a clear evidence-based appeals process.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">F. Disputes &amp; moderation</h2>
-            <p className="text-gray-200">Encourage organizers to resolve issues in 7–14 days. Provide HackSprint mediation for unresolved platform-level disputes. Keep all judging comments and scores archived for audit purposes.</p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-medium mb-2">G. Organizer best practices (to run a “premium” event)</h2>
-            <ul className="list-disc list-inside text-gray-200 space-y-1">
-              <li>Provide a sample submission and a public test case set (if coding tasks).</li>
-              <li>Host live Q&A / office hours and publish FAQs.</li>
-              <li>Provide sample rubrics and scoring examples.</li>
-              <li>Use a judge calibration session to align scoring standards.</li>
-              <li>Offer clear communications: timelines, support, acceptance criteria and data retention policy.</li>
-            </ul>
-          </section>
-        </article>
-
-        <footer className="mt-12 text-sm text-gray-400">
-          <p>Generated for HackSprint organizers — adapt operational details to your legal and regional requirements.</p>
-        </footer>
-      </main>
-    </div>
+    <PolicyLayout
+      eyebrow="For Organizers"
+      title="Organizer"
+      accent="Playbook"
+      subtitle="A practical checklist for running a hackathon on HackSprint — setup, scoring, prize disbursement, and how to handle disputes without it becoming a mess."
+      meta="Contact for organizers: devluplabs@iitj.ac.in — or use the organizer dashboard's support link."
+      sections={sections}
+    />
   );
 }

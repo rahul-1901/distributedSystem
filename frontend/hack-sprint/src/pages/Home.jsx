@@ -9,15 +9,14 @@ import {
   Zap,
   Rocket,
   Lightbulb,
-  Target,
-  Award,
   CheckCircle,
   Calendar,
   Star,
   Sparkles,
-  BookOpen,
   BarChart3,
   Megaphone,
+  Search,
+  UploadCloud,
 } from "lucide-react";
 import "./Styles/Home.css";
 
@@ -169,56 +168,56 @@ const DeveloperJourneySection = () => {
     {
       phase: "Phase 1",
       n: "01",
-      title: "Foundation Building",
-      icon: BookOpen,
-      desc: "Master fundamentals with hands-on projects and expert mentorship from day one.",
+      title: "Discover & Register",
+      icon: Search,
+      desc: "Browse live and upcoming hackathons, check eligibility and timelines, and register solo or as a team in a few clicks.",
       skills: [
-        "Programming Basics",
-        "Version Control",
-        "Problem Solving",
-        "Team Collab",
+        "Live & Upcoming Events",
+        "Solo or Team Entry",
+        "Wishlist Hackathons",
+        "Deadline Reminders",
       ],
       side: "left",
     },
     {
       phase: "Phase 2",
       n: "02",
-      title: "Skill Specialization",
-      icon: Target,
-      desc: "Deep-dive into your chosen stack with real-world applications and structured labs.",
+      title: "Form Your Team",
+      icon: Users,
+      desc: "Create a team and share your invite code, or join one and get approved — manage every teammate from a single dashboard.",
       skills: [
-        "Advanced Frameworks",
-        "Database Design",
-        "API Development",
-        "Testing",
+        "Team Invite Codes",
+        "Join Requests",
+        "Member Management",
+        "Individual Tracks Too",
       ],
       side: "right",
     },
     {
       phase: "Phase 3",
       n: "03",
-      title: "Innovation & Leadership",
-      icon: Rocket,
-      desc: "Lead teams, build complex systems, and craft solutions that create real impact.",
+      title: "Build & Submit",
+      icon: UploadCloud,
+      desc: "Work against a clear submission window, then upload your GitHub repo, live demo, and documentation directly through the platform.",
       skills: [
-        "System Architecture",
-        "Team Leadership",
-        "Product Strategy",
-        "Innovation",
+        "GitHub + Live Demo",
+        "Document Uploads",
+        "Fixed Submission Windows",
+        "Editable Until It Closes",
       ],
       side: "left",
     },
     {
       phase: "Phase 4",
       n: "04",
-      title: "Industry Impact",
-      icon: Award,
-      desc: "Mentor others, contribute to open source, and shape the future of technology.",
+      title: "Get Judged & Ranked",
+      icon: Trophy,
+      desc: "Assigned judges score your submission and leave feedback, and results land on a public leaderboard alongside the prize pool.",
       skills: [
-        "Mentorship",
-        "Open Source",
-        "Public Speaking",
-        "Entrepreneurship",
+        "Judge Scoring & Feedback",
+        "Public Leaderboard",
+        "Prize Pool Details",
+        "Results Announcements",
       ],
       side: "right",
     },
@@ -239,8 +238,8 @@ const DeveloperJourneySection = () => {
             Your Path to <span className="text-[#5fff60]">Excellence</span>
           </h2>
           <p className="font-jb text-[0.72rem] text-[rgba(180,220,180,0.48)] max-w-[520px] mx-auto leading-relaxed tracking-[0.03em]">
-            A structured path crafted by expert developers. From beginner to
-            advanced — every step accelerates your growth.
+            From finding your first hackathon to seeing your name on the
+            leaderboard — here's exactly what happens at each step.
           </p>
         </div>
 
@@ -346,23 +345,49 @@ const Testimonials = () => {
   const stories = [
     {
       name: "Kavya Bhanvadia",
+      role: "Full-Stack Track, Web Dev Hackathon",
       initial: "K",
       quote:
-        "Before this hackathon, I only knew the basics of web dev. Working with my team pushed me to learn fast, and I actually built my first full-stack project here.",
+        "Before this hackathon, I only knew the basics of web dev. Working with my team against a fixed deadline pushed me to learn fast, and I shipped my first real full-stack project here.",
     },
     {
       name: "Mohit Gupta",
+      role: "Team Lead, 3-Member Team",
       initial: "M",
       quote:
-        "HackSprint gave me more than coding practice — it gave me confidence. Presenting to judges and collaborating under pressure was a whole new experience.",
+        "HackSprint gave me more than coding practice — it gave me confidence. Presenting to judges and coordinating a team under a real deadline was a completely different experience from solo projects.",
     },
     {
       name: "Ridham Shah",
+      role: "Solo Participant",
       initial: "R",
       quote:
-        "I met some of the best peers here. The mentors clarified concepts I struggled with for months, and that learning still helps me in my projects today.",
+        "The judge feedback on our submission was specific and actionable, not just a score. That's what pushed me to actually fix the gaps for the next hackathon instead of just moving on.",
+    },
+    {
+      name: "Ananya Deshmukh",
+      role: "Backend Developer, Team of 4",
+      initial: "A",
+      quote:
+        "Finding teammates used to be the hardest part of joining a hackathon. Sharing a single invite code and approving requests from one dashboard made team formation genuinely painless.",
+    },
+    {
+      name: "Devansh Rathi",
+      role: "First-Time Participant",
+      initial: "D",
+      quote:
+        "I registered without a team and wasn't sure I'd manage. The clear submission window and deadline reminders kept me on track, and I ended up placing on the public leaderboard.",
+    },
+    {
+      name: "Priya Nair",
+      role: "Judge & Mentor",
+      initial: "P",
+      quote:
+        "As a judge, having every submission, repo link, and demo in one place made scoring and leaving feedback straightforward instead of chasing links across emails and chats.",
     },
   ];
+
+  const track = [...stories, ...stories];
 
   return (
     <section className="hm-fade relative z-10 py-28 px-5">
@@ -382,12 +407,15 @@ const Testimonials = () => {
             careers.
           </p>
         </div>
+      </div>
 
-        <div className="grid md:grid-cols-3 gap-5">
-          {stories.map((s, i) => (
+      <div className="hm-marquee-wrap max-w-[1400px] mx-auto">
+        <div className="hm-marquee-track">
+          {track.map((s, i) => (
             <div
               key={i}
-              className="hm-card relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-7 backdrop-blur-sm flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
+              aria-hidden={i >= stories.length ? "true" : undefined}
+              className="hm-card relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-7 backdrop-blur-sm flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 w-[320px] flex-shrink-0"
               onMouseEnter={(e) =>
                 (e.currentTarget.style.borderColor = "rgba(95,255,96,0.28)")
               }
@@ -408,7 +436,10 @@ const Testimonials = () => {
                   <p className="font-syne font-extrabold text-white text-[0.88rem] tracking-tight">
                     {s.name}
                   </p>
-                  <div className="flex gap-[2px] mt-0.5">
+                  <p className="font-jb text-[0.58rem] text-[rgba(180,220,180,0.4)] mt-0.5">
+                    {s.role}
+                  </p>
+                  <div className="flex gap-[2px] mt-1">
                     {[...Array(5)].map((_, j) => (
                       <Star
                         key={j}
@@ -461,34 +492,34 @@ const Home = () => {
     {
       icon: Calendar,
       title: "Event Schedule",
-      desc: "Stay updated with workshops, sessions, and deadlines through a centralized timeline.",
+      desc: "Track every hackathon's registration and submission windows in one place, with reminders before each deadline closes.",
       features: [
-        "Interactive Timeline",
-        "Session Reminders",
-        "Workshop Links",
-        "Real-Time Updates",
+        "Registration & Submission Phases",
+        "Deadline Reminders",
+        "Email + In-App Notifications",
+        "Wishlist Hackathons",
       ],
     },
     {
       icon: Users,
       title: "Team Formation",
-      desc: "Find your perfect hackathon teammates using our matching system based on skills and interests.",
+      desc: "Create a team and invite teammates with a shareable code, or join one and get approved — no spreadsheets or group chats needed to track who's in.",
       features: [
-        "Skill-Based Matching",
-        "Global Team Search",
-        "Communication Tools",
-        "Project Collaboration",
+        "Invite-Code Team Creation",
+        "Join Requests & Approval",
+        "Member Management",
+        "Solo or Team Participation",
       ],
     },
     {
       icon: Trophy,
       title: "Competition Hub",
-      desc: "Participate in or host hackathons with comprehensive event management and judging tools.",
+      desc: "Run or join a hackathon end-to-end — from event setup to judge scoring to a public leaderboard.",
       features: [
-        "Event Creation",
-        "Automated Judging",
-        "Live Leaderboards",
-        "Prize Distribution",
+        "Hackathon Creation & Approval",
+        "Judge Scoring & Feedback",
+        "Public Leaderboards",
+        "Prize Pool Details",
       ],
     },
   ];

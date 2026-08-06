@@ -93,17 +93,16 @@ const Footer = () => {
     };
   }, []);
 
+  const GITHUB_REPO_URL = "https://github.com/devlup-labs/HackSprint";
+
   const navSections = [
     {
       title: "Resources",
       external: true,
       links: [
         { name: "Sessions", url: "https://www.youtube.com/@devluplabs1365" },
-        { name: "Documentation", url: "https://about.readthedocs.com/" },
-        {
-          name: "Guides",
-          url: "https://github.com/aaltarazi98/fullstack-guide-2025?tab=readme-ov-file",
-        },
+        { name: "Documentation", url: GITHUB_REPO_URL },
+        { name: "Guides", url: GITHUB_REPO_URL },
         { name: "Explore Projects", url: "https://github.com/devlup-labs/" },
       ],
     },
@@ -113,6 +112,8 @@ const Footer = () => {
       links: [
         { name: "Home", url: "/" },
         { name: "Hackathons", url: "/hackathons" },
+        { name: "Participation Policies", url: "/participation-policies" },
+        { name: "Organizer Playbook", url: "/organizer-ruleBook" },
       ],
     },
   ];
@@ -121,7 +122,7 @@ const Footer = () => {
     {
       name: "GitHub",
       icon: <Github size={16} />,
-      url: "https://github.com/devlup-labs/HackSprint",
+      url: GITHUB_REPO_URL,
     },
     {
       name: "Instagram",

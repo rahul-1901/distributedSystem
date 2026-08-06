@@ -38,7 +38,7 @@ Every service in HackSprint runs inside its own Docker container, and Docker Com
 
 The containers that currently make up the deployment are: the API Gateway, the Auth Service, the Hackathon Service, the Media Service, the Notification Service, MongoDB, Redis, Nginx, Prometheus, and Grafana.
 
-Each of the five application services (the four microservices plus the gateway) loads its runtime configuration from its own `.env.docker` file via Compose's `env_file` directive, rather than from environment variables baked into the image or a single shared `.env`. These files are never committed to the repository; how they get onto the EC2 host in the first place is described in Section 7.
+Each of the five application services (the four microservices plus the gateway), plus Grafana, loads its runtime configuration from its own `.env.docker` file via Compose's `env_file` directive, rather than from environment variables baked into the image or a single shared `.env`. These files are never committed to the repository; how they get onto the EC2 host in the first place is described in Section 7.
 
 ---
 
@@ -67,7 +67,7 @@ Deployment is automated through a single GitHub Actions workflow (`.github/workf
 Once connected, the workflow, in order:
 
 1. **Syncs the code.** `git fetch origin` followed by `git reset --hard origin/main` — a hard reset rather than a `pull`, so the EC2 checkout always matches `main` exactly regardless of any local drift on the instance.
-2. **Materializes the environment files.** Each service's runtime configuration lives in a `.env.docker` file that is `.gitignore`d and never committed — Docker Compose loads it per-service via `env_file` (see Section 3). The workflow recreates all five of these files (`auth-service`, `hackathon-service`, `media-service`, `notification-service`, `api-gateway`) on every run, writing each one from a same-named GitHub Actions secret (`AUTH_ENV`, `HACKATHON_ENV`, `MEDIA_ENV`, `NOTIFICATION_ENV`, `API_GATEWAY_ENV`) via a heredoc. This means the EC2 instance's environment files are fully reproducible from GitHub's secret store rather than being hand-maintained, one-off files that could drift from what's actually configured.
+2. **Materializes the environment files.** Each service's runtime configuration lives in a `.env.docker` file that is `.gitignore`d and never committed — Docker Compose loads it per-service via `env_file` (see Section 3). The workflow recreates all six of these files (`auth-service`, `hackathon-service`, `media-service`, `notification-service`, `api-gateway`, `grafana`) on every run, writing each one from a same-named GitHub Actions secret (`AUTH_ENV`, `HACKATHON_ENV`, `MEDIA_ENV`, `NOTIFICATION_ENV`, `API_GATEWAY_ENV`, `GRAFANA_ENV`) via a heredoc. This means the EC2 instance's environment files are fully reproducible from GitHub's secret store rather than being hand-maintained, one-off files that could drift from what's actually configured.
 3. **Recreates the stack.** `docker compose -f docker-compose.prod.yml down`, then `docker compose -f docker-compose.prod.yml up -d --build` — an explicit `down` before the rebuild, rather than relying on `up`'s in-place container replacement, so every container (including ones whose image didn't change) restarts cleanly against the freshly written environment files.
 4. **Cleans up.** `docker image prune -af` removes now-unreferenced images left behind by the rebuild, so successive deploys don't slowly fill the instance's disk with stale layers.
 
@@ -100,11 +100,27 @@ This design has one notable operational implication worth stating plainly: becau
 
 Prometheus handles metrics scraping across the platform. Each instrumented service exposes a `/metrics` endpoint, and Prometheus periodically scrapes it to collect application metrics. This gives operators a consistent, service-by-service view of what's happening inside the system without needing to log into individual containers.
 
+Prometheus has no authentication of its own, so it is never exposed on the public domain or through Nginx. In `docker-compose.prod.yml` it's published as `127.0.0.1:9090:9090` — bound to the EC2 host's loopback interface only. That means the port exists on the instance but is unreachable from the internet regardless of security group rules; the only way to reach it is by SSH-tunneling into the instance (Section 9.1) as whoever holds SSH access to the box.
+
 ---
 
 ## 9. Grafana
 
-Grafana provides visualization on top of the metrics Prometheus collects, presenting dashboards that make it possible to monitor service health and system metrics at a glance rather than querying raw metrics data directly.
+Grafana provides visualization on top of the metrics Prometheus collects, presenting dashboards that make it possible to monitor service health and system metrics at a glance rather than querying raw metrics data directly. The Prometheus datasource is auto-provisioned on startup from `grafana/provisioning/datasources/prometheus.yml` (committed, non-secret — it just points at `http://prometheus:9090` over the internal Docker network), so a fresh deploy comes up already wired to Prometheus without any manual click-through setup.
+
+Admin credentials come from `grafana/.env.docker` (`GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD`), provisioned from the `GRAFANA_ENV` GitHub secret the same way the five application services get their own `.env.docker` files (Section 7) — this replaces Grafana's `admin`/`admin` default. `GF_USERS_ALLOW_SIGN_UP=false` is set directly in Compose to disable open self-registration.
+
+Like Prometheus, Grafana is published as `127.0.0.1:3001:3000` — loopback-only, not reachable from the internet. Grafana does have its own login, but keeping it off the public internet entirely means that login isn't the only thing standing between the dashboard and the internet.
+
+### 9.1 Accessing Prometheus / Grafana
+
+Both are reached the same way: SSH-tunnel into the EC2 instance, then browse to the forwarded port on your own machine.
+
+```bash
+ssh -L 9090:localhost:9090 -L 3001:localhost:3001 <ec2-user>@<EC2_HOST>
+```
+
+Then open `http://localhost:9090` for Prometheus and `http://localhost:3001` for Grafana. This only works for someone who already holds SSH access to the instance — there is no other route in.
 
 ---
 

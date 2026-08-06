@@ -292,6 +292,43 @@
   }
 }
 
+/* ── Testimonial marquee ── */
+.hm-marquee-wrap {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 6%,
+    black 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 6%,
+    black 94%,
+    transparent
+  );
+}
+.hm-marquee-track {
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+  padding: 12px 0 16px;
+  animation: hm-marquee 42s linear infinite;
+}
+.hm-marquee-wrap:hover .hm-marquee-track {
+  animation-play-state: paused;
+}
+@keyframes hm-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 /* ── CTA gradient text ── */
 .hm-gradient-text {
   background: linear-gradient(135deg, #5fff60 0%, #a0ff80 50%, #5fff60 100%);

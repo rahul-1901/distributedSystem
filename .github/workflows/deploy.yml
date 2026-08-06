@@ -56,6 +56,10 @@ jobs:
             ${{ secrets.API_GATEWAY_ENV }}
             EOF
 
+            cat > grafana/.env.docker << 'EOF'
+            ${{ secrets.GRAFANA_ENV }}
+            EOF
+
             docker compose -f docker-compose.prod.yml down
 
             docker compose -f docker-compose.prod.yml up -d --build
