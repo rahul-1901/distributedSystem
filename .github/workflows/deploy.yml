@@ -28,8 +28,36 @@ jobs:
             hostname
             pwd
             ls -la ~
+
             cd ~/distributedSystem
+
             git fetch origin
             git reset --hard origin/main
+
             cd backend
+
+            cat > auth-service/.env.docker << 'EOF'
+            ${{ secrets.AUTH_ENV }}
+            EOF
+
+            cat > hackathon-service/.env.docker << 'EOF'
+            ${{ secrets.HACKATHON_ENV }}
+            EOF
+
+            cat > media-service/.env.docker << 'EOF'
+            ${{ secrets.MEDIA_ENV }}
+            EOF
+
+            cat > notification-service/.env.docker << 'EOF'
+            ${{ secrets.NOTIFICATION_ENV }}
+            EOF
+
+            cat > api-gateway/.env.docker << 'EOF'
+            ${{ secrets.API_GATEWAY_ENV }}
+            EOF
+
+            docker compose -f docker-compose.prod.yml down
+
             docker compose -f docker-compose.prod.yml up -d --build
+
+            docker image prune -af

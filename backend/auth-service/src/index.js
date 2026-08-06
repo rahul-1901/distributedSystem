@@ -22,9 +22,15 @@ app.use(helmet());
 
 app.use(compression());
 
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  "https://hacksprint.devluplabs.tech",
+  "http://localhost:5173",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true,
   })
 );

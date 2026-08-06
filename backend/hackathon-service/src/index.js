@@ -25,9 +25,15 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "https://hacksprint.devluplabs.tech",
+  "http://localhost:5173",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true,
   })
 );

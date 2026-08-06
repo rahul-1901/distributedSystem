@@ -140,7 +140,6 @@ const exportParticipantsToExcel = (hackathon, teams, individualParticipants) => 
   toast.success("Exported to Excel.");
 };
 
-/* ── Judges section ── */
 const JudgesSection = ({ hackathonId }) => {
   const [judges, setJudges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,7 +160,6 @@ const JudgesSection = ({ hackathonId }) => {
 
   useEffect(() => {
     loadJudges();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hackathonId]);
 
   const handleAssign = async (e) => {

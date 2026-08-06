@@ -68,8 +68,6 @@ const iconFor = (fieldType, url) => {
 
 const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
-// Renders any stray object whose shape we don't recognise (e.g. leftover/legacy
-// data) as a small key/value card instead of letting React choke on it.
 const MetaCard = ({ value }) => (
   <div className="sd-meta-card">
     {Object.entries(value).map(([k, v]) => (
@@ -271,7 +269,6 @@ const AdminSubmissionDetail = () => {
   useEffect(() => {
     setLoading(true);
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hackathonId, entityType, entityId]);
 
   useEffect(() => {
