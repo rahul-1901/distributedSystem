@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { HeroSection } from "../hackathon/Hero-section";
-import { SidebarNav } from "../hackathon/Sidebar-nav";
-import { ContentSection } from "../hackathon/Content-section";
-import { SocialShare } from "../hackathon/Social-share";
+import { HeroSection } from "../hackathon/HeroSection";
+import { SidebarNav } from "../hackathon/SidebarNav";
+import { ContentSection } from "../hackathon/ContentSection";
+import { SocialShare } from "../hackathon/SocialShare";
 import { useParams } from "react-router-dom";
 import { HackathonAPI } from "../api/hackathon.api.js";
 

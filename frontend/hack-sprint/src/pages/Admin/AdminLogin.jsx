@@ -1,6 +1,6 @@
 import React from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import AdminGoogleLogin from "../../components/Admin/AdminGoogleAuth";
+import AdminGoogleLogin from "../../components/auth/AdminGoogleAuth";
 
 const GoogleAuthWrapper = () => (
   <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>

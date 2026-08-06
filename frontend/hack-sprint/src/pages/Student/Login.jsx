@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import GoogleLogin from "./GoogleLogin.jsx";
+import GoogleLogin from "../../components/auth/GoogleLogin.jsx";
 import { AuthAPI } from "../../api/auth.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import toast from "react-hot-toast";

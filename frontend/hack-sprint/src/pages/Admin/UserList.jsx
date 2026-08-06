@@ -17,10 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { HackathonAPI } from "../api/hackathon.api.js";
-import { JudgeAPI } from "../api/judge.api.js";
-import { AdminAPI } from "../api/admin.api.js";
-import "./Userlist.css";
+import { HackathonAPI } from "../../api/hackathon.api.js";
+import { JudgeAPI } from "../../api/judge.api.js";
+import { AdminAPI } from "../../api/admin.api.js";
+import "./UserList.css";
 
 const PAGE_SIZE = 10;
 

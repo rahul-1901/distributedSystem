@@ -29,8 +29,8 @@ import AdminLogin from "../pages/Admin/AdminLogin.jsx";
 import AdminSignup from "../pages/Admin/AdminSignup.jsx";
 import AdminProfile from "../pages/Admin/AdminProfile.jsx";
 
-import HackathonUsersPage from "../admin/userlist.jsx";
-import AdminSubmissionDetail from "../admin/AdminSubmissionDetail.jsx";
+import HackathonUsersPage from "../pages/Admin/UserList.jsx";
+import AdminSubmissionDetail from "../pages/Admin/AdminSubmissionDetail.jsx";
 
 import ParticipantPoliciesPage from "../pages/Participation.jsx";
 import OrganizerPlaybookPage from "../pages/Organiser.jsx";

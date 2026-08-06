@@ -2,235 +2,149 @@
   <img src="/frontend/hack-sprint/src/assets/readme.png" alt="HackSprint Logo" width="800"/>
 </p>
 
-<h1 align="center">🚀 HackSprint</h1>
-<h3 align="center">Hack The Limits — A Centralized Hackathon & Skill-Building Platform</h3>
+<h1 align="center">HackSprint</h1>
+<h3 align="center">A Distributed Hackathon Platform</h3>
+
+<p align="center">
+  Built at IIT Jodhpur — students discover and register for hackathons, form teams,
+  submit projects, and get judged; organizers run events end-to-end from creation to results.
+</p>
 
 ---
 
-## 📌 Overview
+## 1. What This Is
 
-**HackSprint** is a centralized ecosystem created to nurture innovation, collaborative work, and hands-on development across IIT Jodhpur. 
-It enables **hackathons**, **daily developer & aptitude challenges**, **Git-based submissions**, and a **transparent leaderboard system** — all designed to build real-world developer habits.
+HackSprint is a hackathon-hosting platform with two sides: **students** browse and register for hackathons (solo or in a team formed via a shareable invite code), submit their project (GitHub repo, live demo, documents) within a fixed window, and see results on a public leaderboard. **Admins/organizers** create and configure hackathons (subject to platform-admin approval), assign judges, review submissions, and score them. Both sides get email and in-app notifications for things like deadline reminders and team activity.
 
-The platform has **two main user roles**:  
-
-1. **Students** – can participate in hackathons, daily quizzes, and track their leaderboard points.  
-2. **Admins** – can create hackathon events (subject to approval by hackSprint admin), assign points, review submissions, and declare results.
+It's deliberately built as a **distributed system** rather than a single monolith — five independently deployable backend services behind one API gateway, a separately deployed frontend, containerized with Docker, monitored with Prometheus/Grafana, and shipped via GitHub Actions. Part of the point of this project is the engineering exercise of building and operating that kind of system, not just the product on top of it.
 
 ---
 
-## 🧠 Core Idea
+## 2. Architecture
 
-> Enabling students to shift from passive learning to active development, while allowing administrators to manage events effectively.
+```mermaid
+graph TD
+    Browser["Browser"] -->|Vercel| Frontend["React SPA (Vite)"]
+    Frontend -->|"HTTPS, single origin"| Nginx["Nginx (TLS termination)"]
+    Nginx --> Gateway["API Gateway"]
 
-HackSprint provides:  
-- 🚀 Real project-building experience  
-- 🧠 Daily dev & aptitude challenges  
-- 🏆 Hackathons with submission tracking  
-- 📊 Transparent leaderboard system  
-- 🌐 Peer-reviewed submissions  
-- 💻 Admin controls: approval, points assignment, result declaration  
+    Gateway --> Auth["Auth Service"]
+    Gateway --> Hackathon["Hackathon Service"]
+    Gateway --> Media["Media Service"]
+    Gateway --> Notification["Notification Service"]
 
----
+    Auth --> Mongo[("MongoDB")]
+    Hackathon --> Mongo
+    Media --> Mongo
+    Notification --> Mongo
 
-## 🎯 Why HackSprint?
+    Auth --> Redis[("Redis")]
+    Hackathon --> Redis
 
-- 🎓 Tailored for **IITJ culture**  
-- 🔄 Builds **consistency** in coding and event participation  
-- 🌍 Transparent & community-driven  
-- 🛠 Real-world industry-style development style  
-- 📈 Helps build portfolio + placement-ready skillset  
-- 🖥 Admin-friendly: manage events, review submissions, assign points  
+    Media --> S3[("Amazon S3")]
 
----
+    Prometheus["Prometheus"] -.scrapes.-> Auth
+    Prometheus -.scrapes.-> Hackathon
+    Prometheus -.scrapes.-> Media
+    Prometheus -.scrapes.-> Notification
+    Prometheus -.scrapes.-> Gateway
+    Prometheus --> Grafana["Grafana"]
+```
 
-## 💡 Key Features
+The frontend and backend deploy independently: the frontend is a static build hosted on **Vercel**, the backend runs as a set of Docker containers on a single **AWS EC2** instance behind Nginx, shipped by **GitHub Actions** on every push to `main`. Neither side knows or cares how the other is hosted — they only agree on the API Gateway's public URL.
 
-### 🛠 Hackathons
-- Students can participate in hackathons  
-- Submission via GitHub + Deployment URL  
-- Admins can create hackathons (requires platform admin approval to go live)  
-- Admins can see all submissions, URLs, and participant details  
-- Points can be assigned to each team/participant  
-- Results can be declared by admins  
-
-### ⚡ Daily Developer & Aptitude Challenges
-- Students solve MCQs on software dev, logic, and aptitude  
-- Instant feedback and scoring  
-
-### 📊 Leaderboard
-- Rankings based on hackathons + daily challenges + points  
-- Tracks student performance and consistency  
-- Public leaderboard visible to all users  
-
-### 🔐 Authentication
-- Google OAuth  
-- GitHub OAuth  
-
-### 🖥 Admin Features
-- Create hackathons and events  
-- Approve/reject events for publishing(Only HackSprint Platform Admin)  
-- View all submissions per event  
-- Assign points to participants or teams  
-- Declare final results  
+This is the 60-second version. The full architectural reasoning — why microservices, the request-flow sequence, data-layer choices, and known tradeoffs — is in [`backend/docs/architecture.md`](backend/docs/architecture.md).
 
 ---
 
-## 🧪 Tech Stack
+## 3. Repository Structure
+
+```
+HackSprint
+├── backend/
+│   ├── api-gateway/          Single public entry point — routing, CORS, rate limiting
+│   ├── auth-service/         Auth, Google OAuth, JWT + refresh tokens, profiles
+│   ├── hackathon-service/    Hackathons, registrations, teams, judging, discussions
+│   ├── media-service/        File uploads → Amazon S3
+│   ├── notification-service/ In-app notifications + transactional email (BullMQ)
+│   ├── nginx/                Reverse proxy + HTTPS termination config
+│   ├── prometheus/           Scrape config
+│   ├── grafana/              Provisioned datasource + dashboard
+│   ├── docker-compose.prod.yml
+│   └── docs/                 Detailed architecture, services, API gateway, database, and CI/CD docs
+└── frontend/
+    └── hack-sprint/          React + Vite SPA — see its own README for frontend-specific detail
+```
+
+---
+
+## 4. Tech Stack
 
 | Layer | Technology |
-|-------|------------|
-| **Frontend** | React + Vite |
-| **Backend** | Node.js + Express |
-| **Database** | MongoDB + Redis |
-| **Automation** | Kestra |
-| **OAuth** | Google, GitHub |
-| **Deployment** | Vercel |
+|---|---|
+| Frontend | React 19, Vite, Tailwind CSS, TanStack Query, Zustand, React Router |
+| Backend | Node.js + Express, one process per service |
+| Database | MongoDB (primary), Redis (caching) |
+| File Storage | Amazon S3 (IAM role–based access, no static credentials) |
+| Auth | Google OAuth + JWT access/refresh tokens (student and admin sessions are independent) |
+| Async work | BullMQ/Redis (transactional email), `node-cron` (deadline-reminder notifications) |
+| Reverse proxy | Nginx (HTTPS via Let's Encrypt) |
+| Containerization | Docker + Docker Compose |
+| CI/CD | GitHub Actions (backend → EC2), Vercel (frontend) |
+| Observability | Prometheus + Grafana |
 
 ---
 
-## 📁 Folder Structure
+## 5. Local Development
 
-```text
-HackSprint
-├── LICENSE
-├── backend
-│   ├── index.js
-│   ├── allFolders
-│   ├── package.json
-│   └── ...
-└── frontend
-    └── hack-sprint
-        ├── public
-        ├── src
-        ├── package.json
-        └── ...
-```
----
-
-## 🌐 Frontend (.env.example)
+**Backend** (from `backend/`):
 ```bash
-VITE_API_BASE_URL="http://localhost:3000"
-VITE_GOOGLE_CLIENT_ID="your_google_client_id_here"
-VITE_GITHUB_CLIENT_ID="your_github_client_id_here"
+cp <service>/.env.example <service>/.env   # per service, see backend/docs/services.md
+docker compose up -d --build
 ```
----
+Each service needs its own env file (Mongo/Redis connection strings, JWT secret, Google OAuth credentials, S3 credentials for `media-service`, Brevo API key for `notification-service`, etc.) — the exact requirements are enforced in each service's own startup validation, not duplicated here. See [`backend/docs/services.md`](backend/docs/services.md) for what each service owns.
 
-## 🖥 Backend (.env.example)
+**Frontend** (from `frontend/hack-sprint/`):
 ```bash
-MONGO_URL="your_mongodb_connection_url"
-
-GOOGLE_CLIENT_ID="your_google_client_id"
-GOOGLE_CLIENT_SECRET="your_google_client_secret"
-
-GITHUB_CLIENT_ID="your_github_client_id"
-GITHUB_CLIENT_SECRET="your_github_client_secret"
-
-SECRET_KEY="your_jwt_secret_key"
-JWT_EXPIRE_TIME="24h"
-
-SMTP_USER="your_smtp_username"
-SMTP_PASS="your_smtp_password"
-SENDER_EMAIL="your_sender_email_address"
-
-CLOUDINARY_CLOUD_NAME="your_cloud_name"
-CLOUDINARY_API_KEY="your_cloudinary_api_key"
-CLOUDINARY_API_SECRET="your_cloudinary_api_secret"
-
-EMAIL="your_email"
-EMAIL_PASS="your_email_password"
-
-FRONTEND_URL="http://localhost:5173"
-PORT=3000
-```
-
----
-
-## 🚀 Setup Instructions
-### 1️⃣ Clone the Repository
-```bash
-git clone https://github.com/devlup-labs/HackSprint.git
-cd HackSprint
-```
-
-### 2️⃣ Backend Setup
-```bash
-cd backend
-npm install
-nodemon index.js
-```
-
-### 3️⃣ Frontend Setup
-```bash
-cd frontend/hack-sprint
 npm install
 npm run dev
 ```
+Requires `VITE_API_URL` pointing at your local gateway (`http://localhost:5000` by default) — see [`frontend/hack-sprint/README.md`](frontend/hack-sprint/README.md) and its `.env.example`.
 
 ---
 
-## 🐳 Docker Hub Usage
-- Backend
-Pull the backend image and run it:
-```bash
-docker pull rahul1901/hacksprintserver:latest
-docker run -p 3000:3000 rahul1901/hacksprintserver:latest
-```
-Access the backend at: http://localhost:3000
+## 6. Documentation
 
-- Frontend
-Pull the frontend image and run it:
-```bash
-docker pull rahul1901/hacksprint:latest
-docker run -p 5173:80 rahul1901/hacksprint:latest
-```
-Access the frontend at: http://localhost:5173
+This README is the entry point. Everything below goes deeper on one specific part of the system:
+
+| Doc | Covers |
+|---|---|
+| [`backend/docs/architecture.md`](backend/docs/architecture.md) | Full system architecture, request flow, data layer, tradeoffs, planned work |
+| [`backend/docs/services.md`](backend/docs/services.md) | What each of the four services owns and is responsible for |
+| [`backend/docs/api-gateway.md`](backend/docs/api-gateway.md) | Gateway routing, middleware chain, current limitations |
+| [`backend/docs/database.md`](backend/docs/database.md) | MongoDB / Redis / S3 usage and ownership |
+| [`backend/docs/observability.md`](backend/docs/observability.md) | Deployment, CI/CD pipeline, Prometheus/Grafana access |
+| [`frontend/hack-sprint/README.md`](frontend/hack-sprint/README.md) | Frontend folder structure, routing, API client, state management, Docker |
 
 ---
 
-## 🛠 Available Scripts
-| Purpose            | Command                 |
-| ------------------ | ----------------------- |
-| Run backend        | `nodemon index.js`         |
-| Run frontend       | `npm run dev`           |
+## 7. Contributing
 
----
-## 🤝 Contributing
-- Fork the repository
-- Clone your fork
-- Create a branch
 ```bash
+git clone https://github.com/devlup-labs/HackSprint.git
+cd HackSprint
 git checkout -b feature/my-feature
-```
-- Commit changes
-```bash
-git commit -m "Added new feature"
-```
-- Push branch
-```bash
+# make changes
+git commit -m "Add my feature"
 git push origin feature/my-feature
 ```
 
+Open a pull request against `main`. If you're touching backend routing, data ownership, or infrastructure, check the relevant doc in `backend/docs/` first — several design decisions there are deliberate tradeoffs, not oversights.
+
 ---
-        
-## 🌐 Architecture Diagram
 
-```mermaid
-flowchart TD
-    subgraph STUDENT
-        A[👤 Student Login] --> B[🏠 Dashboard]
-        B --> C[🛠 Participate in Hackathons]
-        B --> D[🧠 Daily Quizzes & Challenges]
-        B --> E[🏆 View Leaderboard]
-        C --> F[🔗 Submit GitHub + Deployment URLs]
-    end
+## 8. License
 
-    subgraph ADMIN
-        X[👤 Admin Login] --> Y[🛠 Create Hackathons / Events]
-        Y --> Z[✅ Platform Admin Approval]
-        Z --> B
-        F --> M[📊 Admin Views Submissions]
-        M --> N[💯 Assign Points]
-        N --> E
-        N --> O[📢 Declare Results]
-    end
+See [`LICENSE`](LICENSE).
+
+<p align="center">HackSprint · DevLup Labs · IIT Jodhpur</p>
