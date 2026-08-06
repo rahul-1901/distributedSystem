@@ -60,10 +60,12 @@ Routing is implemented as a set of individual proxy files, each bound to a speci
 graph TD
     Gateway["API Gateway"]
     Gateway -->|"/api/auth"| Auth["Auth Service"]
-    Gateway -->|"/hackathons"| Hackathon["Hackathon Service"]
-    Gateway -->|"/media"| Media["Media Service"]
-    Gateway -->|"/notifications"| Notification["Notification Service"]
+    Gateway -->|"/api/hackathons"| Hackathon["Hackathon Service"]
+    Gateway -->|"/api/media"| Media["Media Service"]
+    Gateway -->|"/api/notifications"| Notification["Notification Service"]
 ```
+
+None of the proxies rewrite the path — the full incoming path (including the `/api/...` prefix) is forwarded as-is to the target service, so each service's own routes are mounted to expect that same prefix.
 
 Each proxy file owns exactly one prefix and knows nothing about the others. This keeps the routing logic for each service self-contained: understanding how `/media` requests are handled requires reading `media.proxy.js` and nothing else. There is no shared route table or central registry to keep in sync as the number of services grows.
 
@@ -101,7 +103,7 @@ graph LR
     Helmet --> CORS --> Compression --> JSONParse["JSON Parsing"] --> Morgan --> ReqID["Request ID"] --> Metrics --> Proxy["Proxy Routes"] --> ErrorMW["Error Middleware"]
 ```
 
-Helmet runs first and sets a set of standard security-related HTTP headers, reducing exposure to a class of common web vulnerabilities before any other processing happens. CORS is applied next, controlling which origins are permitted to call the API — necessary because the gateway is the only component browsers talk to directly. Compression follows, reducing response payload size over the wire. JSON parsing then makes request bodies available to everything downstream of it. Morgan logs each request in a standard access-log format, giving a consistent record of gateway traffic independent of which service ultimately handled it. The request ID middleware runs next and is described in detail in Section 6. The metrics middleware then records request-level data for Prometheus (Section 7). Only after all of that does a request reach the proxy routes described in Section 4. Finally, the error middleware sits at the end of the chain, catching anything that was thrown or passed via `next(err)` earlier in the pipeline.
+Helmet runs first and sets a set of standard security-related HTTP headers, reducing exposure to a class of common web vulnerabilities before any other processing happens. CORS is applied next, controlling which origins are permitted to call the API — necessary because the gateway is the only component browsers talk to directly. The allow-list is a small, explicit array of origins (the deployed frontend plus the local Vite dev server), not a single hardcoded value, so both the production site and local development work against the same gateway without weakening the policy to a wildcard. Compression follows, reducing response payload size over the wire. JSON parsing then makes request bodies available to everything downstream of it. Morgan logs each request in a standard access-log format, giving a consistent record of gateway traffic independent of which service ultimately handled it. The request ID middleware runs next and is described in detail in Section 6. The metrics middleware then records request-level data for Prometheus (Section 7). Only after all of that does a request reach the proxy routes described in Section 4. Finally, the error middleware sits at the end of the chain, catching anything that was thrown or passed via `next(err)` earlier in the pipeline.
 
 Placing Helmet, CORS, and compression before the proxy layer means every downstream service gets these protections for free without implementing them itself. Placing the error middleware last is standard Express practice — it is the only middleware in the chain that receives errors, and it must be registered after every other middleware and route to catch them.
 

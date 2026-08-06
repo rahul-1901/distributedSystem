@@ -38,6 +38,8 @@ Every service in HackSprint runs inside its own Docker container, and Docker Com
 
 The containers that currently make up the deployment are: the API Gateway, the Auth Service, the Hackathon Service, the Media Service, the Notification Service, MongoDB, Redis, Nginx, Prometheus, and Grafana.
 
+Each of the five application services (the four microservices plus the gateway) loads its runtime configuration from its own `.env.docker` file via Compose's `env_file` directive, rather than from environment variables baked into the image or a single shared `.env`. These files are never committed to the repository; how they get onto the EC2 host in the first place is described in Section 7.
+
 ---
 
 ## 4. Nginx
@@ -60,7 +62,16 @@ Production infrastructure runs on a single AWS EC2 instance running Ubuntu 24.04
 
 ## 7. CI/CD
 
-Deployment is automated through GitHub Actions. When a developer pushes code, GitHub Actions runs a workflow that connects to the EC2 instance over SSH, pulls the latest code with `git pull`, rebuilds the affected containers via Docker Compose, and restarts them. This sequence runs automatically after every push to `main` — there is no manual step between a merged change and it running in production.
+Deployment is automated through a single GitHub Actions workflow (`.github/workflows/deploy.yml`) that triggers on every push to `main`. The workflow does not build anything on GitHub's own runners — its entire job is to SSH into the EC2 instance (via `appleboy/ssh-action`) and drive the deployment from there, so the build happens on the same host it will run on.
+
+Once connected, the workflow, in order:
+
+1. **Syncs the code.** `git fetch origin` followed by `git reset --hard origin/main` — a hard reset rather than a `pull`, so the EC2 checkout always matches `main` exactly regardless of any local drift on the instance.
+2. **Materializes the environment files.** Each service's runtime configuration lives in a `.env.docker` file that is `.gitignore`d and never committed — Docker Compose loads it per-service via `env_file` (see Section 3). The workflow recreates all five of these files (`auth-service`, `hackathon-service`, `media-service`, `notification-service`, `api-gateway`) on every run, writing each one from a same-named GitHub Actions secret (`AUTH_ENV`, `HACKATHON_ENV`, `MEDIA_ENV`, `NOTIFICATION_ENV`, `API_GATEWAY_ENV`) via a heredoc. This means the EC2 instance's environment files are fully reproducible from GitHub's secret store rather than being hand-maintained, one-off files that could drift from what's actually configured.
+3. **Recreates the stack.** `docker compose -f docker-compose.prod.yml down`, then `docker compose -f docker-compose.prod.yml up -d --build` — an explicit `down` before the rebuild, rather than relying on `up`'s in-place container replacement, so every container (including ones whose image didn't change) restarts cleanly against the freshly written environment files.
+4. **Cleans up.** `docker image prune -af` removes now-unreferenced images left behind by the rebuild, so successive deploys don't slowly fill the instance's disk with stale layers.
+
+There is no manual step anywhere in this sequence — a merge to `main` is a production deploy.
 
 ```mermaid
 sequenceDiagram
@@ -72,11 +83,16 @@ sequenceDiagram
     Dev->>GH: Push to main
     GH->>GHA: Trigger workflow
     GHA->>EC2: SSH connect
-    GHA->>EC2: git pull
-    GHA->>EC2: docker compose build
-    GHA->>EC2: docker compose up -d
-    EC2-->>GHA: Containers restarted
+    GHA->>EC2: git fetch origin
+    GHA->>EC2: git reset --hard origin/main
+    GHA->>EC2: Write .env.docker files from GitHub Secrets
+    GHA->>EC2: docker compose down
+    GHA->>EC2: docker compose up -d --build
+    GHA->>EC2: docker image prune -af
+    EC2-->>GHA: Stack rebuilt and running
 ```
+
+This design has one notable operational implication worth stating plainly: because the `.env.docker` files are rewritten from secrets on *every* deploy, a secret's value in GitHub is the single source of truth for that service's production configuration — editing a `.env.docker` file by hand directly on the EC2 instance will be silently overwritten on the next push to `main`.
 
 ---
 

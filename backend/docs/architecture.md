@@ -48,6 +48,8 @@ graph TD
 
 The four services implemented today are the Auth Service, the Hackathon Service, the Media Service, and the Notification Service. Each is its own Express application, each owns its own deployment lifecycle, and each is reachable only through the API Gateway — no service is exposed directly to the internet. Inter-service communication is overwhelmingly synchronous HTTP, with one exception: transactional email is handed off asynchronously via a BullMQ/Redis job queue, with the Auth Service enqueueing jobs and the Notification Service consuming them. No broader message broker exists beyond that single queue, and none should be assumed by anything downstream of this document.
 
+The one piece of time-based (rather than request-driven) execution in the system is a `node-cron` job inside the Hackathon Service that runs hourly to find registration/submission phases closing within 24 hours and notify the users who still need to act. This is in-process scheduling, not a job queue — it runs on a timer inside the service itself and calls out to the Notification Service synchronously, the same as any other inter-service call. It should not be conflated with the BullMQ queue above, which is a genuinely separate, message-passing mechanism.
+
 Related reading: [`api-gateway.md`](./api-gateway.md), [`services.md`](./services.md).
 
 ---

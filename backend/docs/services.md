@@ -40,13 +40,17 @@ The Auth Service is responsible for authentication, authorization, and user mana
 
 User information is stored in MongoDB, owned by this service. Isolating authentication into a single service means every other service can treat "who is this user" as a solved problem handled elsewhere, rather than re-implementing credential handling four times.
 
-The current implementation issues JWTs for authenticated sessions. There is no refresh token flow in place today; if one is added, it will be documented here at that time rather than assumed.
+The current implementation issues short-lived JWT access tokens paired with a refresh-token flow (`POST /refresh-token`), so a client can silently obtain a new access token without forcing the user to log in again. Admin authentication runs the same pattern independently: the Hackathon Service's admin-auth routes (Section 3) expose their own `POST /refresh-token` endpoint, issuing and refreshing admin tokens separately from student tokens. The frontend treats these as two independent sessions — refreshing an admin token never blocks or interferes with a student token refresh in the same browser tab, and vice versa.
 
 ---
 
 ## 3. Hackathon Service
 
-The Hackathon Service owns hackathon management: creating, reading, updating, and deleting hackathons, along with the associated business logic for hackathon information, submission metadata, and participant-related operations. All hackathon-specific business rules live here — the Hackathon Service is the single source of truth for what a hackathon is, what a submission looks like at the metadata level, and how participants relate to a given hackathon.
+The Hackathon Service owns hackathon management: creating, reading, updating, and deleting hackathons, along with the associated business logic for hackathon information, submission metadata, registrations, teams, judging, and participant-related operations. All hackathon-specific business rules live here — the Hackathon Service is the single source of truth for what a hackathon is, what a submission looks like at the metadata level, and how participants, teams, and judges relate to a given hackathon.
+
+This is the largest and most stateful of the four services, and it has its own internal authentication surface separate from the Auth Service: **admin authentication** (`/admin/auth` — Google OAuth login plus its own independent access/refresh-token pair and logout, mirroring the Auth Service's pattern for students) and **admin/judge operations** (`/platform/admin` — assigning and removing judges on a hackathon, reviewing and approving/rejecting admin verification requests, and admin/judge profile management). Judges authenticate as admins and are scoped to only the hackathons they've been assigned to.
+
+The service also owns **discussion threads** (`/api/discussions` — per-hackathon messages and threaded replies) and the platform's only scheduled background job: an hourly `node-cron` task that scans for registration/submission phases ending within 24 hours and fires "closing soon" notifications to the users who still need to act — wishlisted-but-unregistered users for a closing registration window, and registered participants/teams who haven't yet submitted for a closing submission window. Each phase is only reminded once, tracked via a `reminderSent` flag on the phase subdocument itself.
 
 This service does not manage the actual submission files themselves; file storage and file metadata management for uploads is the Media Service's responsibility (Section 4). The Hackathon Service deals with the hackathon-domain data that references those uploads, not the uploads themselves.
 
@@ -105,16 +109,7 @@ This distinction matters: "shared database instance" is an infrastructure fact, 
 
 ## 9. Health Endpoints
 
-Each service exposes its own health endpoint:
-
-| Service | Health Endpoint |
-|---|---|
-| Auth Service | `/api/auth/health` |
-| Hackathon Service | `/hackathons/health` |
-| Media Service | `/media/health` |
-| Notification Service | `/notifications/health` |
-
-These endpoints are used by monitoring systems and for deployment verification — confirming a service is up and responding correctly, both during normal operation and immediately after a deploy.
+Each service exposes an identical `GET /health` at its own application root — `auth-service:5001/health`, `hackathon-service:5002/health`, `media-service:5003/health`, `notification-service:5004/health`. These are **not** proxied through the API Gateway under a service-specific prefix; the gateway has no route for `/health` at all. Prometheus (Section 7 of [`observability.md`](./observability.md)) scrapes each service directly over the internal Docker network using these same addresses, and the same endpoints double as a quick manual check that a service came up cleanly after a deploy.
 
 ---
 
