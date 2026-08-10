@@ -114,6 +114,7 @@ const Footer = () => {
         { name: "Hackathons", url: "/hackathons" },
         { name: "Participation Policies", url: "/participation-policies" },
         { name: "Organizer Playbook", url: "/organizer-ruleBook" },
+        { name: "Architecture", url: "/architecture" },
       ],
     },
   ];

@@ -159,7 +159,7 @@ const Navbar = ({ variant = "student" }) => {
                   <Github size={16} />
                 </button>
                 <button
-                  onClick={() => window.open("https://miro.com/app/board/uXjVGHQV81E=/?share_link_id=472464826506", "_blank")}
+                  onClick={() => navigate("/architecture")}
                   title="Architecture"
                   className="nb-root w-8 h-8 flex items-center justify-center text-[rgba(95,255,96,0.35)] hover:text-[#5fff60] hover:shadow-[0_0_10px_rgba(95,255,96,0.3)] rounded-[3px] transition-all duration-200 cursor-pointer"
                 >

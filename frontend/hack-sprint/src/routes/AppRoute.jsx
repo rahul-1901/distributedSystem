@@ -36,6 +36,7 @@ import ParticipantPoliciesPage from "../pages/Participation.jsx";
 import OrganizerPlaybookPage from "../pages/Organiser.jsx";
 import LegalSupportPage from "../pages/TermsCond.jsx";
 import CreateHackathonPage from "../pages/Admin/CreateHackathonPage.jsx";
+import ArchitecturePage from "../pages/Architecture.jsx";
 
 function AppRoutes() {
   return (
@@ -50,6 +51,7 @@ function AppRoutes() {
         />
         <Route path="/organizer-ruleBook" element={<OrganizerPlaybookPage />} />
         <Route path="/terms-and-condition" element={<LegalSupportPage />} />
+        <Route path="/architecture" element={<ArchitecturePage />} />
         <Route path="/adminhome" element={<Adminhome />} />
         <Route path="/u/:userName" element={<PublicProfile />} />
       </Route>
