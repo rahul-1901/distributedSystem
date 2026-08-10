@@ -56,6 +56,14 @@ services:
       - mongodb
       - redis
 
+  chatbot-service:
+    build:
+      context: ./chatbot-service
+    env_file:
+      - ./chatbot-service/.env.docker
+    expose:
+      - "5005"
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -68,6 +76,7 @@ services:
       - hackathon-service
       - media-service
       - notification-service
+      - chatbot-service
 
   prometheus:
     image: prom/prometheus:latest
@@ -83,6 +92,7 @@ services:
       - hackathon-service
       - media-service
       - notification-service
+      - chatbot-service
 
   grafana:
     image: grafana/grafana-oss:latest

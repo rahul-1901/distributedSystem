@@ -17,3 +17,4 @@ export { JudgeAPI } from "./judge.api";
 
 export { MediaAPI } from "./media.api";
 export { NotificationAPI } from "./notification.api";
+export { ChatbotAPI } from "./chatbot.api";

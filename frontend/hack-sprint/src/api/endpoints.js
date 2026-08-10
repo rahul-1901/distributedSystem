@@ -11,5 +11,6 @@ export const API = {
   ADMIN: "/api/hackathons/platform/admin",
   JUDGE: "/api/hackathons/platform/admin",
   MEDIA: "/api/media",
-  NOTIFICATION: "/api/notifications"
+  NOTIFICATION: "/api/notifications",
+  CHATBOT: "/api/chatbot"
 };

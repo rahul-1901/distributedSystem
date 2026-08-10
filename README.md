@@ -32,6 +32,7 @@ graph TD
     Gateway --> Hackathon["Hackathon Service"]
     Gateway --> Media["Media Service"]
     Gateway --> Notification["Notification Service"]
+    Gateway --> Chatbot["Chatbot Service"]
 
     Auth --> Mongo[("MongoDB")]
     Hackathon --> Mongo
@@ -43,10 +44,13 @@ graph TD
 
     Media --> S3[("Amazon S3")]
 
+    Chatbot --> Gemini[("Gemini API")]
+
     Prometheus["Prometheus"] -.scrapes.-> Auth
     Prometheus -.scrapes.-> Hackathon
     Prometheus -.scrapes.-> Media
     Prometheus -.scrapes.-> Notification
+    Prometheus -.scrapes.-> Chatbot
     Prometheus -.scrapes.-> Gateway
     Prometheus --> Grafana["Grafana"]
 ```
@@ -67,11 +71,12 @@ HackSprint
 │   ├── hackathon-service/    Hackathons, registrations, teams, judging, discussions
 │   ├── media-service/        File uploads → Amazon S3
 │   ├── notification-service/ In-app notifications + transactional email (BullMQ)
+│   ├── chatbot-service/      FAQ chatbot (Google Gemini) — stateless, no database, no user data access
 │   ├── nginx/                Reverse proxy + HTTPS termination config
 │   ├── prometheus/           Scrape config
 │   ├── grafana/              Provisioned datasource + dashboard
 │   ├── docker-compose.prod.yml
-│   └── docs/                 Detailed architecture, services, API gateway, database, and CI/CD docs
+│   └── docs/                 Detailed architecture, services, API gateway, and CI/CD docs
 └── frontend/
     └── hack-sprint/          React + Vite SPA — see its own README for frontend-specific detail
 ```
@@ -88,6 +93,7 @@ HackSprint
 | File Storage | Amazon S3 (IAM role–based access, no static credentials) |
 | Auth | Google OAuth + JWT access/refresh tokens (student and admin sessions are independent) |
 | Async work | BullMQ/Redis (transactional email), `node-cron` (deadline-reminder notifications) |
+| AI | Google Gemini API — scoped to a stateless platform-FAQ chatbot, no access to user accounts/data |
 | Reverse proxy | Nginx (HTTPS via Let's Encrypt) |
 | Containerization | Docker + Docker Compose |
 | CI/CD | GitHub Actions (backend → EC2), Vercel (frontend) |
@@ -120,9 +126,8 @@ This README is the entry point. Everything below goes deeper on one specific par
 | Doc | Covers |
 |---|---|
 | [`backend/docs/architecture.md`](backend/docs/architecture.md) | Full system architecture, request flow, data layer, tradeoffs, planned work |
-| [`backend/docs/services.md`](backend/docs/services.md) | What each of the four services owns and is responsible for |
+| [`backend/docs/services.md`](backend/docs/services.md) | What each of the five services owns and is responsible for |
 | [`backend/docs/api-gateway.md`](backend/docs/api-gateway.md) | Gateway routing, middleware chain, current limitations |
-| [`backend/docs/database.md`](backend/docs/database.md) | MongoDB / Redis / S3 usage and ownership |
 | [`backend/docs/observability.md`](backend/docs/observability.md) | Deployment, CI/CD pipeline, Prometheus/Grafana access |
 | [`frontend/hack-sprint/README.md`](frontend/hack-sprint/README.md) | Frontend folder structure, routing, API client, state management, Docker |
 

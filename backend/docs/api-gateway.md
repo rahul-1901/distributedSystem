@@ -43,10 +43,11 @@ src/
     hackathon.proxy.js
     media.proxy.js
     notification.proxy.js
+    chatbot.proxy.js
   index.js
 ```
 
-`config/` holds the gateway's configuration — the values needed to know where each downstream service lives and how the process should start up. `middlewares/` contains the Express middleware the gateway applies to incoming requests, described in full in Section 5. `metrics/` contains the Prometheus instrumentation that backs the `/metrics` endpoint (Section 8). `routes/` contains one proxy file per downstream service — `auth.proxy.js`, `hackathon.proxy.js`, `media.proxy.js`, and `notification.proxy.js` — each responsible for forwarding requests under a specific URL prefix to its corresponding service. `index.js` is the application entrypoint: it wires the middleware stack, mounts the proxy routes, and starts the server.
+`config/` holds the gateway's configuration — the values needed to know where each downstream service lives and how the process should start up. `middlewares/` contains the Express middleware the gateway applies to incoming requests, described in full in Section 5. `metrics/` contains the Prometheus instrumentation that backs the `/metrics` endpoint (Section 8). `routes/` contains one proxy file per downstream service — `auth.proxy.js`, `hackathon.proxy.js`, `media.proxy.js`, `notification.proxy.js`, and `chatbot.proxy.js` — each responsible for forwarding requests under a specific URL prefix to its corresponding service. `index.js` is the application entrypoint: it wires the middleware stack, mounts the proxy routes, and starts the server.
 
 This one-file-per-service layout keeps routing logic easy to navigate as services are added — adding a new downstream service means adding a new proxy file, not modifying a shared route table.
 
@@ -63,6 +64,7 @@ graph TD
     Gateway -->|"/api/hackathons"| Hackathon["Hackathon Service"]
     Gateway -->|"/api/media"| Media["Media Service"]
     Gateway -->|"/api/notifications"| Notification["Notification Service"]
+    Gateway -->|"/api/chatbot"| Chatbot["Chatbot Service"]
 ```
 
 None of the proxies rewrite the path — the full incoming path (including the `/api/...` prefix) is forwarded as-is to the target service, so each service's own routes are mounted to expect that same prefix.
@@ -143,9 +145,9 @@ Stated plainly: the gateway currently performs only routing and the cross-cuttin
 
 ## 11. Why a Gateway
 
-Routing every request through a single gateway gives HackSprint one public endpoint to secure, monitor, and reason about, rather than four independently exposed services each needing its own perimeter. Cross-cutting middleware — security headers, CORS, compression, logging — is applied once, centrally, instead of being duplicated and potentially drifting across four separate Express applications. Because every downstream service is reached the same way, through a proxy file bound to a prefix, adding a new service is a small, well-contained change rather than a reconfiguration of the whole system — a simple form of service discovery appropriate to the current scale.
+Routing every request through a single gateway gives HackSprint one public endpoint to secure, monitor, and reason about, rather than five independently exposed services each needing its own perimeter. Cross-cutting middleware — security headers, CORS, compression, logging — is applied once, centrally, instead of being duplicated and potentially drifting across five separate Express applications. Because every downstream service is reached the same way, through a proxy file bound to a prefix, adding a new service is a small, well-contained change rather than a reconfiguration of the whole system — a simple form of service discovery appropriate to the current scale. The Chatbot Service (Section 3) is a direct example: it slotted in as one more proxy file and one more line in the CORS-and-routing setup, nothing else in the gateway had to change.
 
-The gateway's position also matters for where the system is headed. Centralizing traffic through one layer today means that when authentication, rate limiting, or other cross-cutting concerns are added (Section 12), they can be added in one place rather than retrofitted into four services independently. Consistent request logging and request IDs across all traffic, regardless of destination service, is a direct consequence of that same centralization.
+The gateway's position also matters for where the system is headed. Centralizing traffic through one layer today means that when authentication, rate limiting, or other cross-cutting concerns are added (Section 12), they can be added in one place rather than retrofitted into five services independently. Consistent request logging and request IDs across all traffic, regardless of destination service, is a direct consequence of that same centralization.
 
 ---
 
@@ -168,7 +170,7 @@ The following are planned but **not implemented** in the current gateway. They a
 
 ## 13. Tradeoffs
 
-Routing all traffic through a single gateway has clear advantages for a system at HackSprint's current scale. It keeps downstream services simpler, since none of them need to implement their own CORS, security headers, or compression. It centralizes infrastructure concerns in one codebase instead of four. It gives operational visibility — logs, request IDs, and metrics — from a single, consistent vantage point regardless of which service handled a request. And it provides a single routing layer, so the mapping from URL prefix to service lives in one place.
+Routing all traffic through a single gateway has clear advantages for a system at HackSprint's current scale. It keeps downstream services simpler, since none of them need to implement their own CORS, security headers, or compression. It centralizes infrastructure concerns in one codebase instead of five. It gives operational visibility — logs, request IDs, and metrics — from a single, consistent vantage point regardless of which service handled a request. And it provides a single routing layer, so the mapping from URL prefix to service lives in one place.
 
 These advantages come with real costs. Every request now takes an extra network hop through the gateway before reaching its target service, adding latency that a direct client-to-service call wouldn't have. The gateway is also a potential bottleneck: because all traffic passes through it, its throughput sets an upper bound on the platform's throughput. And as the only public entry point, it is currently a single point of failure — if the gateway process goes down, the entire platform becomes unreachable, even if every downstream service is healthy.
 

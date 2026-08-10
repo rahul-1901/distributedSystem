@@ -4,7 +4,7 @@
 **Scope:** Production deployment, CI/CD, and monitoring
 **Audience:** Engineers contributing to or operating HackSprint
 
-See also: [`architecture.md`](./architecture.md), [`api-gateway.md`](./api-gateway.md), [`services.md`](./services.md), [`database.md`](./database.md).
+See also: [`architecture.md`](./architecture.md), [`api-gateway.md`](./api-gateway.md), [`services.md`](./services.md).
 
 ---
 
@@ -162,4 +162,3 @@ This deployment is appropriate for HackSprint's current scale. A single EC2 host
 - [`architecture.md`](./architecture.md) — overall system architecture
 - [`api-gateway.md`](./api-gateway.md) — API Gateway routing and middleware
 - [`services.md`](./services.md) — service boundaries and responsibilities
-- [`database.md`](./database.md) — storage systems and data ownership

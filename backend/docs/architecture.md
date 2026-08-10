@@ -18,7 +18,7 @@ This document describes the system as it is currently implemented. Section 9 sep
 
 ## 2. Current Architecture
 
-At a high level, a request enters through a single public edge, is terminated and forwarded by Nginx, routed by an API Gateway, and handled by one of four independently deployable services.
+At a high level, a request enters through a single public edge, is terminated and forwarded by Nginx, routed by an API Gateway, and handled by one of five independently deployable services.
 
 ```mermaid
 graph TD
@@ -28,6 +28,7 @@ graph TD
     Gateway --> Hackathon["Hackathon Service"]
     Gateway --> Media["Media Service"]
     Gateway --> Notification["Notification Service"]
+    Gateway --> Chatbot["Chatbot Service"]
 
     Auth --> Mongo[("MongoDB")]
     Hackathon --> Mongo
@@ -39,14 +40,19 @@ graph TD
 
     Media --> S3[("Amazon S3")]
 
+    Chatbot --> Gemini[("Gemini API")]
+
     Prometheus["Prometheus"] -.scrapes.-> Auth
     Prometheus -.scrapes.-> Hackathon
     Prometheus -.scrapes.-> Media
     Prometheus -.scrapes.-> Notification
+    Prometheus -.scrapes.-> Chatbot
     Prometheus --> Grafana["Grafana"]
 ```
 
-The four services implemented today are the Auth Service, the Hackathon Service, the Media Service, and the Notification Service. Each is its own Express application, each owns its own deployment lifecycle, and each is reachable only through the API Gateway — no service is exposed directly to the internet. Inter-service communication is overwhelmingly synchronous HTTP, with one exception: transactional email is handed off asynchronously via a BullMQ/Redis job queue, with the Auth Service enqueueing jobs and the Notification Service consuming them. No broader message broker exists beyond that single queue, and none should be assumed by anything downstream of this document.
+The five services implemented today are the Auth Service, the Hackathon Service, the Media Service, the Notification Service, and the Chatbot Service. Each is its own Express application, each owns its own deployment lifecycle, and each is reachable only through the API Gateway — no service is exposed directly to the internet. Inter-service communication is overwhelmingly synchronous HTTP, with one exception: transactional email is handed off asynchronously via a BullMQ/Redis job queue, with the Auth Service enqueueing jobs and the Notification Service consuming them. No broader message broker exists beyond that single queue, and none should be assumed by anything downstream of this document.
+
+The Chatbot Service is architecturally distinct from the other four: it holds no database connection at all. It answers general platform FAQ questions via Google's Gemini API using a fixed system prompt, with the frontend supplying the visible conversation history on each request rather than the service persisting any state itself — see [`services.md`](./services.md) Section 6 for why that boundary is deliberate, not an oversight.
 
 The one piece of time-based (rather than request-driven) execution in the system is a `node-cron` job inside the Hackathon Service that runs hourly to find registration/submission phases closing within 24 hours and notify the users who still need to act. This is in-process scheduling, not a job queue — it runs on a timer inside the service itself and calls out to the Notification Service synchronously, the same as any other inter-service call. It should not be conflated with the BullMQ queue above, which is a genuinely separate, message-passing mechanism.
 
@@ -104,7 +110,7 @@ S3 stores everything that isn't structured record data: file uploads, project su
 
 The decision to build HackSprint as a set of independent services, rather than a single monolithic application, was deliberate and comes with real tradeoffs discussed in full in Section 10. The reasoning:
 
-**Independent deployment.** Each of the four services — Auth, Hackathon, Media, Notification — can be built, tested, and deployed on its own schedule. A change to how notifications are sent does not require redeploying the authentication code path.
+**Independent deployment.** Each of the five services — Auth, Hackathon, Media, Notification, Chatbot — can be built, tested, and deployed on its own schedule. A change to how notifications are sent does not require redeploying the authentication code path.
 
 **Service isolation.** Each service owns its own codebase and its own responsibilities. The Media Service knows about S3 uploads; it does not need to know how authentication tokens are issued. This keeps each service's mental model small enough to reason about in isolation.
 
@@ -150,13 +156,13 @@ graph LR
 
 To remove any ambiguity about what exists today, this section states the current implementation plainly:
 
-The project contains four production services — Auth, Hackathon, Media, and Notification — each an independent Express application. Communication between the gateway and these services, and any direct service-to-service calls, is synchronous HTTP; the one exception is transactional email, which is queued by the Auth Service and consumed by the Notification Service over a BullMQ/Redis job queue. Docker Compose orchestrates all containers on a single EC2 host. The API Gateway is responsible for routing incoming requests to the correct backend service. Nginx is responsible for HTTPS termination and sits in front of the gateway. Prometheus collects metrics from the running services, and Grafana renders those metrics for operators. IAM roles are used so that no AWS credentials are ever present in application code or configuration files.
+The project contains five production services — Auth, Hackathon, Media, Notification, and Chatbot — each an independent Express application. Communication between the gateway and these services, and any direct service-to-service calls, is synchronous HTTP; the one exception is transactional email, which is queued by the Auth Service and consumed by the Notification Service over a BullMQ/Redis job queue. Docker Compose orchestrates all containers on a single EC2 host. The API Gateway is responsible for routing incoming requests to the correct backend service. Nginx is responsible for HTTPS termination and sits in front of the gateway. Prometheus collects metrics from the running services, and Grafana renders those metrics for operators. IAM roles are used so that no AWS credentials are ever present in application code or configuration files.
 
 ---
 
 ## 8. Component Diagram
 
-The following diagram summarizes the full current system in one view — client traffic, the request path, the four services, and the infrastructure each one depends on.
+The following diagram summarizes the full current system in one view — client traffic, the request path, the five services, and the infrastructure each one depends on.
 
 ```mermaid
 graph TD
@@ -167,6 +173,7 @@ graph TD
     Gateway --> Hackathon["Hackathon Service"]
     Gateway --> Media["Media Service"]
     Gateway --> Notification["Notification Service"]
+    Gateway --> Chatbot["Chatbot Service"]
 
     Auth --> MongoDB[("MongoDB")]
     Hackathon --> MongoDB
@@ -178,11 +185,14 @@ graph TD
 
     Media --> S3[("Amazon S3")]
 
+    Chatbot --> Gemini[("Gemini API")]
+
     Prometheus["Prometheus"] --> Grafana["Grafana"]
     Auth -.metrics.-> Prometheus
     Hackathon -.metrics.-> Prometheus
     Media -.metrics.-> Prometheus
     Notification -.metrics.-> Prometheus
+    Chatbot -.metrics.-> Prometheus
 ```
 
 ---

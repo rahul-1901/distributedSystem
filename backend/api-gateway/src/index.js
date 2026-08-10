@@ -9,6 +9,7 @@ import { authProxy } from "./routes/auth.proxy.js";
 import { hackathonProxy } from "./routes/hackathon.proxy.js";
 import { mediaProxy } from "./routes/media.proxy.js";
 import { notificationProxy } from "./routes/notification.proxy.js";
+import { chatbotProxy } from "./routes/chatbot.proxy.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
@@ -91,6 +92,7 @@ app.use("/api/auth", authProxy);
 app.use("/api/hackathons", hackathonProxy);
 app.use("/api/media", mediaProxy);
 app.use("/api/notifications", notificationProxy);
+app.use("/api/chatbot", chatbotProxy);
 
 app.use(notFound);
 app.use(errorMiddleware);

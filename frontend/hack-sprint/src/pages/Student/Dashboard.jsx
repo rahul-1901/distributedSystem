@@ -32,6 +32,7 @@ import {
   Camera,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
+import CameraCapture from "../../components/CameraCapture.jsx";
 import "../Styles/Dashboard.css";
 
 const inputCls = [
@@ -126,7 +127,20 @@ const EditProfileModal = ({ data, onClose, onSaved }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(data.image?.url || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const fileRef = useRef(null);
+  const avatarMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target))
+        setShowAvatarMenu(false);
+    };
+    if (showAvatarMenu) document.addEventListener("mousedown", handleClickOutside);
+    else document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showAvatarMenu]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -204,7 +218,7 @@ const EditProfileModal = ({ data, onClose, onSaved }) => {
         </div>
 
         <div className="flex flex-col items-center gap-3 mb-5">
-          <div className="relative">
+          <div className="relative" ref={avatarMenuRef}>
             <img
               src={
                 avatarPreview ||
@@ -214,11 +228,36 @@ const EditProfileModal = ({ data, onClose, onSaved }) => {
               className="w-20 h-20 rounded-full border-2 border-[rgba(95,255,96,0.3)] object-cover"
             />
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => setShowAvatarMenu((v) => !v)}
+              title="Change photo"
               className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#5fff60] flex items-center justify-center text-[#050905] hover:bg-[#7fff80] transition-colors cursor-pointer"
             >
               <Camera size={13} />
             </button>
+
+            {showAvatarMenu && (
+              <div className="absolute top-full right-0 mt-2 w-44 bg-[rgba(8,10,8,0.98)] border border-[rgba(95,255,96,0.15)] rounded-[4px] shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden z-10">
+                <button
+                  onClick={() => {
+                    setShowAvatarMenu(false);
+                    setShowCamera(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.65rem] tracking-[0.03em] text-[rgba(180,220,180,0.75)] hover:bg-[rgba(95,255,96,0.08)] hover:text-[#5fff60] transition-colors cursor-pointer"
+                >
+                  <Camera size={13} /> Take Photo
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAvatarMenu(false);
+                    fileRef.current?.click();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.65rem] tracking-[0.03em] text-[rgba(180,220,180,0.75)] hover:bg-[rgba(95,255,96,0.08)] hover:text-[#5fff60] transition-colors cursor-pointer border-t border-[rgba(95,255,96,0.1)]"
+                >
+                  <Upload size={13} /> Upload from Computer
+                </button>
+              </div>
+            )}
+
             <input
               ref={fileRef}
               type="file"
@@ -231,6 +270,13 @@ const EditProfileModal = ({ data, onClose, onSaved }) => {
             JPEG, PNG, WEBP · Max 5MB
           </p>
         </div>
+
+        {showCamera && (
+          <CameraCapture
+            onCapture={handleAvatarSelect}
+            onClose={() => setShowCamera(false)}
+          />
+        )}
 
         <div className="flex flex-col gap-3">
           <div>

@@ -10,7 +10,7 @@ See also: [`architecture.md`](./architecture.md) for the overall system view and
 
 ## 1. Overview
 
-HackSprint's production system consists of four independent services: the Auth Service, the Hackathon Service, the Media Service, and the Notification Service. Each is an independent Express.js application with its own routes, controllers, models, middleware, and business logic — there is no shared application code between them beyond what each pulls in as its own dependencies. Services communicate synchronously over HTTP, and all traffic reaches them through the API Gateway rather than directly. Docker Compose orchestrates all four services as part of a single deployment.
+HackSprint's production system consists of five independent services: the Auth Service, the Hackathon Service, the Media Service, the Notification Service, and the Chatbot Service. Each is an independent Express.js application with its own routes, controllers, models, middleware, and business logic — there is no shared application code between them beyond what each pulls in as its own dependencies. Services communicate synchronously over HTTP, and all traffic reaches them through the API Gateway rather than directly. Docker Compose orchestrates all five services as part of a single deployment.
 
 ```mermaid
 graph TD
@@ -18,6 +18,7 @@ graph TD
     Gateway --> Hackathon["Hackathon Service"]
     Gateway --> Media["Media Service"]
     Gateway --> Notification["Notification Service"]
+    Gateway --> Chatbot["Chatbot Service"]
 
     Auth --> Mongo[("MongoDB")]
     Hackathon --> Mongo
@@ -28,9 +29,11 @@ graph TD
     Hackathon --> Redis
 
     Media --> S3[("Amazon S3")]
+
+    Chatbot --> Gemini[("Gemini API")]
 ```
 
-MongoDB is shared across all four services as the primary datastore. Redis is supporting infrastructure, currently used by the Auth and Hackathon services. Amazon S3 is used exclusively by the Media Service — no other service reads from or writes to S3 directly.
+MongoDB is shared across four of the five services as the primary datastore — the Chatbot Service is the one exception, holding no database connection at all (Section 6). Redis is supporting infrastructure, currently used by the Auth and Hackathon services. Amazon S3 is used exclusively by the Media Service — no other service reads from or writes to S3 directly.
 
 ---
 
@@ -48,7 +51,7 @@ The current implementation issues short-lived JWT access tokens paired with a re
 
 The Hackathon Service owns hackathon management: creating, reading, updating, and deleting hackathons, along with the associated business logic for hackathon information, submission metadata, registrations, teams, judging, and participant-related operations. All hackathon-specific business rules live here — the Hackathon Service is the single source of truth for what a hackathon is, what a submission looks like at the metadata level, and how participants, teams, and judges relate to a given hackathon.
 
-This is the largest and most stateful of the four services, and it has its own internal authentication surface separate from the Auth Service: **admin authentication** (`/admin/auth` — Google OAuth login plus its own independent access/refresh-token pair and logout, mirroring the Auth Service's pattern for students) and **admin/judge operations** (`/platform/admin` — assigning and removing judges on a hackathon, reviewing and approving/rejecting admin verification requests, and admin/judge profile management). Judges authenticate as admins and are scoped to only the hackathons they've been assigned to.
+This is the largest and most stateful of the five services, and it has its own internal authentication surface separate from the Auth Service: **admin authentication** (`/admin/auth` — Google OAuth login plus its own independent access/refresh-token pair and logout, mirroring the Auth Service's pattern for students) and **admin/judge operations** (`/platform/admin` — assigning and removing judges on a hackathon, reviewing and approving/rejecting admin verification requests, and admin/judge profile management). Judges authenticate as admins and are scoped to only the hackathons they've been assigned to.
 
 The service also owns **discussion threads** (`/api/discussions` — per-hackathon messages and threaded replies) and the platform's only scheduled background job: an hourly `node-cron` task that scans for registration/submission phases ending within 24 hours and fires "closing soon" notifications to the users who still need to act — wishlisted-but-unregistered users for a closing registration window, and registered participants/teams who haven't yet submitted for a closing submission window. Each phase is only reminded once, tracked via a `reminderSent` flag on the phase subdocument itself.
 
@@ -70,7 +73,15 @@ The Notification Service is responsible for notification management (creating no
 
 ---
 
-## 6. Service Communication
+## 6. Chatbot Service
+
+The Chatbot Service answers general platform FAQ questions ("how do teams work", "how does judging work") through a chat widget on the frontend, backed by Google's Gemini API. It is deliberately the simplest service in the system: it holds **no database connection at all** — not MongoDB, not Redis — because it is scoped to never know anything about an individual user's account, registrations, teams, or submissions. Each request is self-contained: the frontend sends the current message plus the visible conversation history from that browser session, the service forwards it to Gemini alongside a fixed system prompt describing the platform, and returns the reply. Nothing is persisted server-side between requests.
+
+That system prompt is also where the service's safety boundary is enforced — it explicitly instructs the model to decline account-specific questions and point the user to their dashboard instead of guessing, since this service has no way to answer those questions truthfully even if asked to. A stricter per-IP rate limit than the gateway's general one is applied at the route level (`POST /chat`), since each request is a billed call to a third-party LLM API rather than a free database read.
+
+---
+
+## 7. Service Communication
 
 All communication into the system follows the same path regardless of which service ultimately handles it: client, through Nginx, through the API Gateway, to the target service.
 
@@ -93,13 +104,13 @@ Services communicate synchronously over HTTP for nearly everything, and most ser
 
 ---
 
-## 7. Service Isolation
+## 8. Service Isolation
 
-Separating HackSprint into four services rather than one application was a deliberate boundary decision, not an accident of growth. It allows each service to be deployed independently — a change to notification logic doesn't require redeploying the Auth Service. It allows independent development, since the codebases don't share state or entangled logic. Each service maps to a clear business boundary: authentication, hackathon management, media handling, and notifications are distinct domains with different responsibilities, and keeping them in separate codebases keeps that separation enforced rather than aspirational. This reduces coupling between unrelated concerns, makes each individual service simpler to maintain, and leaves room for future scalability — a service under heavy load can, in principle, be scaled independently of the others.
+Separating HackSprint into five services rather than one application was a deliberate boundary decision, not an accident of growth. It allows each service to be deployed independently — a change to notification logic doesn't require redeploying the Auth Service. It allows independent development, since the codebases don't share state or entangled logic. Each service maps to a clear business boundary: authentication, hackathon management, media handling, and notifications are distinct domains with different responsibilities, and keeping them in separate codebases keeps that separation enforced rather than aspirational. This reduces coupling between unrelated concerns, makes each individual service simpler to maintain, and leaves room for future scalability — a service under heavy load can, in principle, be scaled independently of the others.
 
 ---
 
-## 8. Database Ownership
+## 9. Database Ownership
 
 Although MongoDB is currently a single shared database instance, logical ownership of data is still separated by service. The Auth Service owns user data. The Hackathon Service owns hackathons, submissions, and hackathon-related metadata. The Media Service owns media metadata and manages the associated S3 files. The Notification Service owns notifications.
 
@@ -107,26 +118,26 @@ This distinction matters: "shared database instance" is an infrastructure fact, 
 
 ---
 
-## 9. Health Endpoints
+## 10. Health Endpoints
 
-Each service exposes an identical `GET /health` at its own application root — `auth-service:5001/health`, `hackathon-service:5002/health`, `media-service:5003/health`, `notification-service:5004/health`. These are **not** proxied through the API Gateway under a service-specific prefix; the gateway has no route for `/health` at all. Prometheus (Section 7 of [`observability.md`](./observability.md)) scrapes each service directly over the internal Docker network using these same addresses, and the same endpoints double as a quick manual check that a service came up cleanly after a deploy.
-
----
-
-## 10. Current Implementation Summary
-
-The current production system consists of four services — Auth, Hackathon, Media, and Notification — each an independent Express.js application, communicating over synchronous HTTP. Docker Compose orchestrates deployment. MongoDB is the shared primary datastore, Redis provides supporting caching infrastructure, and Amazon S3 stores media files. All external traffic reaches these services through the API Gateway, fronted by Nginx.
+Each service exposes an identical `GET /health` at its own application root — `auth-service:5001/health`, `hackathon-service:5002/health`, `media-service:5003/health`, `notification-service:5004/health`, `chatbot-service:5005/health`. These are **not** proxied through the API Gateway under a service-specific prefix; the gateway has no route for `/health` at all. Prometheus (Section 8 of [`observability.md`](./observability.md)) scrapes each service directly over the internal Docker network using these same addresses, and the same endpoints double as a quick manual check that a service came up cleanly after a deploy.
 
 ---
 
-## 11. Future Improvements
+## 11. Current Implementation Summary
+
+The current production system consists of five services — Auth, Hackathon, Media, Notification, and Chatbot — each an independent Express.js application, communicating over synchronous HTTP. Docker Compose orchestrates deployment. MongoDB is the shared primary datastore for four of the five (Chatbot holds no database connection), Redis provides supporting caching infrastructure, and Amazon S3 stores media files. All external traffic reaches these services through the API Gateway, fronted by Nginx.
+
+---
+
+## 12. Future Improvements
 
 The following are planned but **not implemented** in the current system. Nothing in this section reflects the system as it exists today.
 
 - **Broader asynchronous communication** — a BullMQ/Redis queue already moves transactional email off the synchronous request/response path (Section 5); extending that pattern to more inter-service interactions is still open.
 - **Background job queues for other workloads** — offloading additional work such as media processing to background workers, following the pattern already used for email.
 - **Event-driven architecture** — services reacting to events rather than direct synchronous calls.
-- **Dedicated databases per service** — splitting the shared MongoDB instance into per-service databases to match the logical ownership described in Section 8.
+- **Dedicated databases per service** — splitting the shared MongoDB instance into per-service databases to match the logical ownership described in Section 9.
 - **Service discovery** — dynamic resolution of service addresses rather than static configuration.
 - **Circuit breakers** — protecting services from cascading failure when a downstream dependency degrades.
 - **Distributed tracing** — tracing a single request as it crosses service boundaries.
@@ -135,10 +146,10 @@ The following are planned but **not implemented** in the current system. Nothing
 
 ---
 
-## 12. Tradeoffs
+## 13. Tradeoffs
 
-Splitting HackSprint into four services brings real advantages at this stage: clear isolation between unrelated domains, the ability to deploy each service independently, a more maintainable codebase overall, a foundation that supports future scalability, and a cleaner separation of concerns than a single monolithic codebase would have.
+Splitting HackSprint into five services brings real advantages at this stage: clear isolation between unrelated domains, the ability to deploy each service independently, a more maintainable codebase overall, a foundation that supports future scalability, and a cleaner separation of concerns than a single monolithic codebase would have.
 
-It also carries real costs. Running four services instead of one means more operational complexity — more containers, more deployment units, more places for something to go wrong. Inter-service communication over HTTP introduces network latency that in-process function calls in a monolith wouldn't have. The shared MongoDB instance (Section 8) means the services are not as fully isolated at the data layer as they are at the application layer — a MongoDB outage affects all four services simultaneously. And the service-oriented design requires an API Gateway to exist at all, which is itself an additional component to build, deploy, and operate.
+It also carries real costs. Running five services instead of one means more operational complexity — more containers, more deployment units, more places for something to go wrong. Inter-service communication over HTTP introduces network latency that in-process function calls in a monolith wouldn't have. The shared MongoDB instance (Section 9) means four of the five services are not as fully isolated at the data layer as they are at the application layer — a MongoDB outage affects all of them simultaneously, though notably not the Chatbot Service, which has no database dependency to lose. And the service-oriented design requires an API Gateway to exist at all, which is itself an additional component to build, deploy, and operate.
 
-These tradeoffs are appropriate for the current production deployment. The system's traffic and team size do not yet demand the isolation that dedicated per-service databases or independent scaling would provide, so the shared MongoDB instance and synchronous HTTP model keep the system simple to operate without meaningfully limiting it at current scale. The operational overhead of four services is manageable on a single Docker Compose deployment, and the clear logical boundaries described in Sections 2 through 5 mean the system is already structured to make the future improvements in Section 11 additive rather than requiring a rearchitecture.
+These tradeoffs are appropriate for the current production deployment. The system's traffic and team size do not yet demand the isolation that dedicated per-service databases or independent scaling would provide, so the shared MongoDB instance and synchronous HTTP model keep the system simple to operate without meaningfully limiting it at current scale. The operational overhead of five services is manageable on a single Docker Compose deployment, and the clear logical boundaries described in Sections 2 through 6 mean the system is already structured to make the future improvements in Section 12 additive rather than requiring a rearchitecture.

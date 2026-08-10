@@ -9,18 +9,10 @@ import {
   ListChecks,
   Zap,
 } from "lucide-react";
+import { ChatbotAPI } from "../api/chatbot.api.js";
 
 const mono = "font-[family-name:'JetBrains_Mono',monospace]";
 const syne = "font-[family-name:'Syne',sans-serif]";
-
-const sendMessageToChatbot = async (message) => {
-  const res = await fetch(`${import.meta.env.VITE_CHATBOT_API_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
-  });
-  return res.json();
-};
 
 
 const formatTime = (date) =>
@@ -38,22 +30,50 @@ const TypingDots = () => (
   </div>
 );
 
-const BotBubble = ({ msg }) => {
+const BOT_NAME = "Byte";
+
+const STARTER_PROMPTS = [
+  { icon: ListChecks, label: "How do teams work?" },
+  { icon: Zap, label: "How does judging work?" },
+  { icon: AlertCircle, label: "What can I submit?" },
+];
+
+const BotBubble = ({ msg, onSuggestionClick }) => {
   return (
-    <div className="msg-in flex items-end gap-2 flex-row">
-      <div className="w-6 h-6 rounded-full bg-[rgba(95,255,96,0.1)] border border-[rgba(95,255,96,0.22)] flex items-center justify-center flex-shrink-0 mb-4">
-        <Bot size={11} className="text-[#5fff60]" />
-      </div>
-      <div className="flex flex-col gap-0.5 items-start max-w-[85%]">
-        <div className="bg-[rgba(95,255,96,0.06)] border border-[rgba(95,255,96,0.14)] rounded-[3px] rounded-tl-none px-3 py-2.5">
-          <p className="text-[0.68rem] text-[rgba(232,255,232,0.85)] leading-relaxed whitespace-pre-line">
-            {msg.text}
-          </p>
+    <div className="msg-in flex flex-col gap-2 items-start">
+      <div className="flex items-end gap-2 flex-row w-full">
+        <div className="w-6 h-6 rounded-full bg-[rgba(95,255,96,0.1)] border border-[rgba(95,255,96,0.22)] flex items-center justify-center flex-shrink-0 mb-4">
+          <Bot size={11} className="text-[#5fff60]" />
         </div>
-        <span className="text-[0.47rem] tracking-[0.06em] text-[rgba(95,255,96,0.25)] px-0.5">
-          {formatTime(msg.time)}
-        </span>
+        <div className="flex flex-col gap-0.5 items-start max-w-[85%]">
+          <div className="bg-[rgba(95,255,96,0.06)] border border-[rgba(95,255,96,0.14)] rounded-[3px] rounded-tl-none px-3 py-2.5">
+            <p className="text-[0.68rem] text-[rgba(232,255,232,0.85)] leading-relaxed whitespace-pre-line">
+              {msg.text}
+            </p>
+          </div>
+          <span className="text-[0.47rem] tracking-[0.06em] text-[rgba(95,255,96,0.25)] px-0.5">
+            {formatTime(msg.time)}
+          </span>
+        </div>
       </div>
+
+      {msg.suggestions && (
+        <div className="flex flex-col gap-1.5 pl-8 w-full">
+          {STARTER_PROMPTS.map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              onClick={() => onSuggestionClick(label)}
+              className="msg-in flex items-center justify-between gap-2 text-left px-2.5 py-2 rounded-[3px] border border-[rgba(95,255,96,0.15)] bg-[rgba(95,255,96,0.04)] text-[0.62rem] text-[rgba(180,220,180,0.75)] hover:border-[rgba(95,255,96,0.35)] hover:bg-[rgba(95,255,96,0.09)] hover:text-[#5fff60] transition-all cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Icon size={11} className="text-[#5fff60] flex-shrink-0" />
+                {label}
+              </span>
+              <ChevronRight size={11} className="flex-shrink-0 opacity-50" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -81,8 +101,9 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      text: "👋 Hey! I'm HackSprint Bot. Ask me anything about the platform!",
+      text: `👋 Hey! I'm ${BOT_NAME}, HackSprint's assistant. Ask me anything about the platform, or try one of these:`,
       time: new Date(),
+      suggestions: true,
     },
   ]);
   const [input, setInput] = useState("");
@@ -95,6 +116,15 @@ const Chatbot = () => {
     const t = setTimeout(() => setPulse(false), 6000);
     return () => clearTimeout(t);
   }, []);
+
+  // Both this widget and InstallPrompt float bottom-right — let it know
+  // when the chat panel is open so it can get out of the way instead of
+  // overlapping it.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("hacksprint:chatbot-toggle", { detail: { open } })
+    );
+  }, [open]);
 
   useEffect(() => {
     if (open && !mini) endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,7 +152,8 @@ const Chatbot = () => {
     setLoading(true);
 
     try {
-      const data = await sendMessageToChatbot(msg);
+      const res = await ChatbotAPI.sendMessage(msg, messages);
+      const data = res.data;
       const reply =
         data?.success && data?.reply
           ? data.reply
@@ -131,23 +162,25 @@ const Chatbot = () => {
         ...prev,
         { role: "bot", text: reply, time: new Date() },
       ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          text: "⚠️ Something went wrong. Please check your connection and try again.",
-          time: new Date(),
-        },
-      ]);
+    } catch (err) {
+      // Logged rather than swallowed — a generic user-facing message can
+      // mean a bad API key, a 429 from the chat rate limit, a CORS/network
+      // failure, or the gateway being unreachable, and there's no way to
+      // tell which from the UI alone otherwise.
+      console.error("[Chatbot] sendMessage failed:", err);
+
+      const status = err?.response?.status;
+      const text =
+        status === 429
+          ? "⚠️ I'm getting a lot of messages right now — try again in a minute."
+          : status
+          ? "⚠️ Something went wrong on my end. Please try again shortly."
+          : "⚠️ Couldn't reach the server. Check your connection and try again.";
+
+      setMessages((prev) => [...prev, { role: "bot", text, time: new Date() }]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleActionClick = (action) => {
-    // console.log("[HackSprint] Action clicked:", action);
-    sendMessage(action);
   };
 
   const handleKeyDown = (e) => {
@@ -173,6 +206,7 @@ const Chatbot = () => {
       {!open && (
         <button
           onClick={handleOpen}
+          title={`Chat with ${BOT_NAME}`}
           className="fixed bottom-4 md:bottom-6 right-4 md:right-6 z-[9999] w-14 h-14 rounded-full bg-[#5fff60] border-2 border-[#5fff60] flex items-center justify-center shadow-[0_0_24px_rgba(95,255,96,0.45)] hover:bg-[#7fff80] hover:shadow-[0_0_32px_rgba(95,255,96,0.6)] transition-all cursor-pointer"
         >
           <Bot size={22} className="text-[#050905]" />
@@ -199,12 +233,12 @@ const Chatbot = () => {
                   <div
                     className={`${syne} font-extrabold text-white text-[0.8rem] tracking-tight leading-none`}
                   >
-                    HackSprint Bot
+                    {BOT_NAME}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#5fff60] animate-pulse" />
                     <span className="text-[0.5rem] tracking-[0.1em] uppercase text-[rgba(95,255,96,0.5)]">
-                      online
+                      AI assistant · online
                     </span>
                   </div>
                 </div>
@@ -232,11 +266,7 @@ const Chatbot = () => {
               <div className="cb-scroll overflow-y-auto h-[320px] px-4 py-4 flex flex-col gap-3">
                 {messages.map((msg, i) =>
                   msg.role === "bot" ? (
-                    <BotBubble
-                      key={i}
-                      msg={msg}
-                      onActionClick={handleActionClick}
-                    />
+                    <BotBubble key={i} msg={msg} onSuggestionClick={sendMessage} />
                   ) : (
                     <UserBubble key={i} msg={msg} />
                   )

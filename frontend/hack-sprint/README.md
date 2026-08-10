@@ -46,7 +46,9 @@ graph TD
 
 **No real-time/WebSocket feature exists.** Notifications are fetched over regular HTTP (see [`api/notification.api.js`](src/api/notification.api.js)). An unused `socket.io-client` dependency was removed from `package.json` for exactly this reason — it had zero imports anywhere in `src/` and was dragging in a vulnerable transitive `ws` version for no benefit. If a live-socket feature is ever added, it starts clean from here.
 
-**PWA scaffolding:** [`main.jsx`](src/main.jsx) registers `public/service-worker.js`, a minimal cache-first service worker (caches `/`, `/index.html`, `/manifest.json`). This is basic install-ability, not an offline-first architecture — there's no cache-invalidation strategy or background sync.
+**PWA.** [`main.jsx`](src/main.jsx) registers `public/service-worker.js`, which is network-first for the app shell (`index.html`) and cache-first for hashed `/assets/*` — network-first specifically because a stale cached shell could reference JS/CSS filenames a newer deploy has already deleted. The service worker versions its own cache and calls `skipWaiting()`/`clients.claim()` so updates take effect on already-open tabs (paired with a `controllerchange` → reload in `main.jsx`), rather than requiring every tab to be closed first. [`components/InstallPrompt.jsx`](src/components/InstallPrompt.jsx) is the floating bottom-right "Install App" button, site-wide — it captures `beforeinstallprompt` on Chromium and shows an "Add to Home Screen" tip on iOS Safari instead, since iOS never fires that event.
+
+**Chatbot.** [`components/Chatbot.jsx`](src/components/Chatbot.jsx) is a floating chat widget, also mounted site-wide, backed by [`api/chatbot.api.js`](src/api/chatbot.api.js) → the gateway → a dedicated `chatbot-service` (see `backend/docs/services.md`). It's scoped to platform FAQ only — the backend has no database and cannot answer anything account-specific. Both this and `InstallPrompt` float in the same corner; they coordinate via a `hacksprint:chatbot-toggle` window event so the install button hides itself while the chat panel is open instead of overlapping it.
 
 ---
 
@@ -162,7 +164,7 @@ sequenceDiagram
 
 **Dual sessions, one tab.** A single browser tab can hold both a student session (`token` in `localStorage`) and an admin session (`adminToken`) simultaneously. The request interceptor picks which token to attach based on `config.adminRequest` or whether the URL contains `/admin`. The response interceptor's 401→refresh logic tracks in-flight refreshes **separately per surface** (`refreshState.student` / `refreshState.admin`), so a student token refresh never blocks or gets blocked by an admin token refresh happening in the same tab.
 
-**One file per resource.** `auth.api.js`, `admin-auth.api.js`, `hackathon.api.js`, `registration.api.js`, `team.api.js`, `submission.api.js`, `voting.api.js`, `discussion.api.js`, `admin.api.js`, `judge.api.js`, `media.api.js`, `notification.api.js`, `profile.api.js` — each wraps `client` calls for one backend resource and is re-exported from [`api/index.js`](src/api/index.js) for convenient importing.
+**One file per resource.** `auth.api.js`, `admin-auth.api.js`, `hackathon.api.js`, `registration.api.js`, `team.api.js`, `submission.api.js`, `voting.api.js`, `discussion.api.js`, `admin.api.js`, `judge.api.js`, `media.api.js`, `notification.api.js`, `profile.api.js`, `chatbot.api.js` — each wraps `client` calls for one backend resource and is re-exported from [`api/index.js`](src/api/index.js) for convenient importing.
 
 ---
 

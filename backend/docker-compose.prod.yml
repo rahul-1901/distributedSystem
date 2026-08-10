@@ -48,6 +48,13 @@ services:
       - mongodb
       - redis
 
+  chatbot-service:
+    build:
+      context: ./chatbot-service
+    env_file:
+      - ./chatbot-service/.env.docker
+    restart: unless-stopped
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -59,7 +66,8 @@ services:
       - hackathon-service
       - media-service
       - notification-service
-      
+      - chatbot-service
+
   nginx:
     build: ./nginx
     restart: unless-stopped
@@ -75,11 +83,6 @@ services:
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
-    # Bound to the host's loopback interface only — never reachable from
-    # outside the EC2 instance, regardless of the security group. Access it
-    # by SSH-tunneling into the box (see docs/observability.md), not through
-    # nginx or the public domain. Prometheus has no built-in auth, so it must
-    # never be exposed any other way.
     ports:
       - "127.0.0.1:9090:9090"
     volumes:
@@ -93,10 +96,6 @@ services:
       - ./grafana/.env.docker
     environment:
       - GF_USERS_ALLOW_SIGN_UP=false
-    # Same loopback-only access model as Prometheus above. Grafana does have
-    # its own login (credentials come from grafana/.env.docker), but keeping
-    # it off the public internet entirely removes the need to trust that
-    # login as the only line of defense.
     ports:
       - "127.0.0.1:3001:3000"
     depends_on:

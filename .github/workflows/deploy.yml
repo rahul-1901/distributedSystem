@@ -52,6 +52,10 @@ jobs:
             ${{ secrets.NOTIFICATION_ENV }}
             EOF
 
+            cat > chatbot-service/.env.docker << 'EOF'
+            ${{ secrets.CHATBOT_ENV }}
+            EOF
+
             cat > api-gateway/.env.docker << 'EOF'
             ${{ secrets.API_GATEWAY_ENV }}
             EOF
