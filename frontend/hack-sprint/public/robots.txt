@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Auth-gated / private routes — nothing useful for a crawler to index, and
+# some (dashboards, team pages) would otherwise leak into search results.
+Disallow: /account/
+Disallow: /dashboard
+Disallow: /studenthome
+Disallow: /adminlogin
+Disallow: /admin
+Disallow: /admin/
+Disallow: /hackathon/RegistrationForm/
+Disallow: /hackathon/*/team/*
+
+Sitemap: https://hacksprint.devluplabs.tech/sitemap.xml

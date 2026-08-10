@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Loader from "../../components/Loader";
+import SEO from "../../components/SEO.jsx";
 import {
   Users,
   Calendar,
@@ -526,6 +527,11 @@ const Hackathons = () => {
 
   return (
     <>
+      <SEO
+        title="Browse Hackathons"
+        description="Browse live, upcoming, and completed hackathons on HackSprint. Register solo or with a team and start building."
+        path="/hackathons"
+      />
       <div className="font-jb hk-bg min-h-screen bg-[#0a0a0a] text-[#e8ffe8] overflow-hidden -mt-16">
         <Loader />
 

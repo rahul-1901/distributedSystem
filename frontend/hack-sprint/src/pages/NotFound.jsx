@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import SEO from "../components/SEO.jsx";
 import "./Styles/NotFound.css"
 
 const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
@@ -16,6 +17,7 @@ const NotFound = () => {
 
   return (
     <div className="nf-root">
+      <SEO title="Page Not Found" noindex />
 
       <div className="nf-scanlines" />
 

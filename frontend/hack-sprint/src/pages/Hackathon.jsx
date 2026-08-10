@@ -5,11 +5,9 @@ import { ContentSection } from "../hackathon/ContentSection";
 import { SocialShare } from "../hackathon/SocialShare";
 import { useParams } from "react-router-dom";
 import { HackathonAPI } from "../api/hackathon.api.js";
+import SEO from "../components/SEO.jsx";
+import { SITE_URL } from "../utils/seo.js";
 
-// SocialShare was previously kept mounted at all viewport widths and only
-// CSS-hidden below `lg` (`hidden lg:block`), so it still fired its wishlist
-// check on mobile for a panel nobody could see. Mounting it only once the
-// viewport is actually wide enough to show it skips that wasted request.
 const useIsDesktop = () => {
   const query = "(min-width: 1024px)";
   const [isDesktop, setIsDesktop] = useState(
@@ -90,8 +88,44 @@ export default function HackathonDetails() {
       </div>
     );
 
+  const phases = hackathon.phases || [];
+  const starts = phases.map((p) => new Date(p.startDate)).filter((d) => !isNaN(d));
+  const ends = phases.map((p) => new Date(p.endDate)).filter((d) => !isNaN(d));
+  const overallStart = starts.length ? new Date(Math.min(...starts)) : null;
+  const overallEnd = ends.length ? new Date(Math.max(...ends)) : null;
+  const pageUrl = `${SITE_URL}/hackathon/${hackathon.slug}`;
+
+  const eventJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: hackathon.title,
+    description: hackathon.subTitle || `${hackathon.title} — hosted on HackSprint.`,
+    url: pageUrl,
+    ...(hackathon.image?.url && { image: [hackathon.image.url] }),
+    ...(overallStart && { startDate: overallStart.toISOString() }),
+    ...(overallEnd && { endDate: overallEnd.toISOString() }),
+    eventAttendanceMode: hackathon.venue
+      ? "https://schema.org/OfflineEventAttendanceMode"
+      : "https://schema.org/OnlineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: hackathon.venue
+      ? { "@type": "Place", name: hackathon.venue }
+      : { "@type": "VirtualLocation", url: pageUrl },
+    organizer: { "@type": "Organization", name: "HackSprint", url: SITE_URL },
+  };
+
   return (
     <div className="min-h-screen bg-[rgba(8,10,8,0.92)] backdrop-blur-xl relative text-white">
+      <SEO
+        title={hackathon.title}
+        description={
+          hackathon.subTitle ||
+          `Register for ${hackathon.title} on HackSprint — form a team, submit your project, and get judged.`
+        }
+        path={`/hackathon/${hackathon.slug}`}
+        image={hackathon.image?.url}
+        jsonLd={eventJsonLd}
+      />
       <GridBackground />
 
       <div className="relative z-10">

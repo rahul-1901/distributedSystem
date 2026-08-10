@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Static routes only. Individual hackathon pages (/hackathon/:slug) are not
+  listed here because they're dynamic — a complete sitemap would need a
+  backend endpoint enumerating published hackathon slugs. Those pages are
+  still crawlable and indexable (robots.txt allows them); they just aren't
+  proactively listed for discovery the way these are.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://hacksprint.devluplabs.tech/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://hacksprint.devluplabs.tech/hackathons</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://hacksprint.devluplabs.tech/adminhome</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://hacksprint.devluplabs.tech/participation-policies</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://hacksprint.devluplabs.tech/organizer-ruleBook</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

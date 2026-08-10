@@ -18,6 +18,7 @@ import {
   Search,
   UploadCloud,
 } from "lucide-react";
+import SEO from "../components/SEO.jsx";
 import "./Styles/Home.css";
 
 const TypingText = ({ text, className = "" }) => {
@@ -526,6 +527,7 @@ const Home = () => {
 
   return (
     <div className="hm-root overflow-hidden">
+      <SEO />
       {/* bg grid */}
       <div className="hm-bg" />
 
