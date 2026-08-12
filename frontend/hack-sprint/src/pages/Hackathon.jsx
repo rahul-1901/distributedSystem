@@ -140,6 +140,7 @@ export default function HackathonDetails() {
           slug={hackathon.slug}
           phases={hackathon.phases}
           participationType={hackathon.participationType}
+          maxTeamSize={hackathon.maxTeamSize}
         />
 
         <div className="flex flex-col lg:flex-row max-w-screen-2xl mx-auto">

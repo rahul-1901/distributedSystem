@@ -151,4 +151,8 @@ export const HackathonAPI = {
   getAdminResults(id) {
     return client.get(`${API.HACKATHON}/admin/hackathons/${id}/results`);
   },
+
+  releaseResults(id) {
+    return client.post(`${API.HACKATHON}/admin/hackathons/${id}/release-results`);
+  },
 };

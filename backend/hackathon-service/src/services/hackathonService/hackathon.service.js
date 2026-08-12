@@ -4,6 +4,7 @@ import { BadRequestError } from "../../errors/BadRequestError.js";
 import { REDIS_KEYS } from "../../config/redisKeys.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import { calculateFinalScore } from "../../utils/scoreCalculator.js";
+import { getLifecycleStatus } from "../../utils/lifecycleStatus.js";
 
 export class HackathonService {
   constructor(
@@ -16,7 +17,8 @@ export class HackathonService {
     mediaServiceClient,
     teamRepository,
     judgeAssignmentRepository,
-    submissionReviewRepository
+    submissionReviewRepository,
+    notificationClient
   ) {
     this.hackathonRepository = hackathonRepository;
     this.submissionRepository = submissionRepository;
@@ -28,6 +30,7 @@ export class HackathonService {
     this.teamRepository = teamRepository;
     this.judgeAssignmentRepository = judgeAssignmentRepository;
     this.submissionReviewRepository = submissionReviewRepository;
+    this.notificationClient = notificationClient;
   }
 
   async deleteHackathonImage(hackathon, payload) {
@@ -350,7 +353,7 @@ export class HackathonService {
       throw new ForbiddenError("Completed hackathons cannot be edited");
     }
 
-    if (hackathon.status !== "APPROVED") {
+    if (hackathon.status === "APPROVED") {
       throw new BadRequestError("Hackathon already approved");
     }
 
@@ -447,6 +450,15 @@ export class HackathonService {
 
     await this.invalidatePublicCaches(hackathonId, updated.slug);
 
+    await this.notificationClient.createNotification({
+      userId: hackathon.createdBy,
+      title: "Hackathon Approved",
+      message: `${hackathon.title} has been approved and is now live.`,
+      type: "HACKATHON",
+      actionUrl: `/hackathon/${updated.slug}`,
+      metadata: { hackathonId: hackathonId.toString() },
+    });
+
     return updated;
   }
 
@@ -473,6 +485,17 @@ export class HackathonService {
     });
 
     await this.invalidatePublicCaches(hackathonId);
+
+    await this.notificationClient.createNotification({
+      userId: hackathon.createdBy,
+      title: "Hackathon Rejected",
+      message: reason
+        ? `${hackathon.title} was rejected: ${reason}`
+        : `${hackathon.title} was rejected by a platform controller.`,
+      type: "HACKATHON",
+      actionUrl: `/admin`,
+      metadata: { hackathonId: hackathonId.toString() },
+    });
 
     return rejected;
   }
@@ -844,6 +867,113 @@ export class HackathonService {
     leaderboard.sort((a, b) => b.finalScore - a.finalScore);
 
     return leaderboard;
+  }
+
+  // The one action that actually makes judged scores/feedback visible to
+  // participants and fires their "results are out" notification. Everything
+  // else (judges scoring, the admin scoreboard above) happens without any
+  // participant-facing signal — this is deliberately the single choke point,
+  // so results can never leak piecemeal as individual judges finish scoring.
+  async releaseResults({ hackathonId, adminId }) {
+    if (!mongoose.Types.ObjectId.isValid(hackathonId)) {
+      throw new BadRequestError("Invalid hackathon id");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const isOwner = hackathon.createdBy._id.toString() === adminId.toString();
+
+    if (!isOwner) {
+      const admin = await this.adminRepository.getById(adminId);
+
+      if (!admin?.controller) {
+        throw new ForbiddenError("Not your hackathon");
+      }
+    }
+
+    if (getLifecycleStatus(hackathon) !== "COMPLETED") {
+      throw new ForbiddenError(
+        "Results can only be released after the hackathon has concluded"
+      );
+    }
+
+    if (hackathon.showResult) {
+      throw new BadRequestError("Results have already been released");
+    }
+
+    await this.hackathonRepository.update(hackathonId, { showResult: true });
+
+    await this.invalidatePublicCaches(hackathonId, hackathon.slug);
+
+    try {
+      await this.cacheService.del(REDIS_KEYS.RESULTS(hackathonId));
+    } catch (error) {
+      this.logger.error({ error }, "Failed to invalidate results cache");
+    }
+
+    const submissionPhases = (hackathon.phases || []).filter(
+      (phase) => phase.phaseType === "SUBMISSION"
+    );
+    const finalPhase = submissionPhases[submissionPhases.length - 1];
+
+    let notifiedCount = 0;
+
+    if (finalPhase) {
+      const submissions = await this.submissionRepository.getLeaderboardSubmissions(
+        hackathonId,
+        finalPhase._id
+      );
+
+      // Only submissions at least one judge actually scored — nothing to
+      // tell someone whose submission was never reviewed.
+      const reviewed = submissions.filter((s) => (s.reviewCount || 0) > 0);
+
+      await Promise.all(
+        reviewed.map(async (submission) => {
+          const recipientIds = submission.team
+            ? [submission.team.leader, ...(submission.team.members || [])].filter(
+                Boolean
+              )
+            : submission.participant
+            ? [submission.participant._id]
+            : [];
+
+          const scoreText =
+            submission.averageScore != null
+              ? ` Final score: ${Math.round(submission.averageScore)}.`
+              : "";
+
+          await Promise.all(
+            recipientIds.map((userId) =>
+              this.notificationClient.createNotification({
+                userId,
+                title: "Results Are Out!",
+                message: `Your submission for ${hackathon.title} has been reviewed.${scoreText} View the full feedback on your dashboard.`,
+                type: "RESULT",
+                actionUrl: `/submissions/${submission._id}`,
+                metadata: {
+                  hackathonId: hackathonId.toString(),
+                  submissionId: submission._id.toString(),
+                },
+              })
+            )
+          );
+
+          notifiedCount += recipientIds.length;
+        })
+      );
+    }
+
+    this.logger.info(
+      { hackathonId, adminId, notifiedCount },
+      "Results released"
+    );
+
+    return { released: true, notifiedCount };
   }
 
   async deleteHackathon({ hackathonId, adminId }) {

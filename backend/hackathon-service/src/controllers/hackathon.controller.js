@@ -299,6 +299,23 @@ export const getAdminResults = async (req, res, next) => {
   }
 };
 
+export const releaseResults = async (req, res, next) => {
+  try {
+    const result = await hackathonService.releaseResults({
+      hackathonId: req.params.id,
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Results released",
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getMyHackathons = async (req, res, next) => {
   try {
     const hackathons = await hackathonService.getMyHackathons(req.admin._id);

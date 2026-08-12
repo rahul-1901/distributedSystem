@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Loader2,
   Eye,
+  Trophy,
 } from "lucide-react";
 
 const mono = "font-[family-name:'JetBrains_Mono',monospace]";
@@ -691,6 +692,40 @@ const TeamDetails = () => {
                     {viewingSubmission.description}
                   </p>
                 </div>
+
+                {viewingSubmission.averageScore != null && (
+                  <div className="border border-[rgba(95,255,96,0.18)] bg-[rgba(95,255,96,0.04)] rounded-[3px] p-3.5 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Trophy size={13} className="text-[#5fff60] flex-shrink-0" />
+                      <span
+                        className={`${mono} text-[0.55rem] tracking-[0.14em] uppercase text-[rgba(95,255,96,0.7)]`}
+                      >
+                        Results
+                      </span>
+                      <span className="ml-auto text-[0.9rem] font-bold text-[#5fff60]">
+                        {viewingSubmission.averageScore.toFixed(1)}
+                      </span>
+                    </div>
+
+                    {viewingSubmission.reviews?.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        <div
+                          className={`${mono} text-[0.5rem] tracking-[0.14em] uppercase text-[rgba(180,220,180,0.4)]`}
+                        >
+                          Judge Feedback
+                        </div>
+                        {viewingSubmission.reviews.map((review, i) => (
+                          <p
+                            key={i}
+                            className="text-[0.68rem] text-[rgba(232,255,232,0.8)] leading-relaxed italic border-l-2 border-[rgba(95,255,96,0.2)] pl-2.5"
+                          >
+                            "{review.feedback || "No written feedback."}"
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {(() => {
                   const phase = (teamData.hackathon?.phases || []).find(

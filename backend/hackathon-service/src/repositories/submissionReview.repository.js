@@ -20,6 +20,15 @@ export class SubmissionReviewRepository {
     });
   }
 
+  // Deliberately selects only score + feedback — never touches `judge` at
+  // all, so there's no field to accidentally leak once this is shown to the
+  // participant who submitted. Judge identity must stay internal.
+  async getPublicReviewsForSubmission(submissionId) {
+    return SubmissionReviewModel.find({ submission: submissionId })
+      .select("score feedback -_id")
+      .lean();
+  }
+
   async getReviewsForSubmissions(submissionIds) {
     return SubmissionReviewModel.find({
       submission: { $in: submissionIds },

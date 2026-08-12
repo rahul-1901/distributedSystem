@@ -255,7 +255,7 @@ export class SubmissionRepository {
       phaseId,
     })
       .populate("participant", "name avatar email")
-      .populate("team", "name members")
+      .populate("team", "name leader members")
       .lean();
   }
 }

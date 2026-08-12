@@ -292,6 +292,16 @@ const HackathonCard = ({ hackathon, onEdited, onSubmitForApproval }) => {
               </div>
             )}
             <div className="ad-hack-meta">
+              <span>
+                {hackathon.participationType === "TEAM" ? (
+                  <Users size={12} style={{ color: "var(--green)" }} />
+                ) : (
+                  <User size={12} style={{ color: "var(--green)" }} />
+                )}
+                {hackathon.participationType === "TEAM"
+                  ? `Team · up to ${hackathon.maxTeamSize || "N"}`
+                  : "Individual"}
+              </span>
               <span><Users size={12} style={{ color: "var(--green)" }} />{hackathon.numParticipants || 0}</span>
               {totalPrize > 0 && <span><Trophy size={12} style={{ color: "var(--amber)" }} />₹{totalPrize.toLocaleString("en-IN")}</span>}
               {hackathon.phases?.[0]?.startDate && (
@@ -420,6 +430,11 @@ const PendingHackathonCard = ({ hackathon: initialHackathon, onApprove, onReject
             </div>
             <div className="ad-pending-meta flex flex-wrap gap-2 mt-1">
               <span>By {hackathon.createdBy?.adminName || "Unknown"} {hackathon.createdBy?.organizationName ? `· ${hackathon.createdBy.organizationName}` : ""}</span>
+              <Chip color="gray">
+                {hackathon.participationType === "TEAM"
+                  ? `Team · up to ${hackathon.maxTeamSize || "N"}`
+                  : "Individual"}
+              </Chip>
               {hackathon.difficulty && <Chip color="blue">{hackathon.difficulty}</Chip>}
               {totalPrize > 0 && <Chip color="amber">₹{totalPrize.toLocaleString("en-IN")}</Chip>}
             </div>
@@ -462,6 +477,11 @@ const PendingHackathonCard = ({ hackathon: initialHackathon, onApprove, onReject
               ))}
               <DetailRow icon={Layers} label="Difficulty" value={hackathon.difficulty} />
               <DetailRow icon={Trophy} label="Total Prize" value={totalPrize > 0 ? `₹${totalPrize.toLocaleString("en-IN")}` : null} />
+              <DetailRow
+                icon={hackathon.participationType === "TEAM" ? Users : User}
+                label="Participation"
+                value={hackathon.participationType === "TEAM" ? `Team (up to ${hackathon.maxTeamSize || "N"})` : "Individual"}
+              />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {hackathon.techStacks?.length > 0 && (

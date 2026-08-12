@@ -16,6 +16,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Send,
 } from "lucide-react";
 import { HackathonAPI } from "../../api/hackathon.api.js";
 import { JudgeAPI } from "../../api/judge.api.js";
@@ -265,6 +266,7 @@ const HackathonUsersPage = () => {
   const [notFound, setNotFound] = useState(false);
   const [result, setResult] = useState(null);
   const [showScoreboard, setShowScoreboard] = useState(false);
+  const [releasingResults, setReleasingResults] = useState(false);
   const [activeTab, setActiveTab] = useState("participants");
 
   const [teamFilter, setTeamFilter] = useState("all");
@@ -357,6 +359,32 @@ const HackathonUsersPage = () => {
       setResult(res.data.results || []);
     } catch {
       setResult([]);
+    }
+  };
+
+  const handleReleaseResults = async () => {
+    if (
+      !window.confirm(
+        "Release results now? Every reviewed team/participant will immediately see their score and feedback, and get notified. This can't be undone."
+      )
+    )
+      return;
+
+    setReleasingResults(true);
+    try {
+      const res = await HackathonAPI.releaseResults(hackathon._id);
+      toast.success(
+        `Results released — ${res.data.notifiedCount ?? 0} people notified.`
+      );
+      setOverview((prev) =>
+        prev ? { ...prev, hackathon: { ...prev.hackathon, showResult: true } } : prev
+      );
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to release results."
+      );
+    } finally {
+      setReleasingResults(false);
     }
   };
 
@@ -625,6 +653,33 @@ const HackathonUsersPage = () => {
             <div className="hu-modal-header">
               <Trophy size={18} style={{ color: "var(--amber)", flexShrink: 0 }} />
               <div className="hu-modal-title">Scoreboard</div>
+
+              {!isJudgeViewer &&
+                (hackathon.showResult ? (
+                  <span
+                    style={{
+                      fontSize: "0.62rem",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "var(--green)",
+                      marginLeft: "auto",
+                      marginRight: "0.5rem",
+                    }}
+                  >
+                    Results released
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleReleaseResults}
+                    disabled={releasingResults}
+                    className="hu-results-btn"
+                    style={{ marginLeft: "auto", marginRight: "0.5rem" }}
+                  >
+                    <Send size={12} />
+                    {releasingResults ? "Releasing…" : "Release Results"}
+                  </button>
+                ))}
+
               <button onClick={() => setShowScoreboard(false)} className="hu-modal-close">
                 <X size={15} />
               </button>

@@ -173,4 +173,14 @@ export class NotificationService {
       success: true,
     };
   }
+
+  async clearAllNotifications(userId) {
+    await this.notificationRepository.deleteManyByUser(
+      userId
+    );
+
+    return {
+      success: true,
+    };
+  }
 }

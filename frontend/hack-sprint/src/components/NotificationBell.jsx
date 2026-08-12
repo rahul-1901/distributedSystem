@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck, BellOff } from "lucide-react";
+import { Bell, Trash2, BellOff } from "lucide-react";
 import { NotificationAPI } from "../api/notification.api.js";
 
 const timeAgo = (dateStr) => {
@@ -73,8 +73,8 @@ const NotificationBell = ({ asAdmin = false }) => {
 
   const handleMarkAllRead = async () => {
     try {
-      await NotificationAPI.markAllAsRead(asAdmin);
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      await NotificationAPI.clearAll(asAdmin);
+      setNotifications([]);
       setUnreadCount(0);
     } catch {
       // best-effort
@@ -105,12 +105,12 @@ const NotificationBell = ({ asAdmin = false }) => {
             <span className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-white">
               Notifications
             </span>
-            {unreadCount > 0 && (
+            {notifications.length > 0 && (
               <button
                 onClick={handleMarkAllRead}
                 className="flex items-center gap-1 text-[0.58rem] uppercase tracking-[0.06em] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] cursor-pointer"
               >
-                <CheckCheck size={11} /> Mark all read
+                <Trash2 size={11} /> Clear all
               </button>
             )}
           </div>
@@ -129,6 +129,7 @@ const NotificationBell = ({ asAdmin = false }) => {
               notifications.map((n) => (
                 <div
                   key={n._id}
+                  onClick={() => handleNotificationClick(n)}
                   className={`px-4 py-3 border-b border-[rgba(95,255,96,0.06)] cursor-pointer transition-colors hover:bg-[rgba(95,255,96,0.05)] ${
                     n.isRead ? "" : "bg-[rgba(95,255,96,0.03)]"
                   }`}

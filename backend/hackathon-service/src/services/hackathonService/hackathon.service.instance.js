@@ -9,6 +9,7 @@ import { TeamRepository } from "../../repositories/team.repository.js";
 import { JudgeAssignmentRepository } from "../../repositories/judgeAssignment.repository.js";
 import { SubmissionReviewRepository } from "../../repositories/submissionReview.repository.js";
 import { mediaServiceClient } from "../mediaService/media.client.instance.js";
+import { notificationClient } from "../../clients/notification.client.instance.js";
 
 const hackathonRepository = new HackathonRepository();
 
@@ -34,5 +35,6 @@ export const hackathonService = new HackathonService(
   mediaServiceClient,
   teamRepository,
   judgeAssignmentRepository,
-  submissionReviewRepository
+  submissionReviewRepository,
+  notificationClient
 );

@@ -134,3 +134,24 @@ export const deleteNotification =
       next(error);
     }
   };
+
+export const clearAllNotifications =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+      await notificationService.clearAllNotifications(
+        req.user._id
+      );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Notifications cleared",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };

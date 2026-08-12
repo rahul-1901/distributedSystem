@@ -16,7 +16,8 @@ export class SubmissionService {
     mediaServiceClient,
     cacheService,
     notificationClient,
-    logger
+    logger,
+    submissionReviewRepository
   ) {
     this.submissionRepository = submissionRepository;
     this.hackathonRepository = hackathonRepository;
@@ -26,6 +27,7 @@ export class SubmissionService {
     this.cacheService = cacheService;
     this.notificationClient = notificationClient,
     this.logger = logger;
+    this.submissionReviewRepository = submissionReviewRepository;
   }
 
   async getHackathonResults(hackathonId) {
@@ -490,26 +492,22 @@ export class SubmissionService {
       throw new BadRequestError("Invalid submission id");
     }
 
-    const submission = await this.submissionRepository.getSubmissionById(
+    const submissionDoc = await this.submissionRepository.getSubmissionById(
       submissionId
     );
 
-    if (!submission) {
+    if (!submissionDoc) {
       throw new NotFoundError("Submission not found");
     }
 
     // Individual submission
-    if (submission.participant) {
-      if (submission.participant._id.toString() !== userId.toString()) {
+    if (submissionDoc.participant) {
+      if (submissionDoc.participant._id.toString() !== userId.toString()) {
         throw new ForbiddenError("Access denied");
       }
-
-      return submission;
-    }
-
-    // Team submission
-    if (submission.team) {
-      const team = await this.teamRepository.findById(submission.team._id);
+    } else if (submissionDoc.team) {
+      // Team submission
+      const team = await this.teamRepository.findById(submissionDoc.team._id);
 
       if (!team) {
         throw new NotFoundError("Team not found");
@@ -524,10 +522,41 @@ export class SubmissionService {
       if (!isLeader && !isMember) {
         throw new ForbiddenError("Access denied");
       }
-
-      return submission;
+    } else {
+      throw new ForbiddenError("Access denied");
     }
 
-    throw new ForbiddenError("Access denied");
+    const submission = submissionDoc.toObject();
+
+    // Score/feedback only ever leaves this endpoint once the organizer has
+    // explicitly released results (same double-gate as the public results
+    // leaderboard: hackathon actually over, and showResult on). Without
+    // this, a participant could see their score the moment a single judge
+    // finishes reviewing — while the hackathon is still active and other
+    // judges haven't scored yet — which is exactly the premature,
+    // inconsistent disclosure this gate exists to prevent.
+    const hackathonId = submission.hackathon?._id || submission.hackathon;
+    const hackathon = await this.hackathonRepository.getResultVisibility(
+      hackathonId
+    );
+    const resultsReleased =
+      !!hackathon &&
+      getLifecycleStatus(hackathon) === "COMPLETED" &&
+      !!hackathon.showResult;
+
+    if (resultsReleased) {
+      submission.reviews =
+        await this.submissionReviewRepository.getPublicReviewsForSubmission(
+          submissionId
+        );
+    } else {
+      delete submission.averageScore;
+      delete submission.reviewCount;
+      delete submission.resultStatus;
+      delete submission.hackathonPoints;
+      submission.reviews = [];
+    }
+
+    return submission;
   }
 }

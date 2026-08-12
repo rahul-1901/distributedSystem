@@ -36,4 +36,10 @@ export const NotificationAPI = {
       adminRequest: asAdmin,
     });
   },
+
+  clearAll(asAdmin = false) {
+    return client.delete(`${API.NOTIFICATION}/clear-all`, {
+      adminRequest: asAdmin,
+    });
+  },
 };

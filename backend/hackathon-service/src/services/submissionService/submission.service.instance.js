@@ -7,6 +7,7 @@ import { TeamRepository } from "../../repositories/team.repository.js";
 import { RegistrationRepository } from "../../repositories/registration.repository.js";
 import { MediaServiceClient } from "../mediaService/media.client.js";
 import { NotificationClient } from "../../clients/notification.client.js";
+import { SubmissionReviewRepository } from "../../repositories/submissionReview.repository.js";
 
 const submissionRepository = new SubmissionRepository();
 
@@ -20,6 +21,8 @@ const mediaServiceClient = new MediaServiceClient(logger);
 
 const notificationClient = new NotificationClient(logger);
 
+const submissionReviewRepository = new SubmissionReviewRepository();
+
 export const submissionService = new SubmissionService(
   submissionRepository,
   hackathonRepository,
@@ -28,5 +31,6 @@ export const submissionService = new SubmissionService(
   mediaServiceClient,
   cacheService,
   notificationClient,
-  logger
+  logger,
+  submissionReviewRepository
 );

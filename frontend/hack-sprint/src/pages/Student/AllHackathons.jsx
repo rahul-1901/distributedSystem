@@ -4,6 +4,7 @@ import Loader from "../../components/Loader";
 import SEO from "../../components/SEO.jsx";
 import {
   Users,
+  User,
   Calendar,
   Timer,
   Code,
@@ -313,6 +314,22 @@ const HackathonCard = ({ hackathon }) => {
                 {hackathon.title}
               </h3>
               <div className="flex flex-wrap gap-1.5">
+                <span
+                  className={`font-jb inline-flex items-center gap-1 text-[0.55rem] tracking-[0.08em] uppercase px-2 py-[3px] rounded-[2px] border ${
+                    hackathon.participationType === "TEAM"
+                      ? "bg-[rgba(190,120,255,0.07)] border-[rgba(190,120,255,0.2)] text-[rgba(190,120,255,0.75)]"
+                      : "bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.14)] text-[rgba(220,220,220,0.6)]"
+                  }`}
+                >
+                  {hackathon.participationType === "TEAM" ? (
+                    <Users size={9} />
+                  ) : (
+                    <User size={9} />
+                  )}
+                  {hackathon.participationType === "TEAM"
+                    ? `Team · up to ${hackathon.maxTeamSize || "N"}`
+                    : "Individual"}
+                </span>
                 {hackathon.difficulty && (
                   <span className="font-jb text-[0.55rem] tracking-[0.08em] uppercase px-2 py-[3px] rounded-[2px] bg-[rgba(255,184,77,0.07)] border border-[rgba(255,184,77,0.2)] text-[rgba(255,184,77,0.75)]">
                     {hackathon.difficulty}

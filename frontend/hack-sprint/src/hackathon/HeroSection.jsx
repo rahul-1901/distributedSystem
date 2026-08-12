@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Calendar,
   Users,
+  User,
   Trophy,
   Clock,
   ChevronRight,
@@ -32,6 +33,7 @@ export const HeroSection = ({
   slug,
   phases = [],
   participationType = "INDIVIDUAL",
+  maxTeamSize = 1,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -405,6 +407,23 @@ export const HeroSection = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-[#5fff60] animate-pulse" />
               )}
               {statusBadge.label}
+            </span>
+
+            <span
+              className={`font-[family-name:'JetBrains_Mono',monospace] inline-flex items-center gap-1.5 text-[0.58rem] tracking-[0.12em] uppercase px-2.5 py-1 rounded-[2px] border ${
+                participationType === "TEAM"
+                  ? "bg-[rgba(190,120,255,0.08)] border-[rgba(190,120,255,0.25)] text-[rgba(200,150,255,0.9)]"
+                  : "bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.16)] text-[rgba(220,220,220,0.7)]"
+              }`}
+            >
+              {participationType === "TEAM" ? (
+                <Users size={11} />
+              ) : (
+                <User size={11} />
+              )}
+              {participationType === "TEAM"
+                ? `Team · up to ${maxTeamSize} members`
+                : "Individual"}
             </span>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5">
