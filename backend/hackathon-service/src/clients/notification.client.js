@@ -3,7 +3,6 @@ import axios from "axios";
 export class NotificationClient {
   constructor(logger) {
     this.logger = logger;
-    this.baseUrl = process.env.NOTIFICATION_SERVICE_URL;
   }
 
   async createNotification({
@@ -15,8 +14,13 @@ export class NotificationClient {
     metadata = {},
   }) {
     try {
+      // Read at call time, not in the constructor — several call sites
+      // (e.g. the cron job files) construct this before index.js's own
+      // dotenv.config() has run, since ESM evaluates static imports before
+      // the importing file's own top-level code. Snapshotting the URL in
+      // the constructor would permanently freeze it as undefined for those.
       await axios.post(
-        `${this.baseUrl}/internal`,
+        `${process.env.NOTIFICATION_SERVICE_URL}/internal`,
         {
           userId,
           title,

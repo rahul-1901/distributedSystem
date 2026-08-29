@@ -18,6 +18,7 @@ import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsMiddleware, metricsHandler } from "./metrics/metrics.js";
 import { startPhaseReminderJob } from "./jobs/phaseReminder.job.js";
+import { startMatchReminderJob } from "./jobs/matchReminder.job.js";
 
 dotenv.config();
 
@@ -91,6 +92,7 @@ const startServer = async () => {
     });
 
     startPhaseReminderJob();
+    startMatchReminderJob();
 
     const shutdown = async (signal) => {
       logger.info(`${signal} received. Starting graceful shutdown`);

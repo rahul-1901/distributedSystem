@@ -56,6 +56,12 @@ const matchSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    remindersSent: {
+      type: [String],
+      enum: ["1h", "15m"],
+      default: [],
+    },
   },
   {
     timestamps: true,

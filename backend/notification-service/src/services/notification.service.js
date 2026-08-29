@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { BadRequestError } from "../errors/BadRequestError.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
+import { pushQueue } from "../queues/push.queue.js";
 
 export class NotificationService {
   constructor(
@@ -66,6 +67,23 @@ export class NotificationService {
       },
       "Notification created"
     );
+
+    // Every notification also fans out as a browser push — queued (not
+    // awaited) so a slow/unreachable push service never delays the caller,
+    // and retried on transient failure like every other queued job here.
+    pushQueue
+      .add("send-push", {
+        userId,
+        title: notification.title,
+        message: notification.message,
+        actionUrl: notification.actionUrl,
+      })
+      .catch((error) => {
+        this.logger.error(
+          { err: error, userId, notificationId: notification._id },
+          "Failed to queue push notification"
+        );
+      });
 
     return notification;
   }

@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { Bell, Trash2, BellOff } from "lucide-react";
+import toast from "react-hot-toast";
+import { Bell, Trash2, BellOff, BellRing, BellPlus } from "lucide-react";
 import { NotificationAPI } from "../api/notification.api.js";
+import {
+  isPushSupported,
+  getExistingSubscription,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "../utils/pushNotifications.js";
 
 const timeAgo = (dateStr) => {
   const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -15,12 +21,62 @@ const timeAgo = (dateStr) => {
 };
 
 const NotificationBell = ({ asAdmin = false }) => {
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
   const ref = useRef(null);
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+
+    getExistingSubscription().then((sub) => {
+      if (sub) {
+        setPushEnabled(true);
+        return;
+      }
+
+      // Auto-enable rather than waiting on the user to find and click a
+      // toggle — silently skipped if they've already said no, so this
+      // never re-nags someone who denied it.
+      if (Notification.permission === "denied") return;
+
+      subscribeToPush(asAdmin)
+        .then(() => setPushEnabled(true))
+        .catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleTogglePush = async (e) => {
+    e.stopPropagation();
+    if (pushBusy || !isPushSupported()) return;
+
+    setPushBusy(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush(asAdmin);
+        setPushEnabled(false);
+        toast.success("Browser notifications turned off");
+      } else {
+        await subscribeToPush(asAdmin);
+        setPushEnabled(true);
+        toast.success("Browser notifications enabled");
+      }
+    } catch (err) {
+      if (err.message === "denied") {
+        toast.error(
+          "Notifications are blocked for this site — enable them in your browser's site settings."
+        );
+      } else if (err.message !== "dismissed") {
+        toast.error("Couldn't update browser notifications");
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const loadUnreadCount = () => {
     NotificationAPI.getUnreadCount(asAdmin)
@@ -54,20 +110,16 @@ const NotificationBell = ({ asAdmin = false }) => {
   };
 
   const handleNotificationClick = async (n) => {
-    if (!n.isRead) {
-      try {
-        await NotificationAPI.markAsRead(n._id, asAdmin);
-        setNotifications((prev) =>
-          prev.map((x) => (x._id === n._id ? { ...x, isRead: true } : x))
-        );
-        setUnreadCount((c) => Math.max(0, c - 1));
-      } catch {
-        // best-effort
-      }
-    }
-    if (n.actionUrl) {
-      setOpen(false);
-      navigate(n.actionUrl);
+    if (n.isRead) return;
+
+    try {
+      await NotificationAPI.markAsRead(n._id, asAdmin);
+      setNotifications((prev) =>
+        prev.map((x) => (x._id === n._id ? { ...x, isRead: true } : x))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch {
+      // best-effort
     }
   };
 
@@ -105,14 +157,35 @@ const NotificationBell = ({ asAdmin = false }) => {
             <span className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-white">
               Notifications
             </span>
-            {notifications.length > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="flex items-center gap-1 text-[0.58rem] uppercase tracking-[0.06em] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] cursor-pointer"
-              >
-                <Trash2 size={11} /> Clear all
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {isPushSupported() && (
+                <button
+                  onClick={handleTogglePush}
+                  disabled={pushBusy}
+                  title={
+                    pushEnabled
+                      ? "Browser notifications on — click to turn off"
+                      : "Turn on browser notifications"
+                  }
+                  className={`flex items-center gap-1 text-[0.58rem] uppercase tracking-[0.06em] cursor-pointer disabled:opacity-40 disabled:cursor-wait ${
+                    pushEnabled
+                      ? "text-[#5fff60]"
+                      : "text-[rgba(180,220,180,0.45)] hover:text-[#5fff60]"
+                  }`}
+                >
+                  {pushEnabled ? <BellRing size={11} /> : <BellPlus size={11} />}
+                  {pushEnabled ? "On" : "Enable"}
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="flex items-center gap-1 text-[0.58rem] uppercase tracking-[0.06em] text-[rgba(95,255,96,0.6)] hover:text-[#5fff60] cursor-pointer"
+                >
+                  <Trash2 size={11} /> Clear all
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-80 overflow-y-auto">

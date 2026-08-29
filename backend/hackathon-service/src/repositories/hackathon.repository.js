@@ -116,7 +116,7 @@ export class HackathonRepository {
     );
   }
 
-  async getPhasesEndingSoon(withinHours) {
+  async getPhasesEndingSoon(withinHours, milestone) {
     const now = new Date();
     const windowEnd = new Date(now.getTime() + withinHours * 60 * 60 * 1000);
 
@@ -126,11 +126,11 @@ export class HackathonRepository {
     // document — if a single hackathon somehow had both a REGISTRATION and a
     // SUBMISSION phase ending in the same window, only one would be returned
     // per run; the other would still be caught on a later tick since its own
-    // endDate keeps it inside the window until reminderSent is set.
+    // endDate keeps it inside the window until this milestone is recorded.
     const matchStage = {
       phaseType: { $in: ["REGISTRATION", "SUBMISSION"] },
       isActive: true,
-      reminderSent: { $ne: true },
+      remindersSent: { $ne: milestone },
       endDate: { $gte: now, $lte: windowEnd },
     };
 
@@ -147,10 +147,10 @@ export class HackathonRepository {
       .lean();
   }
 
-  async markPhaseReminderSent(hackathonId, phaseId) {
+  async markPhaseReminderSent(hackathonId, phaseId, milestone) {
     return hackathonModel.updateOne(
       { _id: hackathonId, "phases._id": phaseId },
-      { $set: { "phases.$.reminderSent": true } }
+      { $addToSet: { "phases.$.remindersSent": milestone } }
     );
   }
 

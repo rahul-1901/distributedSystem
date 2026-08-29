@@ -22,7 +22,17 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// This worker now also has to be registered during local dev (Vite's dev
+// server, normally on 5173) so push notifications can be tested without a
+// production build. Vite dev module URLs are unhashed and change meaning
+// between edits, so any caching here would risk serving stale modules
+// across HMR reloads — the offline app-shell cache is a production-only
+// concern, and push delivery doesn't depend on it at all.
+const IS_DEV_SERVER = self.location.port === "5173";
+
 self.addEventListener("fetch", (event) => {
+  if (IS_DEV_SERVER) return;
+
   const { request } = event;
 
   // Only ever cache same-origin GETs. This is a single-origin SPA that
@@ -63,6 +73,50 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         return response;
       });
+    })
+  );
+});
+
+// Browser (Web Push) notifications — the backend fans every in-app
+// notification out to this via the push service, so this fires for the
+// same events the notification bell already shows, on any tab or none.
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "HackSprint", body: event.data.text() };
+  }
+
+  const { title = "HackSprint", body = "", url = "/" } = payload;
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsList) => {
+      for (const client of clientsList) {
+        const clientUrl = new URL(client.url);
+        if (clientUrl.origin === self.location.origin && "focus" in client) {
+          client.focus();
+          if ("navigate" in client) client.navigate(url);
+          return;
+        }
+      }
+      return self.clients.openWindow(url);
     })
   );
 });

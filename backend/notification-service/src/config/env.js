@@ -6,7 +6,9 @@ const requiredEnvVars = [
   "FRONTEND_URL",
   "BACKEND_URL",
   "BREVO_API_KEY",
-  "BREVO_SENDER_EMAIL"
+  "BREVO_SENDER_EMAIL",
+  "VAPID_PUBLIC_KEY",
+  "VAPID_PRIVATE_KEY",
 ];
 
 requiredEnvVars.forEach((key) => {
@@ -26,4 +28,7 @@ export const env = {
   BACKEND_URL: process.env.BACKEND_URL,
   BREVO_API_KEY: process.env.BREVO_API_KEY,
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT || "mailto:support@hacksprint.dev",
 };

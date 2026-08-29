@@ -3,7 +3,9 @@ import dotenv from "dotenv";
 import {connectDB} from "./config/db.js";
 import { connectRedis, redisClient } from "./config/redis.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import pushRoutes from "./routes/push.routes.js";
 import { emailWorker } from "./workers/email.worker.js";
+import { pushWorker } from "./workers/push.worker.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
@@ -26,6 +28,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/", notificationRoutes);
+app.use("/push", pushRoutes);
 
 const startServer = async () => {
   try {
@@ -64,6 +67,9 @@ const shutdown = async (signal) => {
   try {
     await emailWorker.close();
     logger.info("Email worker closed");
+
+    await pushWorker.close();
+    logger.info("Push worker closed");
 
     await redisClient.quit();
     logger.info("Redis connection closed");

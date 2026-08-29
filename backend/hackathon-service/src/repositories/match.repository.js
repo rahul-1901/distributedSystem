@@ -91,4 +91,25 @@ export class MatchRepository {
   async existsForHackathon(hackathonId) {
     return MatchModel.exists({ hackathon: hackathonId });
   }
+
+  async findUpcomingForReminder(withinMinutes, milestone) {
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() + withinMinutes * 60 * 1000);
+
+    return MatchModel.find({
+      status: "SCHEDULED",
+      scheduledAt: { $ne: null, $gte: now, $lte: windowEnd },
+      remindersSent: { $ne: milestone },
+    })
+      .populate("teamA", "name leader members")
+      .populate("teamB", "name leader members")
+      .populate("hackathon", "title slug");
+  }
+
+  async markReminderSent(matchId, milestone) {
+    return MatchModel.updateOne(
+      { _id: matchId },
+      { $addToSet: { remindersSent: milestone } }
+    );
+  }
 }

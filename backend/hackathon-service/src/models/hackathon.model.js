@@ -94,9 +94,10 @@ const phaseSchema = new mongoose.Schema(
       default: [],
     },
 
-    reminderSent: {
-      type: Boolean,
-      default: false,
+    remindersSent: {
+      type: [String],
+      enum: ["24h", "12h"],
+      default: [],
     },
 
     weight: {

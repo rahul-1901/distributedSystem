@@ -14,9 +14,14 @@ const teamRepository = new TeamRepository();
 const submissionRepository = new SubmissionRepository();
 const notificationClient = new NotificationClient(logger);
 
-const REMINDER_WINDOW_HOURS = 24;
+// Standard two-stage reminder cadence — a heads-up a day out, then a final
+// call as the window actually closes.
+const REMINDER_MILESTONES = [
+  { hours: 24, milestone: "24h", label: "in less than 24 hours" },
+  { hours: 12, milestone: "12h", label: "in less than 12 hours — last call" },
+];
 
-const notifyRegistrationEndingSoon = async (hackathon, phase) => {
+const notifyRegistrationEndingSoon = async (hackathon, phase, label) => {
   const [wishlisters, participants] = await Promise.all([
     userRepository.getWishlistedUserIds(hackathon._id),
     registrationRepository.getParticipants(hackathon._id),
@@ -35,7 +40,7 @@ const notifyRegistrationEndingSoon = async (hackathon, phase) => {
       notificationClient.createNotification({
         userId: u._id,
         title: "Registration Closing Soon",
-        message: `Registration for ${hackathon.title} closes soon. Don't miss out!`,
+        message: `Registration for ${hackathon.title} closes ${label}. Don't miss out!`,
         type: "HACKATHON",
         actionUrl: `/hackathon/${hackathon.slug}`,
         metadata: { hackathonId: hackathon._id.toString(), phaseId: phase._id.toString() },
@@ -46,7 +51,7 @@ const notifyRegistrationEndingSoon = async (hackathon, phase) => {
   return recipients.length;
 };
 
-const notifySubmissionEndingSoon = async (hackathon, phase) => {
+const notifySubmissionEndingSoon = async (hackathon, phase, label) => {
   const submissions = await submissionRepository.getSubmissionsByPhase(
     hackathon._id,
     phase._id
@@ -90,7 +95,7 @@ const notifySubmissionEndingSoon = async (hackathon, phase) => {
       notificationClient.createNotification({
         userId,
         title: "Submission Deadline Approaching",
-        message: `The submission window for ${hackathon.title} closes soon.`,
+        message: `The submission window for ${hackathon.title} closes ${label}.`,
         type: "SUBMISSION",
         actionUrl: `/hackathon/${hackathon.slug}`,
         metadata: { hackathonId: hackathon._id.toString(), phaseId: phase._id.toString() },
@@ -102,37 +107,45 @@ const notifySubmissionEndingSoon = async (hackathon, phase) => {
 };
 
 export const runPhaseReminderSweep = async () => {
-  const hackathons = await hackathonRepository.getPhasesEndingSoon(
-    REMINDER_WINDOW_HOURS
-  );
+  for (const { hours, milestone, label } of REMINDER_MILESTONES) {
+    const hackathons = await hackathonRepository.getPhasesEndingSoon(
+      hours,
+      milestone
+    );
 
-  for (const hackathon of hackathons) {
-    const phase = hackathon.phases?.[0];
+    for (const hackathon of hackathons) {
+      const phase = hackathon.phases?.[0];
 
-    if (!phase) continue;
+      if (!phase) continue;
 
-    try {
-      const notified =
-        phase.phaseType === "REGISTRATION"
-          ? await notifyRegistrationEndingSoon(hackathon, phase)
-          : await notifySubmissionEndingSoon(hackathon, phase);
+      try {
+        const notified =
+          phase.phaseType === "REGISTRATION"
+            ? await notifyRegistrationEndingSoon(hackathon, phase, label)
+            : await notifySubmissionEndingSoon(hackathon, phase, label);
 
-      await hackathonRepository.markPhaseReminderSent(hackathon._id, phase._id);
+        await hackathonRepository.markPhaseReminderSent(
+          hackathon._id,
+          phase._id,
+          milestone
+        );
 
-      logger.info(
-        {
-          hackathonId: hackathon._id,
-          phaseId: phase._id,
-          phaseType: phase.phaseType,
-          notified,
-        },
-        "Phase-ending reminder sent"
-      );
-    } catch (error) {
-      logger.error(
-        { err: error, hackathonId: hackathon._id, phaseId: phase._id },
-        "Failed to process phase-ending reminder"
-      );
+        logger.info(
+          {
+            hackathonId: hackathon._id,
+            phaseId: phase._id,
+            phaseType: phase.phaseType,
+            milestone,
+            notified,
+          },
+          "Phase-ending reminder sent"
+        );
+      } catch (error) {
+        logger.error(
+          { err: error, hackathonId: hackathon._id, phaseId: phase._id, milestone },
+          "Failed to process phase-ending reminder"
+        );
+      }
     }
   }
 };
