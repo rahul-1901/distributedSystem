@@ -378,6 +378,11 @@ const AdminSubmissionDetail = () => {
                 <div className="sd-phase-dates">
                   {new Date(phase.startDate).toLocaleDateString("en-IN")} –{" "}
                   {new Date(phase.endDate).toLocaleDateString("en-IN")}
+                  {phase.weight > 0 && ` · Weight: ${phase.weight}%`}
+                  {phase.qualificationRule?.type === "TOP_N" &&
+                    ` · Top ${phase.qualificationRule.value} advance`}
+                  {phase.qualificationRule?.type === "THRESHOLD" &&
+                    ` · Score ≥ ${phase.qualificationRule.value} advances`}
                 </div>
               )}
 
@@ -394,6 +399,25 @@ const AdminSubmissionDetail = () => {
                           <Award size={11} /> {phase.submission.resultStatus.replace("_", " ")}
                         </span>
                       )}
+                      {phase.submission.qualificationStatus &&
+                        phase.submission.qualificationStatus !== "PENDING" && (
+                          <span
+                            className={`hu-badge ${
+                              phase.submission.qualificationStatus === "QUALIFIED"
+                                ? "hu-badge--submitted"
+                                : "hu-badge--not"
+                            }`}
+                          >
+                            {phase.submission.qualificationStatus === "QUALIFIED" ? (
+                              <CheckCircle size={11} />
+                            ) : (
+                              <XCircle size={11} />
+                            )}{" "}
+                            {phase.submission.qualificationStatus === "QUALIFIED"
+                              ? "Qualified"
+                              : "Not Advancing"}
+                          </span>
+                        )}
                       <span className="sd-points">
                         <Award size={11} /> {phase.submission.hackathonPoints || 0} pts
                       </span>

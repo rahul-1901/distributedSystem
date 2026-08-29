@@ -126,7 +126,9 @@ export class SubmissionRepository {
       participant: participantId,
       hackathon: hackathonId,
     })
-      .select("_id phaseId title submittedAt")
+      .select(
+        "_id phaseId title submittedAt qualificationStatus resultAvailable averageScore reviewCount"
+      )
       .lean();
   }
 
@@ -135,7 +137,9 @@ export class SubmissionRepository {
       team: teamId,
       hackathon: hackathonId,
     })
-      .select("_id phaseId title submittedAt")
+      .select(
+        "_id phaseId title submittedAt qualificationStatus resultAvailable averageScore reviewCount"
+      )
       .lean();
   }
 
@@ -257,5 +261,25 @@ export class SubmissionRepository {
       .populate("participant", "name avatar email")
       .populate("team", "name leader members")
       .lean();
+  }
+
+  async bulkSetQualificationStatus(updates) {
+    if (!updates.length) return { modifiedCount: 0 };
+
+    const result = await SubmissionModel.bulkWrite(
+      updates.map(({ submissionId, status }) => ({
+        updateOne: {
+          filter: {
+            _id: submissionId,
+            qualificationOverride: false,
+          },
+          update: {
+            qualificationStatus: status,
+          },
+        },
+      }))
+    );
+
+    return result;
   }
 }

@@ -11,7 +11,9 @@ export class SubmissionReviewService {
     judgeAssignmentRepository,
     hackathonRepository,
     cacheService,
-    logger
+    logger,
+    notificationClient,
+    teamRepository
   ) {
     this.submissionReviewRepository = submissionReviewRepository;
     this.submissionRepository = submissionRepository;
@@ -19,6 +21,8 @@ export class SubmissionReviewService {
     this.hackathonRepository = hackathonRepository;
     this.cacheService = cacheService;
     this.logger = logger;
+    this.notificationClient = notificationClient;
+    this.teamRepository = teamRepository;
   }
 
   async reviewSubmission({ submissionId, judgeId, score, feedback }) {
@@ -99,6 +103,50 @@ export class SubmissionReviewService {
       aggregate.averageScore,
       aggregate.reviewCount
     );
+
+    // Auto-reveal: the moment every judge assigned to this hackathon has
+    // reviewed this specific submission, its score becomes visible on the
+    // owner's own dashboard — no admin action needed, and independent of
+    // the hackathon-wide release gate (which only governs the full
+    // leaderboard). Guarded on the previous state so this only fires once.
+    if (!submission.resultAvailable) {
+      const judges = await this.judgeAssignmentRepository.getHackathonJudges(
+        submission.hackathon
+      );
+
+      if (judges.length > 0 && aggregate.reviewCount >= judges.length) {
+        await this.submissionRepository.update(submission._id, {
+          resultAvailable: true,
+        });
+
+        const team = submission.team
+          ? await this.teamRepository.findById(submission.team)
+          : null;
+
+        const recipientIds = team
+          ? [team.leader, ...(team.members || [])].filter(Boolean)
+          : submission.participant
+          ? [submission.participant]
+          : [];
+
+        await Promise.all(
+          recipientIds.map((userId) =>
+            this.notificationClient.createNotification({
+              userId,
+              title: "Your Round Score Is Available",
+              message: `Your submission for ${hackathon.title} has been fully reviewed. Check your dashboard for the score and feedback.`,
+              type: "RESULT",
+              actionUrl: `/submissions/${submission._id}`,
+              metadata: {
+                hackathonId: submission.hackathon.toString(),
+                submissionId: submission._id.toString(),
+                kind: "SCORE_AVAILABLE",
+              },
+            })
+          )
+        );
+      }
+    }
 
     try {
       await this.cacheService.del(

@@ -282,6 +282,7 @@ const HackathonCard = ({ hackathon, onEdited, onSubmitForApproval }) => {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <StatusPill status={hackathon.status} />
               {hackathon.status === "APPROVED" && <LifecyclePill status={derivePhaseLifecycle(hackathon.phases)} />}
+              {hackathon.eventFormat === "ON_SPOT" && <Chip color="amber">On-Spot</Chip>}
             </div>
             <div className="ad-hack-title">{hackathon.title}</div>
             {hackathon.subTitle && <div className="ad-hack-subtitle">{hackathon.subTitle}</div>}
@@ -324,13 +325,14 @@ const HackathonCard = ({ hackathon, onEdited, onSubmitForApproval }) => {
 };
 
 /* ── Hackathon section ── */
-const HackathonSection = ({ title, hackathons, setHackathons, viewMoreLink, icon: Icon, onSubmitForApproval }) => {
-  const navigate = useNavigate();
+const HackathonSection = ({ title, hackathons, setHackathons, icon: Icon, onSubmitForApproval }) => {
+  const [expanded, setExpanded] = useState(false);
   const handleEdited = (updated) => {
     if (updated.deleted) setHackathons((prev) => prev.filter((h) => h._id !== updated._id));
     else setHackathons((prev) => prev.map((h) => (h._id === updated._id ? updated : h)));
   };
   if (hackathons.length === 0) return null;
+  const visible = expanded ? hackathons : hackathons.slice(0, 3);
   return (
     <div className="mb-10">
       <div className="ad-section-title mb-4">
@@ -339,8 +341,8 @@ const HackathonSection = ({ title, hackathons, setHackathons, viewMoreLink, icon
         <span className="ad-section-count">({hackathons.length})</span>
       </div>
       <div className="flex flex-col gap-3">
-        {hackathons.slice(0, 3).map((hackathon, index) => {
-          const isOverlay = index === 2 && hackathons.length > 3;
+        {visible.map((hackathon, index) => {
+          const isOverlay = !expanded && index === 2 && hackathons.length > 3;
           return (
             <div key={hackathon._id} className={isOverlay ? "relative" : ""}>
               <div style={{ pointerEvents: isOverlay ? "none" : undefined }}>
@@ -350,7 +352,7 @@ const HackathonSection = ({ title, hackathons, setHackathons, viewMoreLink, icon
                 <>
                   <div className="absolute inset-0 rounded-[4px]" style={{ background: "linear-gradient(to top, #0a0a0a, rgba(10,10,10,0.7), transparent)" }} />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <button onClick={() => navigate(viewMoreLink)} className="ad-viewall-btn">
+                    <button onClick={() => setExpanded(true)} className="ad-viewall-btn">
                       View All {hackathons.length} <ArrowRight size={13} />
                     </button>
                   </div>
@@ -360,6 +362,11 @@ const HackathonSection = ({ title, hackathons, setHackathons, viewMoreLink, icon
           );
         })}
       </div>
+      {expanded && hackathons.length > 3 && (
+        <button onClick={() => setExpanded(false)} className="ad-viewall-btn mt-3">
+          Show Less
+        </button>
+      )}
     </div>
   );
 };
@@ -1347,10 +1354,10 @@ const AdminProfile = () => {
           <div className="ad-empty p-6"><AlertCircle size={14} /> You haven't created any hackathons yet.</div>
         ) : (
           <>
-            <HackathonSection title="Drafts" hackathons={drafts} setHackathons={setMyHackathons} viewMoreLink="/admin" icon={FileText} onSubmitForApproval={handleSubmitForApproval} />
-            <HackathonSection title="Awaiting Approval" hackathons={pendingApproval} setHackathons={setMyHackathons} viewMoreLink="/admin" icon={Clock} onSubmitForApproval={handleSubmitForApproval} />
-            <HackathonSection title="Rejected" hackathons={rejected} setHackathons={setMyHackathons} viewMoreLink="/admin" icon={XCircle} onSubmitForApproval={handleSubmitForApproval} />
-            <HackathonSection title="Published" hackathons={published} setHackathons={setMyHackathons} viewMoreLink="/admin" icon={CheckCircle} onSubmitForApproval={handleSubmitForApproval} />
+            <HackathonSection title="Drafts" hackathons={drafts} setHackathons={setMyHackathons} icon={FileText} onSubmitForApproval={handleSubmitForApproval} />
+            <HackathonSection title="Awaiting Approval" hackathons={pendingApproval} setHackathons={setMyHackathons} icon={Clock} onSubmitForApproval={handleSubmitForApproval} />
+            <HackathonSection title="Rejected" hackathons={rejected} setHackathons={setMyHackathons} icon={XCircle} onSubmitForApproval={handleSubmitForApproval} />
+            <HackathonSection title="Published" hackathons={published} setHackathons={setMyHackathons} icon={CheckCircle} onSubmitForApproval={handleSubmitForApproval} />
           </>
         )}
       </div>

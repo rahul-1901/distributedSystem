@@ -605,54 +605,80 @@ const TeamDetails = () => {
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-4">
-                {submissionPhases.map((phase) => (
-                  <div
-                    key={phase.phaseId}
-                    className="relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-4"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <h3
-                        className={`${syne} font-extrabold text-white text-sm tracking-tight truncate`}
-                      >
-                        {phase.phaseName}
-                      </h3>
-                      <span
-                        className={`${mono} text-[0.52rem] tracking-[0.1em] uppercase px-2 py-[3px] rounded-[2px] border flex-shrink-0 ${
-                          phase.submitted
-                            ? "bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60]"
-                            : "bg-[rgba(255,184,77,0.08)] border-[rgba(255,184,77,0.25)] text-[#ffb84d]"
-                        }`}
-                      >
-                        {phase.submitted ? "Submitted" : "Not Submitted"}
-                      </span>
-                    </div>
-                    {phase.submitted && phase.submittedAt && (
-                      <p className={`${mono} text-[0.6rem] text-[rgba(180,220,180,0.5)] mb-3`}>
-                        Submitted {formatDate(phase.submittedAt)}
-                      </p>
-                    )}
-                    {phase.submitted ? (
-                      <button
-                        onClick={() => handleViewSubmission(phase.submissionId)}
-                        disabled={loadingSubmission}
-                        className={`${mono} inline-flex items-center gap-1.5 text-[0.58rem] tracking-[0.08em] uppercase px-3 py-1.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(95,255,96,0.2)] bg-[rgba(95,255,96,0.06)] text-[rgba(95,255,96,0.65)] hover:bg-[rgba(95,255,96,0.12)] hover:text-[#5fff60] disabled:opacity-40 disabled:cursor-not-allowed`}
-                      >
-                        {loadingSubmission ? (
-                          <Loader2 size={11} className="animate-spin" />
-                        ) : (
-                          <Eye size={11} />
+                {submissionPhases.map((phase, index) => {
+                  const prevPhase = submissionPhases[index - 1];
+                  const blockedByPrevRound =
+                    prevPhase?.qualificationStatus === "ELIMINATED";
+
+                  return (
+                    <div
+                      key={phase.phaseId}
+                      className="relative bg-[rgba(10,12,10,0.88)] border border-[rgba(95,255,96,0.1)] rounded-[4px] p-4"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <h3
+                          className={`${syne} font-extrabold text-white text-sm tracking-tight truncate`}
+                        >
+                          {phase.phaseName}
+                        </h3>
+                        <span
+                          className={`${mono} text-[0.52rem] tracking-[0.1em] uppercase px-2 py-[3px] rounded-[2px] border flex-shrink-0 ${
+                            phase.submitted
+                              ? "bg-[rgba(95,255,96,0.08)] border-[rgba(95,255,96,0.25)] text-[#5fff60]"
+                              : "bg-[rgba(255,184,77,0.08)] border-[rgba(255,184,77,0.25)] text-[#ffb84d]"
+                          }`}
+                        >
+                          {phase.submitted ? "Submitted" : "Not Submitted"}
+                        </span>
+                      </div>
+
+                      {phase.qualificationStatus &&
+                        phase.qualificationStatus !== "PENDING" && (
+                          <span
+                            className={`${mono} inline-block text-[0.5rem] tracking-[0.1em] uppercase px-2 py-[2px] rounded-[2px] border mb-2 ${
+                              phase.qualificationStatus === "QUALIFIED"
+                                ? "bg-[rgba(95,255,96,0.06)] border-[rgba(95,255,96,0.2)] text-[rgba(95,255,96,0.75)]"
+                                : "bg-[rgba(255,96,96,0.06)] border-[rgba(255,96,96,0.2)] text-[rgba(255,96,96,0.75)]"
+                            }`}
+                          >
+                            {phase.qualificationStatus === "QUALIFIED"
+                              ? "Qualified"
+                              : "Not Advancing"}
+                          </span>
                         )}
-                        View Submission
-                      </button>
-                    ) : (
-                      <p className={`${mono} text-[0.6rem] text-[rgba(180,220,180,0.35)]`}>
-                        {phase.canSubmit
-                          ? "Submission window is open"
-                          : "Submission window is not open"}
-                      </p>
-                    )}
-                  </div>
-                ))}
+
+                      {phase.submitted && phase.submittedAt && (
+                        <p className={`${mono} text-[0.6rem] text-[rgba(180,220,180,0.5)] mb-3`}>
+                          Submitted {formatDate(phase.submittedAt)}
+                        </p>
+                      )}
+                      {phase.submitted ? (
+                        <button
+                          onClick={() => handleViewSubmission(phase.submissionId)}
+                          disabled={loadingSubmission}
+                          className={`${mono} inline-flex items-center gap-1.5 text-[0.58rem] tracking-[0.08em] uppercase px-3 py-1.5 rounded-[3px] border cursor-pointer transition-all border-[rgba(95,255,96,0.2)] bg-[rgba(95,255,96,0.06)] text-[rgba(95,255,96,0.65)] hover:bg-[rgba(95,255,96,0.12)] hover:text-[#5fff60] disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                          {loadingSubmission ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : (
+                            <Eye size={11} />
+                          )}
+                          View Submission
+                        </button>
+                      ) : blockedByPrevRound ? (
+                        <p className={`${mono} text-[0.6rem] text-[rgba(255,96,96,0.55)]`}>
+                          You didn't qualify for this round.
+                        </p>
+                      ) : (
+                        <p className={`${mono} text-[0.6rem] text-[rgba(180,220,180,0.35)]`}>
+                          {phase.canSubmit
+                            ? "Submission window is open"
+                            : "Submission window is not open"}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -726,6 +752,16 @@ const TeamDetails = () => {
                     )}
                   </div>
                 )}
+
+                {viewingSubmission.averageScore == null &&
+                  viewingSubmission.reviewCount > 0 && (
+                    <div className="border border-[rgba(255,184,77,0.18)] bg-[rgba(255,184,77,0.04)] rounded-[3px] p-3.5 flex items-center gap-2">
+                      <Loader2 size={13} className="text-[#ffb84d] flex-shrink-0" />
+                      <span className="text-[0.68rem] text-[rgba(255,184,77,0.8)]">
+                        Being reviewed — your score will appear here once every judge has scored it.
+                      </span>
+                    </div>
+                  )}
 
                 {(() => {
                   const phase = (teamData.hackathon?.phases || []).find(

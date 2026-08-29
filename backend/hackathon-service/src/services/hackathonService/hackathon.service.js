@@ -3,8 +3,8 @@ import { NotFoundError } from "../../errors/NotFoundError.js";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { REDIS_KEYS } from "../../config/redisKeys.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
-import { calculateFinalScore } from "../../utils/scoreCalculator.js";
 import { getLifecycleStatus } from "../../utils/lifecycleStatus.js";
+import { buildWeightedLeaderboard } from "../../utils/weightedLeaderboard.js";
 
 export class HackathonService {
   constructor(
@@ -18,7 +18,8 @@ export class HackathonService {
     teamRepository,
     judgeAssignmentRepository,
     submissionReviewRepository,
-    notificationClient
+    notificationClient,
+    matchRepository
   ) {
     this.hackathonRepository = hackathonRepository;
     this.submissionRepository = submissionRepository;
@@ -31,6 +32,7 @@ export class HackathonService {
     this.judgeAssignmentRepository = judgeAssignmentRepository;
     this.submissionReviewRepository = submissionReviewRepository;
     this.notificationClient = notificationClient;
+    this.matchRepository = matchRepository;
   }
 
   async deleteHackathonImage(hackathon, payload) {
@@ -210,6 +212,7 @@ export class HackathonService {
 
       participationType: payload.participationType,
       maxTeamSize: payload.maxTeamSize,
+      eventFormat: payload.eventFormat,
 
       tags: payload.tags,
 
@@ -272,6 +275,21 @@ export class HackathonService {
       throw new BadRequestError("At least one phase is required");
     }
 
+    /**
+     * Event format is locked once matches exist — reformatting a
+     * hackathon mid-tournament would orphan its Match documents.
+     */
+
+    if (
+      payload.eventFormat &&
+      payload.eventFormat !== hackathon.eventFormat &&
+      (await this.matchRepository.existsForHackathon(hackathonId))
+    ) {
+      throw new BadRequestError(
+        "Event format can't be changed once matches have been created"
+      );
+    }
+
     await this.deleteHackathonImage(hackathon, payload);
 
     await this.deleteRemovedGalleryImages(hackathon, payload);
@@ -306,6 +324,7 @@ export class HackathonService {
 
       participationType: payload.participationType,
       maxTeamSize: payload.maxTeamSize,
+      eventFormat: payload.eventFormat,
 
       tags: payload.tags,
     };
@@ -686,6 +705,7 @@ export class HackathonService {
       averageScore: submission.averageScore,
       reviewCount: submission.reviewCount,
       submittedAt: submission.submittedAt,
+      qualificationStatus: submission.qualificationStatus,
       reviews: reviewsBySubmission.get(submission._id.toString()) || [],
     });
 
@@ -728,6 +748,10 @@ export class HackathonService {
         startDate: phase.startDate,
         endDate: phase.endDate,
         submissionForm: phase.submissionForm || [],
+        weight: phase.weight,
+        qualificationRule: phase.qualificationRule,
+        judgingConfig: phase.judgingConfig,
+        concludedAt: phase.concludedAt,
         submission: submission ? serializeSubmission(submission) : null,
       };
     });
@@ -805,6 +829,64 @@ export class HackathonService {
     };
   }
 
+  // Powers the admin submissions list's phase-filter tabs — everyone who
+  // submitted to one specific round, instead of drilling into one team at
+  // a time via getEntitySubmissions.
+  async getPhaseSubmissions({ hackathonId, phaseId, adminId }) {
+    if (
+      !mongoose.Types.ObjectId.isValid(hackathonId) ||
+      !mongoose.Types.ObjectId.isValid(phaseId)
+    ) {
+      throw new BadRequestError("Invalid id");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const isOwner = hackathon.createdBy._id.toString() === adminId.toString();
+    const admin = await this.adminRepository.getById(adminId);
+    const isAssignedJudge = !!(await this.judgeAssignmentRepository.exists(
+      hackathonId,
+      adminId
+    ));
+
+    if (!isOwner && !admin?.controller && !isAssignedJudge) {
+      throw new ForbiddenError("Unauthorized");
+    }
+
+    const phase = (hackathon.phases || []).find(
+      (p) => p._id.toString() === phaseId.toString()
+    );
+
+    if (!phase || phase.phaseType !== "SUBMISSION") {
+      throw new BadRequestError("Invalid submission phase");
+    }
+
+    const submissions = await this.submissionRepository.getSubmissionsByPhase(
+      hackathonId,
+      phaseId
+    );
+
+    return {
+      phase: {
+        _id: phase._id,
+        phaseName: phase.phaseName,
+        startDate: phase.startDate,
+        endDate: phase.endDate,
+        weight: phase.weight,
+        qualificationRule: phase.qualificationRule,
+        judgingConfig: phase.judgingConfig,
+        concludedAt: phase.concludedAt,
+      },
+      canScore: isAssignedJudge,
+      viewerRole: isOwner ? "owner" : admin?.controller ? "controller" : "judge",
+      submissions,
+    };
+  }
+
   // Admin-facing scoreboard — mirrors submissionService.getHackathonResults'
   // finalScore ranking (judge average + weighted votes) so the numbers match
   // what gets published, but isn't gated behind lifecycleStatus/showResult
@@ -833,40 +915,11 @@ export class HackathonService {
       throw new ForbiddenError("Unauthorized");
     }
 
-    const submissionPhases = (hackathon.phases || []).filter(
-      (phase) => phase.phaseType === "SUBMISSION"
-    );
-    const finalPhase = submissionPhases[submissionPhases.length - 1];
-
-    if (!finalPhase) {
-      return [];
-    }
-
-    const submissions = await this.submissionRepository.getLeaderboardSubmissions(
-      hackathonId,
-      finalPhase._id
+    const submissions = await this.submissionRepository.getHackathonSubmissions(
+      hackathonId
     );
 
-    const maxVoteCount = submissions.length
-      ? Math.max(...submissions.map((submission) => submission.voteCount || 0))
-      : 0;
-    const voteWeight = hackathon.votingConfig?.voteWeight || 0;
-    const maxJudgeScore = hackathon.judgingConfig?.maxScore || 100;
-
-    const leaderboard = submissions.map((submission) => ({
-      ...submission,
-      finalScore: calculateFinalScore({
-        averageScore: submission.averageScore,
-        voteCount: submission.voteCount,
-        maxVoteCount,
-        voteWeight,
-        maxJudgeScore,
-      }),
-    }));
-
-    leaderboard.sort((a, b) => b.finalScore - a.finalScore);
-
-    return leaderboard;
+    return buildWeightedLeaderboard({ hackathon, submissions });
   }
 
   // The one action that actually makes judged scores/feedback visible to
@@ -915,58 +968,54 @@ export class HackathonService {
       this.logger.error({ error }, "Failed to invalidate results cache");
     }
 
-    const submissionPhases = (hackathon.phases || []).filter(
-      (phase) => phase.phaseType === "SUBMISSION"
+    const allSubmissions = await this.submissionRepository.getHackathonSubmissions(
+      hackathonId
     );
-    const finalPhase = submissionPhases[submissionPhases.length - 1];
+    const leaderboard = buildWeightedLeaderboard({
+      hackathon,
+      submissions: allSubmissions,
+    });
+
+    // Only entities at least one round actually scored — nothing to tell
+    // someone whose submissions were never reviewed.
+    const reviewed = leaderboard.filter((entity) =>
+      entity.phaseScores.some((phase) => phase.averageScore > 0)
+    );
 
     let notifiedCount = 0;
 
-    if (finalPhase) {
-      const submissions = await this.submissionRepository.getLeaderboardSubmissions(
-        hackathonId,
-        finalPhase._id
-      );
+    await Promise.all(
+      reviewed.map(async (entity) => {
+        const recipientIds = entity.team
+          ? [entity.team.leader, ...(entity.team.members || [])].filter(Boolean)
+          : entity.participant
+          ? [entity.participant._id]
+          : [];
 
-      // Only submissions at least one judge actually scored — nothing to
-      // tell someone whose submission was never reviewed.
-      const reviewed = submissions.filter((s) => (s.reviewCount || 0) > 0);
+        const scoreText =
+          entity.finalScore != null
+            ? ` Final score: ${Math.round(entity.finalScore)}.`
+            : "";
 
-      await Promise.all(
-        reviewed.map(async (submission) => {
-          const recipientIds = submission.team
-            ? [submission.team.leader, ...(submission.team.members || [])].filter(
-                Boolean
-              )
-            : submission.participant
-            ? [submission.participant._id]
-            : [];
+        await Promise.all(
+          recipientIds.map((userId) =>
+            this.notificationClient.createNotification({
+              userId,
+              title: "Results Are Out!",
+              message: `Your submission for ${hackathon.title} has been reviewed.${scoreText} View the full feedback on your dashboard.`,
+              type: "RESULT",
+              actionUrl: `/submissions/${entity._id}`,
+              metadata: {
+                hackathonId: hackathonId.toString(),
+                submissionId: entity._id.toString(),
+              },
+            })
+          )
+        );
 
-          const scoreText =
-            submission.averageScore != null
-              ? ` Final score: ${Math.round(submission.averageScore)}.`
-              : "";
-
-          await Promise.all(
-            recipientIds.map((userId) =>
-              this.notificationClient.createNotification({
-                userId,
-                title: "Results Are Out!",
-                message: `Your submission for ${hackathon.title} has been reviewed.${scoreText} View the full feedback on your dashboard.`,
-                type: "RESULT",
-                actionUrl: `/submissions/${submission._id}`,
-                metadata: {
-                  hackathonId: hackathonId.toString(),
-                  submissionId: submission._id.toString(),
-                },
-              })
-            )
-          );
-
-          notifiedCount += recipientIds.length;
-        })
-      );
-    }
+        notifiedCount += recipientIds.length;
+      })
+    );
 
     this.logger.info(
       { hackathonId, adminId, notifiedCount },
@@ -974,6 +1023,263 @@ export class HackathonService {
     );
 
     return { released: true, notifiedCount };
+  }
+
+  // Applies a round's qualification rule (NONE/TOP_N/THRESHOLD) to every
+  // submission in that phase. Safe to re-run: submissions an admin has
+  // manually overridden are skipped, and notifications only fire for
+  // entities whose status actually changed this run.
+  async concludeRound({ hackathonId, phaseId, adminId }) {
+    if (
+      !mongoose.Types.ObjectId.isValid(hackathonId) ||
+      !mongoose.Types.ObjectId.isValid(phaseId)
+    ) {
+      throw new BadRequestError("Invalid id");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const ownerId = hackathon.createdBy._id
+      ? hackathon.createdBy._id.toString()
+      : hackathon.createdBy.toString();
+    const isOwner = ownerId === adminId.toString();
+
+    if (!isOwner) {
+      const admin = await this.adminRepository.getById(adminId);
+
+      if (!admin?.controller) {
+        throw new ForbiddenError("Unauthorized");
+      }
+    }
+
+    const phase = (hackathon.phases || []).find(
+      (p) => p._id.toString() === phaseId.toString()
+    );
+
+    if (!phase || phase.phaseType !== "SUBMISSION") {
+      throw new BadRequestError("Invalid submission phase");
+    }
+
+    const submissions = await this.submissionRepository.getSubmissionsByPhase(
+      hackathonId,
+      phaseId
+    );
+
+    const unreviewedCount = submissions.filter(
+      (submission) => !(submission.reviewCount > 0)
+    ).length;
+
+    const rule = phase.qualificationRule || { type: "NONE" };
+    const eligible = submissions.filter(
+      (submission) => !submission.qualificationOverride
+    );
+
+    const statusBySubmission = new Map();
+
+    if (rule.type === "TOP_N" && rule.value > 0) {
+      const sorted = [...eligible].sort((a, b) => {
+        if ((b.averageScore || 0) !== (a.averageScore || 0)) {
+          return (b.averageScore || 0) - (a.averageScore || 0);
+        }
+
+        return new Date(a.submittedAt) - new Date(b.submittedAt);
+      });
+
+      sorted.forEach((submission, index) => {
+        statusBySubmission.set(
+          submission._id.toString(),
+          index < rule.value ? "QUALIFIED" : "ELIMINATED"
+        );
+      });
+    } else if (rule.type === "THRESHOLD" && rule.value != null) {
+      for (const submission of eligible) {
+        statusBySubmission.set(
+          submission._id.toString(),
+          (submission.averageScore || 0) >= rule.value
+            ? "QUALIFIED"
+            : "ELIMINATED"
+        );
+      }
+    } else {
+      for (const submission of eligible) {
+        statusBySubmission.set(submission._id.toString(), "QUALIFIED");
+      }
+    }
+
+    const changed = eligible.filter(
+      (submission) =>
+        statusBySubmission.get(submission._id.toString()) !==
+        submission.qualificationStatus
+    );
+
+    await this.submissionRepository.bulkSetQualificationStatus(
+      changed.map((submission) => ({
+        submissionId: submission._id,
+        status: statusBySubmission.get(submission._id.toString()),
+      }))
+    );
+
+    await this.hackathonRepository.markPhaseConcluded(
+      hackathonId,
+      phaseId,
+      adminId
+    );
+    await this.invalidatePublicCaches(hackathonId, hackathon.slug);
+
+    let notifiedCount = 0;
+
+    await Promise.all(
+      changed.map(async (submission) => {
+        const status = statusBySubmission.get(submission._id.toString());
+        const recipientIds = submission.team
+          ? [submission.team.leader, ...(submission.team.members || [])].filter(
+              Boolean
+            )
+          : submission.participant
+          ? [submission.participant._id || submission.participant]
+          : [];
+
+        const isQualified = status === "QUALIFIED";
+
+        await Promise.all(
+          recipientIds.map((userId) =>
+            this.notificationClient.createNotification({
+              userId,
+              title: isQualified
+                ? "You've Advanced to the Next Round"
+                : "Round Results: Not Advancing",
+              message: isQualified
+                ? `You've qualified from ${phase.phaseName} in ${hackathon.title}. Get ready for the next round!`
+                : `Your ${phase.phaseName} results for ${hackathon.title} are in — you didn't advance this time. Check your dashboard for feedback.`,
+              type: "RESULT",
+              actionUrl: `/submissions/${submission._id}`,
+              metadata: {
+                hackathonId: hackathonId.toString(),
+                submissionId: submission._id.toString(),
+                phaseId: phaseId.toString(),
+                kind: status,
+              },
+            })
+          )
+        );
+
+        notifiedCount += recipientIds.length;
+      })
+    );
+
+    const statuses = Array.from(statusBySubmission.values());
+    const qualifiedCount = statuses.filter((s) => s === "QUALIFIED").length;
+    const eliminatedCount = statuses.filter((s) => s === "ELIMINATED").length;
+
+    this.logger.info(
+      { hackathonId, phaseId, adminId, qualifiedCount, eliminatedCount },
+      "Round concluded"
+    );
+
+    return {
+      concluded: true,
+      qualifiedCount,
+      eliminatedCount,
+      unreviewedCount,
+      notifiedCount,
+    };
+  }
+
+  // Lets an admin manually correct one entity's qualification status after
+  // (or instead of) an automatic Conclude Round pass. Marks the submission
+  // as overridden so a later re-run of concludeRound never clobbers it.
+  async overrideQualification({ hackathonId, submissionId, adminId, status }) {
+    if (
+      !mongoose.Types.ObjectId.isValid(hackathonId) ||
+      !mongoose.Types.ObjectId.isValid(submissionId)
+    ) {
+      throw new BadRequestError("Invalid id");
+    }
+
+    if (!["QUALIFIED", "ELIMINATED"].includes(status)) {
+      throw new BadRequestError("Invalid qualification status");
+    }
+
+    const hackathon = await this.hackathonRepository.getById(hackathonId);
+
+    if (!hackathon) {
+      throw new NotFoundError("Hackathon not found");
+    }
+
+    const ownerId = hackathon.createdBy._id
+      ? hackathon.createdBy._id.toString()
+      : hackathon.createdBy.toString();
+    const isOwner = ownerId === adminId.toString();
+
+    if (!isOwner) {
+      const admin = await this.adminRepository.getById(adminId);
+
+      if (!admin?.controller) {
+        throw new ForbiddenError("Unauthorized");
+      }
+    }
+
+    const submission = await this.submissionRepository.findById(submissionId);
+
+    if (
+      !submission ||
+      submission.hackathon.toString() !== hackathonId.toString()
+    ) {
+      throw new NotFoundError("Submission not found");
+    }
+
+    const updated = await this.submissionRepository.update(submissionId, {
+      qualificationStatus: status,
+      qualificationOverride: true,
+    });
+
+    const phase = (hackathon.phases || []).find(
+      (p) => p._id.toString() === submission.phaseId.toString()
+    );
+
+    const team = submission.team
+      ? await this.teamRepository.getTeamDetails(submission.team)
+      : null;
+
+    const recipientIds = team
+      ? [team.leader, ...(team.members || [])].filter(Boolean)
+      : submission.participant
+      ? [submission.participant]
+      : [];
+
+    const isQualified = status === "QUALIFIED";
+
+    await Promise.all(
+      recipientIds.map((userId) =>
+        this.notificationClient.createNotification({
+          userId,
+          title: isQualified
+            ? "You've Advanced to the Next Round"
+            : "Round Results: Not Advancing",
+          message: isQualified
+            ? `You've qualified from ${phase?.phaseName || "a round"} in ${
+                hackathon.title
+              }. Get ready for the next round!`
+            : `Your ${phase?.phaseName || "round"} results for ${
+                hackathon.title
+              } have been updated — you didn't advance this time.`,
+          type: "RESULT",
+          actionUrl: `/submissions/${submission._id}`,
+          metadata: {
+            hackathonId: hackathonId.toString(),
+            submissionId: submission._id.toString(),
+            phaseId: submission.phaseId.toString(),
+            kind: `OVERRIDE_${status}`,
+          },
+        })
+      )
+    );
+
+    return updated;
   }
 
   async deleteHackathon({ hackathonId, adminId }) {

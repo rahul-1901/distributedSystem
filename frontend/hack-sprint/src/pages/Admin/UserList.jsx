@@ -17,10 +17,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Send,
+  Layers,
+  Clock,
+  Swords,
 } from "lucide-react";
 import { HackathonAPI } from "../../api/hackathon.api.js";
 import { JudgeAPI } from "../../api/judge.api.js";
 import { AdminAPI } from "../../api/admin.api.js";
+import MatchManagement from "./MatchManagement.jsx";
 import "./UserList.css";
 
 const PAGE_SIZE = 10;
@@ -60,6 +64,28 @@ const SubmissionBadge = ({ submitted }) =>
       <XCircle size={11} /> Not Submitted
     </span>
   );
+
+const QualificationBadge = ({ status }) => {
+  if (status === "QUALIFIED") {
+    return (
+      <span className="hu-badge hu-badge--submitted">
+        <CheckCircle size={11} /> Qualified
+      </span>
+    );
+  }
+  if (status === "ELIMINATED") {
+    return (
+      <span className="hu-badge hu-badge--not">
+        <XCircle size={11} /> Not Advancing
+      </span>
+    );
+  }
+  return (
+    <span className="hu-badge">
+      <Clock size={11} /> Pending
+    </span>
+  );
+};
 
 const Pagination = ({ page, totalPages, onChange }) => {
   if (totalPages <= 1) return null;
@@ -276,6 +302,11 @@ const HackathonUsersPage = () => {
   const [teamPage, setTeamPage] = useState(1);
   const [participantPage, setParticipantPage] = useState(1);
 
+  const [selectedPhaseId, setSelectedPhaseId] = useState(null);
+  const [phaseData, setPhaseData] = useState(null);
+  const [loadingPhase, setLoadingPhase] = useState(false);
+  const [concluding, setConcluding] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -310,6 +341,82 @@ const HackathonUsersPage = () => {
   const goToParticipantSubmission = (userId) => {
     if (!userId) return;
     navigate(`/admin/hackathon/${hackathon._id}/submission/participant/${userId}`);
+  };
+
+  const submissionPhases = useMemo(
+    () => (hackathon?.phases || []).filter((p) => p.phaseType === "SUBMISSION"),
+    [hackathon]
+  );
+
+  const isOnSpot = hackathon?.eventFormat === "ON_SPOT";
+
+  const matchPhases = useMemo(
+    () => (hackathon?.phases || []).filter((p) => p.phaseType === "MATCH_ROUND"),
+    [hackathon]
+  );
+
+  useEffect(() => {
+    if (isOnSpot && activeTab === "participants") {
+      setActiveTab("matches");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnSpot]);
+
+  const loadPhaseSubmissions = async (phaseId) => {
+    setSelectedPhaseId(phaseId);
+    setLoadingPhase(true);
+    try {
+      const res = await HackathonAPI.getPhaseSubmissions(hackathon._id, phaseId);
+      setPhaseData(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to load round submissions");
+      setPhaseData(null);
+    } finally {
+      setLoadingPhase(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "rounds" && submissionPhases.length && !selectedPhaseId) {
+      loadPhaseSubmissions(submissionPhases[0]._id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, submissionPhases]);
+
+  const handleConcludeRound = async () => {
+    if (!selectedPhaseId) return;
+    if (
+      !window.confirm(
+        "Conclude this round now? This applies the round's qualification rule and notifies everyone whose status changes. You can still manually override individual results after."
+      )
+    )
+      return;
+
+    setConcluding(true);
+    try {
+      const res = await HackathonAPI.concludeRound(hackathon._id, selectedPhaseId);
+      toast.success(
+        `Round concluded — ${res.data.qualifiedCount} qualified, ${res.data.eliminatedCount} not advancing.` +
+          (res.data.unreviewedCount
+            ? ` (${res.data.unreviewedCount} submission(s) had no reviews.)`
+            : "")
+      );
+      loadPhaseSubmissions(selectedPhaseId);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to conclude round");
+    } finally {
+      setConcluding(false);
+    }
+  };
+
+  const handleOverrideQualification = async (submissionId, status) => {
+    try {
+      await HackathonAPI.overrideQualification(hackathon._id, submissionId, status);
+      toast.success("Qualification status updated");
+      loadPhaseSubmissions(selectedPhaseId);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update status");
+    }
   };
 
   const filteredTeams = useMemo(() => {
@@ -442,20 +549,24 @@ const HackathonUsersPage = () => {
             <span className="hu-page-badge">
               <Shield size={11} /> {overview.totalTeams} teams
             </span>
-            <span className="hu-page-badge">
-              <Trophy size={11} /> {overview.totalSubmissions} submissions
-            </span>
+            {!isOnSpot && (
+              <span className="hu-page-badge">
+                <Trophy size={11} /> {overview.totalSubmissions} submissions
+              </span>
+            )}
           </div>
 
           <div className="hu-tabs">
-            <button
-              onClick={() => setActiveTab("participants")}
-              className={`hu-tab ${
-                activeTab === "participants" ? "hu-tab--active" : "hu-tab--inactive"
-              }`}
-            >
-              <Users size={13} /> Participants
-            </button>
+            {!isOnSpot && (
+              <button
+                onClick={() => setActiveTab("participants")}
+                className={`hu-tab ${
+                  activeTab === "participants" ? "hu-tab--active" : "hu-tab--inactive"
+                }`}
+              >
+                <Users size={13} /> Participants
+              </button>
+            )}
             {!isJudgeViewer && (
               <button
                 onClick={() => setActiveTab("judges")}
@@ -464,6 +575,26 @@ const HackathonUsersPage = () => {
                 }`}
               >
                 <Gavel size={13} /> Judges
+              </button>
+            )}
+            {!isOnSpot && submissionPhases.length > 1 && (
+              <button
+                onClick={() => setActiveTab("rounds")}
+                className={`hu-tab ${
+                  activeTab === "rounds" ? "hu-tab--active" : "hu-tab--inactive"
+                }`}
+              >
+                <Layers size={13} /> Rounds
+              </button>
+            )}
+            {isOnSpot && (
+              <button
+                onClick={() => setActiveTab("matches")}
+                className={`hu-tab ${
+                  activeTab === "matches" ? "hu-tab--active" : "hu-tab--inactive"
+                }`}
+              >
+                <Swords size={13} /> Matches
               </button>
             )}
           </div>
@@ -638,6 +769,131 @@ const HackathonUsersPage = () => {
 
           {activeTab === "judges" && !isJudgeViewer && (
             <JudgesSection hackathonId={hackathon._id} canManage={overview.viewerRole !== "judge"} />
+          )}
+
+          {activeTab === "rounds" && (
+            <div className="hu-card">
+              <div className="hu-filters" style={{ marginBottom: "0.75rem" }}>
+                {submissionPhases.map((phase) => (
+                  <button
+                    key={phase._id}
+                    onClick={() => loadPhaseSubmissions(phase._id)}
+                    className={`hu-filter-btn ${
+                      selectedPhaseId === phase._id
+                        ? "hu-filter-btn--active"
+                        : "hu-filter-btn--inactive"
+                    }`}
+                  >
+                    {phase.phaseName}
+                  </button>
+                ))}
+              </div>
+
+              {loadingPhase ? (
+                <div style={{ padding: "1.5rem", textAlign: "center" }}>Loading…</div>
+              ) : !phaseData ? (
+                <EmptyState message="Select a round to view its submissions." />
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "0.5rem",
+                      marginBottom: "0.75rem",
+                    }}
+                  >
+                    <span className="hu-page-badge">
+                      Rule:{" "}
+                      {phaseData.phase.qualificationRule?.type === "TOP_N"
+                        ? `Top ${phaseData.phase.qualificationRule.value} advance`
+                        : phaseData.phase.qualificationRule?.type === "THRESHOLD"
+                        ? `Score ≥ ${phaseData.phase.qualificationRule.value} advances`
+                        : "None configured — everyone advances"}
+                    </span>
+                    {!isJudgeViewer && (
+                      <button
+                        onClick={handleConcludeRound}
+                        disabled={concluding}
+                        className="hu-results-btn"
+                      >
+                        <Layers size={13} />{" "}
+                        {phaseData.phase.concludedAt
+                          ? concluding
+                            ? "Re-running…"
+                            : "Re-run Conclude Round"
+                          : concluding
+                          ? "Concluding…"
+                          : "Conclude Round"}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="hu-table-wrap">
+                    <div className="hu-table-scroll">
+                      <table className="hu-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th className="center">Score</th>
+                            <th className="center">Status</th>
+                            {!isJudgeViewer && <th className="center">Override</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {phaseData.submissions.map((submission) => (
+                            <tr key={submission._id}>
+                              <td className="hu-td-name">
+                                {submission.team?.name || submission.participant?.name || "N/A"}
+                              </td>
+                              <td className="hu-td-center">
+                                {submission.reviewCount > 0
+                                  ? submission.averageScore?.toFixed?.(1) ?? submission.averageScore
+                                  : "—"}
+                              </td>
+                              <td className="hu-td-center">
+                                <QualificationBadge status={submission.qualificationStatus} />
+                              </td>
+                              {!isJudgeViewer && (
+                                <td className="hu-td-center">
+                                  <select
+                                    value=""
+                                    onChange={(e) =>
+                                      e.target.value &&
+                                      handleOverrideQualification(submission._id, e.target.value)
+                                    }
+                                    className="hf-input"
+                                    style={{ fontSize: "0.65rem", padding: "0.25rem 0.4rem" }}
+                                  >
+                                    <option value="">Set status…</option>
+                                    <option value="QUALIFIED">Mark Qualified</option>
+                                    <option value="ELIMINATED">Mark Not Advancing</option>
+                                  </select>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {phaseData.submissions.length === 0 && (
+                        <EmptyState message="No submissions for this round yet." />
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === "matches" && (
+            <MatchManagement
+              hackathon={hackathon}
+              phases={matchPhases}
+              teams={teams}
+              isJudgeViewer={isJudgeViewer}
+            />
           )}
         </main>
       </div>

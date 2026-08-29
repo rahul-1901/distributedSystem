@@ -9,6 +9,7 @@ import {
   ThumbsUp,
   Phone,
   Images,
+  Swords,
 } from "lucide-react";
 
 export const SidebarNav = ({
@@ -17,8 +18,10 @@ export const SidebarNav = ({
   showVoting,
   showResult,
   showJudging,
+  showMatches,
 }) => {
   const allSections = [
+    { id: "matches", label: "Live Bracket", icon: Swords, requiresMatches: true },
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "details", label: "Details", icon: FileText },
     { id: "prizes", label: "Prizes", icon: Award },
@@ -36,6 +39,7 @@ export const SidebarNav = ({
     if (s.requiresVoting && !showVoting) return false;
     if (s.requiresResult && !showResult) return false;
     if (s.requiresJudging && !showJudging) return false;
+    if (s.requiresMatches && !showMatches) return false;
     return true;
   });
 

@@ -34,6 +34,8 @@ export const HeroSection = ({
   phases = [],
   participationType = "INDIVIDUAL",
   maxTeamSize = 1,
+  eventFormat = "SUBMISSION",
+  extraAction = null,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -231,6 +233,11 @@ export const HeroSection = ({
           Create/Join Team <ChevronRight size={14} />
         </button>
       );
+
+    // On-spot (bracket/match) events have nothing for a team to submit —
+    // admins score matches directly — so there's no equivalent of the
+    // submission CTA below once someone's registered/on a team.
+    if (eventFormat === "ON_SPOT") return null;
 
     if (isTeamMember && !isLeader)
       return (
@@ -506,6 +513,7 @@ export const HeroSection = ({
                 </button>
               )}
               {renderActionButton()}
+              {extraAction}
             </div>
           </div>
 

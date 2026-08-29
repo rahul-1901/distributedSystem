@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 import { BadRequestError } from "../../errors/BadRequestError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
-import { calculateFinalScore } from "../../utils/scoreCalculator.js";
 import { getLifecycleStatus } from "../../utils/lifecycleStatus.js";
+import { buildWeightedLeaderboard } from "../../utils/weightedLeaderboard.js";
 import { validateSubmissionData } from "../../utils/validateSubmissionData.js";
 import { getNowUTC } from "../../utils/dateUtils.js";
 
@@ -51,51 +51,11 @@ export class SubmissionService {
       throw new ForbiddenError("Results are not public");
     }
 
-    const submissionPhases = hackathon.phases.filter(
-      (phase) => phase.phaseType === "SUBMISSION"
+    const submissions = await this.submissionRepository.getHackathonSubmissions(
+      hackathonId
     );
 
-    const finalPhase = submissionPhases[submissionPhases.length - 1];
-
-    if (!finalPhase) {
-      throw new BadRequestError("No submission phase configured");
-    }
-
-    const submissions =
-      await this.submissionRepository.getLeaderboardSubmissions(
-        hackathonId,
-        finalPhase._id
-      );
-
-    const maxVoteCount = submissions.length
-      ? Math.max(...submissions.map((submission) => submission.voteCount || 0))
-      : 0;
-
-    const voteWeight = hackathon.votingConfig?.voteWeight || 0;
-
-    const maxJudgeScore = hackathon.judgingConfig?.maxScore || 100;
-
-    const leaderboard = submissions.map((submission) => {
-      const finalScore = calculateFinalScore({
-        averageScore: submission.averageScore,
-
-        voteCount: submission.voteCount,
-
-        maxVoteCount,
-
-        voteWeight,
-
-        maxJudgeScore,
-      });
-
-      return {
-        ...submission,
-
-        finalScore,
-      };
-    });
-
-    leaderboard.sort((a, b) => b.finalScore - a.finalScore);
+    const leaderboard = buildWeightedLeaderboard({ hackathon, submissions });
 
     if (hackathon.publicLeaderboardLimit) {
       return leaderboard.slice(0, hackathon.publicLeaderboardLimit);
@@ -206,6 +166,52 @@ export class SubmissionService {
       }
 
       participant = userId;
+    }
+
+    // Prerequisite-round gating: block submitting to a later round unless
+    // the entity qualified out of the immediately preceding SUBMISSION
+    // phase. Phase order (not a separate "order" field) is already this
+    // codebase's convention for sequencing rounds.
+    const phaseData = await this.hackathonRepository.getPhases(hackathonId);
+    const submissionPhases = (phaseData?.phases || []).filter(
+      (phase) => phase.phaseType === "SUBMISSION"
+    );
+    const activeIndex = submissionPhases.findIndex(
+      (phase) => phase._id.toString() === activePhase._id.toString()
+    );
+    const prereqPhase =
+      activeIndex > 0 ? submissionPhases[activeIndex - 1] : null;
+
+    if (prereqPhase) {
+      const prereqSubmission = team
+        ? await this.submissionRepository.findByTeamAndPhase(
+            team,
+            hackathonId,
+            prereqPhase._id
+          )
+        : await this.submissionRepository.findByParticipantAndPhase(
+            userId,
+            hackathonId,
+            prereqPhase._id
+          );
+
+      if (!prereqSubmission) {
+        throw new BadRequestError(
+          `You didn't submit to ${prereqPhase.phaseName}, so you can't submit to this round.`
+        );
+      }
+
+      if (prereqSubmission.qualificationStatus === "ELIMINATED") {
+        throw new ForbiddenError(
+          `You did not qualify for ${activePhase.phaseName} based on your ${prereqPhase.phaseName} results.`
+        );
+      }
+
+      if (prereqSubmission.qualificationStatus === "PENDING") {
+        throw new BadRequestError(
+          `Results for ${prereqPhase.phaseName} haven't been finalized yet. Check back once qualification is confirmed.`
+        );
+      }
     }
 
     try {
@@ -335,6 +341,12 @@ export class SubmissionService {
           submissionId: existing?._id || null,
           submittedAt: existing?.submittedAt || null,
           canSubmit,
+          qualificationStatus: existing?.qualificationStatus || null,
+          resultAvailable: existing?.resultAvailable || false,
+          averageScore: existing?.resultAvailable
+            ? existing?.averageScore
+            : null,
+          reviewCount: existing?.reviewCount || 0,
         };
       });
 
@@ -528,30 +540,23 @@ export class SubmissionService {
 
     const submission = submissionDoc.toObject();
 
-    // Score/feedback only ever leaves this endpoint once the organizer has
-    // explicitly released results (same double-gate as the public results
-    // leaderboard: hackathon actually over, and showResult on). Without
-    // this, a participant could see their score the moment a single judge
-    // finishes reviewing — while the hackathon is still active and other
-    // judges haven't scored yet — which is exactly the premature,
-    // inconsistent disclosure this gate exists to prevent.
-    const hackathonId = submission.hackathon?._id || submission.hackathon;
-    const hackathon = await this.hackathonRepository.getResultVisibility(
-      hackathonId
-    );
-    const resultsReleased =
-      !!hackathon &&
-      getLifecycleStatus(hackathon) === "COMPLETED" &&
-      !!hackathon.showResult;
-
-    if (resultsReleased) {
+    // Score/feedback for THIS round becomes visible the moment every judge
+    // assigned to the hackathon has reviewed it (resultAvailable, set in
+    // submissionReview.service.js) — fully automatic, per round, and
+    // independent of the hackathon-wide showResult flag, which now governs
+    // only the full comparative leaderboard, not an entity's own score.
+    // qualificationStatus and reviewCount are never gated — neither is a
+    // judge's numeric score/feedback. An entity needs qualificationStatus
+    // to know if they can submit to the next round, and reviewCount lets
+    // the UI show "being reviewed" instead of leaving the score silently
+    // blank while judging is still in progress.
+    if (submission.resultAvailable) {
       submission.reviews =
         await this.submissionReviewRepository.getPublicReviewsForSubmission(
           submissionId
         );
     } else {
       delete submission.averageScore;
-      delete submission.reviewCount;
       delete submission.resultStatus;
       delete submission.hackathonPoints;
       submission.reviews = [];

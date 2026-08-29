@@ -316,6 +316,58 @@ export const releaseResults = async (req, res, next) => {
   }
 };
 
+export const getPhaseSubmissions = async (req, res, next) => {
+  try {
+    const data = await hackathonService.getPhaseSubmissions({
+      hackathonId: req.params.id,
+      phaseId: req.params.phaseId,
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      ...data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const concludeRound = async (req, res, next) => {
+  try {
+    const result = await hackathonService.concludeRound({
+      hackathonId: req.params.id,
+      phaseId: req.params.phaseId,
+      adminId: req.admin._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const overrideQualification = async (req, res, next) => {
+  try {
+    const submission = await hackathonService.overrideQualification({
+      hackathonId: req.params.id,
+      submissionId: req.params.submissionId,
+      adminId: req.admin._id,
+      status: req.body.status,
+    });
+
+    return res.status(200).json({
+      success: true,
+      submission,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getMyHackathons = async (req, res, next) => {
   try {
     const hackathons = await hackathonService.getMyHackathons(req.admin._id);

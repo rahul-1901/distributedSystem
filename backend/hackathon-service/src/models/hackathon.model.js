@@ -64,7 +64,13 @@ const phaseSchema = new mongoose.Schema(
 
     phaseType: {
       type: String,
-      enum: ["REGISTRATION", "SUBMISSION", "REVIEW", "ANNOUNCEMENT"],
+      enum: [
+        "REGISTRATION",
+        "SUBMISSION",
+        "REVIEW",
+        "ANNOUNCEMENT",
+        "MATCH_ROUND",
+      ],
       required: true,
     },
 
@@ -91,6 +97,45 @@ const phaseSchema = new mongoose.Schema(
     reminderSent: {
       type: Boolean,
       default: false,
+    },
+
+    weight: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+
+    qualificationRule: {
+      type: {
+        type: String,
+        enum: ["NONE", "TOP_N", "THRESHOLD"],
+        default: "NONE",
+      },
+      value: {
+        type: Number,
+        default: null,
+      },
+    },
+
+    judgingConfig: {
+      minScore: {
+        type: Number,
+      },
+      maxScore: {
+        type: Number,
+      },
+    },
+
+    concludedAt: {
+      type: Date,
+      default: null,
+    },
+
+    concludedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "admins",
+      default: null,
     },
   },
   {
@@ -304,6 +349,11 @@ const hackathonSchema = new mongoose.Schema(
       type: String,
       enum: ["INDIVIDUAL", "TEAM"],
       default: "INDIVIDUAL",
+    },
+    eventFormat: {
+      type: String,
+      enum: ["SUBMISSION", "ON_SPOT"],
+      default: "SUBMISSION",
     },
     featured: {
       type: Boolean,

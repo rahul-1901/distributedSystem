@@ -155,4 +155,21 @@ export const HackathonAPI = {
   releaseResults(id) {
     return client.post(`${API.HACKATHON}/admin/hackathons/${id}/release-results`);
   },
+
+  getPhaseSubmissions(hackathonId, phaseId) {
+    return client.get(
+      `${API.HACKATHON}/admin/hackathons/${hackathonId}/phases/${phaseId}/submissions`
+    );
+  },
+  concludeRound(hackathonId, phaseId) {
+    return client.post(
+      `${API.HACKATHON}/admin/hackathons/${hackathonId}/phases/${phaseId}/conclude`
+    );
+  },
+  overrideQualification(hackathonId, submissionId, status) {
+    return client.patch(
+      `${API.HACKATHON}/admin/hackathons/${hackathonId}/submissions/${submissionId}/qualification`,
+      { status }
+    );
+  },
 };

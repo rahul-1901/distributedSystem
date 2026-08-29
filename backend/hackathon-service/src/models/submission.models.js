@@ -76,6 +76,20 @@ const submissionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+
+    qualificationStatus: {
+      type: String,
+      enum: ["PENDING", "QUALIFIED", "ELIMINATED"],
+      default: "PENDING",
+    },
+    qualificationOverride: {
+      type: Boolean,
+      default: false,
+    },
+    resultAvailable: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -88,6 +102,11 @@ submissionSchema.pre("validate", function (next) {
   }
 });
 
+// $type (not $exists) here — participant/team both default to null, so
+// $exists:true would match every document regardless of which field is
+// actually set, treating every team submission's null participant (and
+// every individual submission's null team) as the same "duplicate" key
+// and blocking any second team/participant from submitting to a phase.
 submissionSchema.index(
   {
     participant: 1,
@@ -98,7 +117,7 @@ submissionSchema.index(
     unique: true,
     partialFilterExpression: {
       participant: {
-        $exists: true,
+        $type: "objectId",
       },
     },
   }
@@ -114,7 +133,7 @@ submissionSchema.index(
     unique: true,
     partialFilterExpression: {
       team: {
-        $exists: true,
+        $type: "objectId",
       },
     },
   }

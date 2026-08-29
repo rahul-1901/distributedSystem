@@ -24,8 +24,23 @@ import {
   getHackathonAdminOverview,
   getEntitySubmissions,
   getAdminResults,
-  releaseResults
+  releaseResults,
+  getPhaseSubmissions,
+  concludeRound,
+  overrideQualification
 } from "../controllers/hackathon.controller.js";
+
+import {
+  createMatch,
+  updateMatchScore,
+  updateMatchStatus,
+  updateMatchSchedule,
+  reorderMatches,
+  deleteMatch,
+  getRoundMatchesAdmin,
+  getRoundMatchesPublic,
+  getStandings,
+} from "../controllers/match.controller.js";
 
 import { 
   registerParticipants, 
@@ -99,6 +114,12 @@ router.get("/wishlist/check/:hackathonId", verifyAuth, getLimiter, checkHackatho
 
 router.get("/:id", getLimiter, getHackathonById);
 router.get("/:id/results", getLimiter, getHackathonResults);
+router.get("/:id/on-spot/standings", getLimiter, getStandings);
+router.get(
+  "/:id/on-spot/phases/:phaseId/matches",
+  getLimiter,
+  getRoundMatchesPublic
+);
 router.get("/:hackathonId/gallery", getLimiter, getHackathonGallery);
 router.post("/:submissionId/vote", verifyAuth, strictLimiter, toggleVote);
 router.get("/:hackathonId/voting-submissions", getLimiter, getVotingSubmissions);
@@ -142,6 +163,52 @@ router.delete("/admin/:id/deleteHackathon", adminAuth, deleteHackathon);
 router.get("/admin/hackathons/:id/overview", adminAuth, getHackathonAdminOverview);
 router.get("/admin/hackathons/:id/results", adminAuth, getAdminResults);
 router.post("/admin/hackathons/:id/release-results", adminAuth, releaseResults);
+router.get(
+  "/admin/hackathons/:id/phases/:phaseId/submissions",
+  adminAuth,
+  getPhaseSubmissions
+);
+router.post(
+  "/admin/hackathons/:id/phases/:phaseId/conclude",
+  adminAuth,
+  concludeRound
+);
+router.patch(
+  "/admin/hackathons/:id/submissions/:submissionId/qualification",
+  adminAuth,
+  overrideQualification
+);
+router.post("/admin/hackathons/:id/matches", adminAuth, createMatch);
+router.get(
+  "/admin/hackathons/:id/phases/:phaseId/matches",
+  adminAuth,
+  getRoundMatchesAdmin
+);
+router.patch(
+  "/admin/hackathons/:id/matches/:matchId/score",
+  adminAuth,
+  updateMatchScore
+);
+router.patch(
+  "/admin/hackathons/:id/matches/:matchId/status",
+  adminAuth,
+  updateMatchStatus
+);
+router.patch(
+  "/admin/hackathons/:id/matches/:matchId/schedule",
+  adminAuth,
+  updateMatchSchedule
+);
+router.patch(
+  "/admin/hackathons/:id/phases/:phaseId/matches/reorder",
+  adminAuth,
+  reorderMatches
+);
+router.delete(
+  "/admin/hackathons/:id/matches/:matchId",
+  adminAuth,
+  deleteMatch
+);
 router.get(
   "/admin/hackathons/:id/submissions/:entityType/:entityId",
   adminAuth,

@@ -154,6 +154,18 @@ export class HackathonRepository {
     );
   }
 
+  async markPhaseConcluded(hackathonId, phaseId, adminId) {
+    return hackathonModel.updateOne(
+      { _id: hackathonId, "phases._id": phaseId },
+      {
+        $set: {
+          "phases.$.concludedAt": new Date(),
+          "phases.$.concludedBy": adminId,
+        },
+      }
+    );
+  }
+
   async getPhases(hackathonId) {
     return hackathonModel
       .findById(hackathonId)

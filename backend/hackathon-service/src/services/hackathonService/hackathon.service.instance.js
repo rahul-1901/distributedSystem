@@ -10,6 +10,7 @@ import { JudgeAssignmentRepository } from "../../repositories/judgeAssignment.re
 import { SubmissionReviewRepository } from "../../repositories/submissionReview.repository.js";
 import { mediaServiceClient } from "../mediaService/media.client.instance.js";
 import { notificationClient } from "../../clients/notification.client.instance.js";
+import { MatchRepository } from "../../repositories/match.repository.js";
 
 const hackathonRepository = new HackathonRepository();
 
@@ -25,6 +26,8 @@ const judgeAssignmentRepository = new JudgeAssignmentRepository();
 
 const submissionReviewRepository = new SubmissionReviewRepository();
 
+const matchRepository = new MatchRepository();
+
 export const hackathonService = new HackathonService(
   hackathonRepository,
   submissionRepository,
@@ -36,5 +39,6 @@ export const hackathonService = new HackathonService(
   teamRepository,
   judgeAssignmentRepository,
   submissionReviewRepository,
-  notificationClient
+  notificationClient,
+  matchRepository
 );

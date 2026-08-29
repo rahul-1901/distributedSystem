@@ -3,6 +3,7 @@ import { HeroSection } from "../hackathon/HeroSection";
 import { SidebarNav } from "../hackathon/SidebarNav";
 import { ContentSection } from "../hackathon/ContentSection";
 import { SocialShare } from "../hackathon/SocialShare";
+import { OnSpotEventPage } from "../hackathon/OnSpotEventPage.jsx";
 import { useParams } from "react-router-dom";
 import { HackathonAPI } from "../api/hackathon.api.js";
 import SEO from "../components/SEO.jsx";
@@ -87,6 +88,10 @@ export default function HackathonDetails() {
         </div>
       </div>
     );
+
+  if (hackathon.eventFormat === "ON_SPOT") {
+    return <OnSpotEventPage hackathon={hackathon} />;
+  }
 
   const phases = hackathon.phases || [];
   const starts = phases.map((p) => new Date(p.startDate)).filter((d) => !isNaN(d));

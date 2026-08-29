@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import DOMPurify from "dompurify";
 import ChatInterface from "../components/Chat/ChatInterface";
+import { OnSpotMatchesSection } from "./OnSpotMatchesSection.jsx";
 import Upvote from "./Upvote";
 import Gallery from "./Gallery";
 import { HackathonAPI } from "../api/hackathon.api.js";
@@ -661,6 +662,9 @@ export const ContentSection = ({ activeSection, hackathon }) => {
 
       case "discussion":
         return <ChatInterface hackathonId={hackathon._id} />;
+
+      case "matches":
+        return <OnSpotMatchesSection hackathon={hackathon} />;
 
       case "contact": {
         const contacts = hackathon.contacts || [];

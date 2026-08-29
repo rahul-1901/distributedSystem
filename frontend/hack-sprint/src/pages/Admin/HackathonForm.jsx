@@ -12,6 +12,8 @@ import {
   ThumbsUp,
   Users,
   Image as ImageIcon,
+  FileText,
+  Swords,
 } from "lucide-react";
 import { MediaAPI } from "../../api/media.api.js";
 import RichTextEditor from "../../components/RichTextEditor.jsx";
@@ -485,7 +487,7 @@ const SubmissionFormEditor = ({ values, onChange }) => {
    Phases builder
 ───────────────────────────────────────────────────────────────────────── */
 
-const PHASE_TYPES = ["REGISTRATION", "SUBMISSION", "REVIEW", "ANNOUNCEMENT"];
+const PHASE_TYPES = ["REGISTRATION", "SUBMISSION", "REVIEW", "ANNOUNCEMENT", "MATCH_ROUND"];
 const toLocalInput = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -497,8 +499,12 @@ const toLocalInput = (iso) => {
   return local.toISOString().slice(0, 16);
 };
 
-const PhaseCard = ({ phase, onChange, onRemove }) => {
+const PhaseCard = ({ phase, onChange, onRemove, eventFormat }) => {
   const set = (field, val) => onChange({ ...phase, [field]: val });
+  const availableTypes =
+    eventFormat === "ON_SPOT"
+      ? PHASE_TYPES.filter((t) => t !== "SUBMISSION" && t !== "REVIEW")
+      : PHASE_TYPES.filter((t) => t !== "MATCH_ROUND");
   return (
     <div className="hf-phase-card">
       <div className="hf-phase-head">
@@ -509,7 +515,7 @@ const PhaseCard = ({ phase, onChange, onRemove }) => {
           onChange={(e) => set("phaseName", e.target.value)}
         />
         <select className="hf-input hf-phase-type" value={phase.phaseType} onChange={(e) => set("phaseType", e.target.value)}>
-          {PHASE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {availableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         <button type="button" className="hf-icon-btn hf-icon-btn--danger" onClick={onRemove}>
           <Trash2 size={13} />
@@ -534,17 +540,112 @@ const PhaseCard = ({ phase, onChange, onRemove }) => {
         <div className="mt-3">
           <label className="hf-label hf-label--sm">Submission form fields</label>
           <SubmissionFormEditor values={phase.submissionForm || []} onChange={(v) => set("submissionForm", v)} />
+
+          <label className="hf-label hf-label--sm mt-3">
+            Weight in final score (%)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            className="hf-input"
+            value={phase.weight ?? 0}
+            onChange={(e) => set("weight", Number(e.target.value))}
+          />
+
+          <div className="hf-row-2 mt-2">
+            <div>
+              <label className="hf-label hf-label--sm">Qualification rule</label>
+              <select
+                className="hf-input"
+                value={phase.qualificationRule?.type || "NONE"}
+                onChange={(e) =>
+                  set("qualificationRule", {
+                    ...(phase.qualificationRule || {}),
+                    type: e.target.value,
+                  })
+                }
+              >
+                <option value="NONE">None — everyone advances</option>
+                <option value="TOP_N">Top N teams advance</option>
+                <option value="THRESHOLD">Minimum score to advance</option>
+              </select>
+            </div>
+            {phase.qualificationRule?.type && phase.qualificationRule.type !== "NONE" && (
+              <div>
+                <label className="hf-label hf-label--sm">
+                  {phase.qualificationRule.type === "TOP_N" ? "Top N" : "Minimum score"}
+                </label>
+                <input
+                  type="number"
+                  className="hf-input"
+                  value={phase.qualificationRule?.value ?? ""}
+                  onChange={(e) =>
+                    set("qualificationRule", {
+                      ...(phase.qualificationRule || {}),
+                      value: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <details className="mt-2">
+            <summary className="hf-label hf-label--sm" style={{ cursor: "pointer" }}>
+              Override judging scale for this round
+            </summary>
+            <div className="hf-row-2 mt-2">
+              <div>
+                <label className="hf-label hf-label--sm">Min Score</label>
+                <input
+                  type="number"
+                  className="hf-input"
+                  value={phase.judgingConfig?.minScore ?? ""}
+                  onChange={(e) =>
+                    set("judgingConfig", {
+                      ...(phase.judgingConfig || {}),
+                      minScore: e.target.value === "" ? undefined : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="hf-label hf-label--sm">Max Score</label>
+                <input
+                  type="number"
+                  className="hf-input"
+                  value={phase.judgingConfig?.maxScore ?? ""}
+                  onChange={(e) =>
+                    set("judgingConfig", {
+                      ...(phase.judgingConfig || {}),
+                      maxScore: e.target.value === "" ? undefined : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </details>
         </div>
       )}
     </div>
   );
 };
 
-const PhasesEditor = ({ values, onChange }) => {
+const PhasesEditor = ({ values, onChange, eventFormat }) => {
   const addPhase = () =>
     onChange([
       ...values,
-      { phaseName: "", phaseType: "REGISTRATION", startDate: "", endDate: "", isActive: true, submissionForm: [] },
+      {
+        phaseName: "",
+        phaseType: eventFormat === "ON_SPOT" ? "MATCH_ROUND" : "REGISTRATION",
+        startDate: "",
+        endDate: "",
+        isActive: true,
+        submissionForm: [],
+        weight: 0,
+        qualificationRule: { type: "NONE", value: null },
+      },
     ]);
   return (
     <div>
@@ -552,6 +653,7 @@ const PhasesEditor = ({ values, onChange }) => {
         <PhaseCard
           key={i}
           phase={p}
+          eventFormat={eventFormat}
           onChange={(updated) => onChange(values.map((v, j) => (j === i ? updated : v)))}
           onRemove={() => onChange(values.filter((_, j) => j !== i))}
         />
@@ -570,6 +672,7 @@ const PhasesEditor = ({ values, onChange }) => {
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced", "Expert", "Tough"];
 
 export const buildDefaultHackathonForm = () => ({
+  eventFormat: "SUBMISSION",
   title: "",
   subTitle: "",
   venue: "",
@@ -684,6 +787,20 @@ export default function HackathonForm({ initialValues, onSubmit, submitLabel = "
   return (
     <form onSubmit={handleSubmit} className="hf-root">
       <Section badge="01 / basic information">
+        <Field label="Event Format" hint="Submission-based hackathons are judged from uploaded work. On-Spot events are live, in-person, bracket-style competitions (Team vs Team matches).">
+          <div className="hf-radio-row">
+            {[
+              { value: "SUBMISSION", label: "Submission-Based", icon: FileText },
+              { value: "ON_SPOT", label: "On-Spot Event", icon: Swords },
+            ].map(({ value, label, icon: Icon }) => (
+              <label key={value} className={`hf-radio-pill ${form.eventFormat === value ? "hf-radio-pill--active" : ""}`}>
+                <input type="radio" name="eventFormat" checked={form.eventFormat === value} onChange={() => set("eventFormat", value)} />
+                <Icon size={12} />
+                {label}
+              </label>
+            ))}
+          </div>
+        </Field>
         <Field label="Title" required>
           <input className="hf-input" value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Hackathon title" />
         </Field>
@@ -778,7 +895,7 @@ export default function HackathonForm({ initialValues, onSubmit, submitLabel = "
           <Calendar size={11} style={{ display: "inline", marginRight: 4 }} />
           Define each stage of the event. Submission-type phases get their own dynamic submission form.
         </p>
-        <PhasesEditor values={form.phases} onChange={(v) => set("phases", v)} />
+        <PhasesEditor values={form.phases} onChange={(v) => set("phases", v)} eventFormat={form.eventFormat} />
       </Section>
 
       <Section badge="05 / registration form">
@@ -795,6 +912,7 @@ export default function HackathonForm({ initialValues, onSubmit, submitLabel = "
         </Field>
       </Section>
 
+      {form.eventFormat !== "ON_SPOT" && (
       <Section badge="07 / judging & voting">
         <div className="hf-row-2">
           <Field label="Min Score">
@@ -854,6 +972,7 @@ export default function HackathonForm({ initialValues, onSubmit, submitLabel = "
           </Field>
         )}
       </Section>
+      )}
 
       <Section badge="08 / resources & faqs">
         <Field label="Resources" hint="Reference material links for participants">
