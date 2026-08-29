@@ -28,23 +28,22 @@ const FLOWS = [
   { d: "M 752,592 C 752,660 595,660 595,744", color: "#b478ff", dur: "2.1s", begin: "-1.8s" },
   { d: "M905,773 L935,773", color: "#ff6060", dur: "1s", begin: "0s" },
   { d: "M 832,744 C 832,650 700,610 700,592", color: "#ff6060", dur: "2s", begin: "-0.9s" },
-  { d: "M 1020,554 C 1180,554 1180,554 1315,554", color: "#ff6bcb", dur: "2s", begin: "-0.4s" },
-  { d: "M 1205,566 C 1260,566 1260,626 1315,626", color: "#ff6bcb", dur: "2.2s", begin: "-1.5s" },
+  { d: "M 1020,554 C 1180,554 1180,547 1315,547", color: "#ff6bcb", dur: "2s", begin: "-0.4s" },
   { d: "M660,1160 L660,1076", color: "#9aa7b8", dur: "1.8s", begin: "-0.3s" },
 ];
 
 const NOTES = [
   {
-    title: "Two of six services are fully stateless.",
-    body: "Chatbot and Analytics hold no database connection at all — each is a thin, cacheable wrapper around one external API (Gemini, Google Analytics), scoped so neither can ever see a user's account data.",
+    title: "One of five services is fully stateless.",
+    body: "Chatbot holds no database connection at all — it's a thin, cacheable wrapper around Gemini, scoped so it can never see a user's account data.",
   },
   {
-    title: "Exactly one async hop exists.",
-    body: "Every other call in the system is synchronous HTTP. Auth enqueues transactional email onto a BullMQ/Redis queue; Notification's worker is the only consumer.",
+    title: "Two async hops exist, both queue-backed.",
+    body: "Auth enqueues transactional email onto a BullMQ/Redis queue for Notification's worker to send. Notification also queues every browser push notification the same way — so a slow push provider can never delay a request or another job.",
   },
   {
     title: "The gateway does no business logic.",
-    body: "Helmet, CORS, rate-limiting, and prefix-based routing only — auth, DB access, and validation all live inside the six services themselves.",
+    body: "Helmet, CORS, rate-limiting, and prefix-based routing only — auth, DB access, and validation all live inside the five services themselves.",
   },
   {
     title: "One push, one deploy.",
@@ -57,7 +56,7 @@ export default function ArchitecturePage() {
     <div className="hk-bg font-jb min-h-screen bg-[#050505] text-[#e8ffe8] relative overflow-hidden py-20 px-5">
       <SEO
         title="System Architecture"
-        description="How HackSprint's backend is actually built — the API gateway, six services, data layer, external APIs, observability, and deployment pipeline."
+        description="How HackSprint's backend is actually built — the API gateway, five services, data layer, external APIs, observability, and deployment pipeline."
         path="/architecture"
       />
       <div className="relative z-10 max-w-[1240px] mx-auto">
@@ -71,7 +70,7 @@ export default function ArchitecturePage() {
           Hack<span className="text-[#5fff60]">Sprint</span> — Current Architecture
         </h1>
         <p className="font-jb text-[0.78rem] text-[rgba(180,220,180,0.55)] leading-relaxed max-w-2xl mb-10">
-          Six independent backend services behind one API gateway, a separately deployed
+          Five independent backend services behind one API gateway, a separately deployed
           frontend, and a single EC2 host running the whole backend under Docker Compose.
           This reflects the system as it's actually implemented today not a target state.
         </p>
@@ -83,7 +82,7 @@ export default function ArchitecturePage() {
               role="img"
               className="block w-full h-auto"
               style={{ minWidth: 980 }}
-              aria-label="HackSprint request flow: browser talks to the React SPA on Vercel, which sends HTTPS requests to Nginx and the API Gateway on a single EC2 host; the gateway routes to six services (Auth, Notification, Hackathon, Media, Chatbot, Analytics); four of those six read and write MongoDB, two of those four also use Redis, Media alone writes to S3; Auth hands transactional email to Notification via a BullMQ/Redis queue; Chatbot calls the Gemini API and Analytics calls the Google Analytics Data API, both outside the host; Prometheus scrapes every service and Grafana visualizes it; GitHub Actions deploys to the host by SSH on every push to main."
+              aria-label="HackSprint request flow: browser talks to the React SPA on Vercel, which sends HTTPS requests to Nginx and the API Gateway on a single EC2 host; the gateway routes to five services (Auth, Notification, Hackathon, Media, Chatbot); four of those five read and write MongoDB, two of those four also use Redis, Media alone writes to S3; Auth hands transactional email to Notification via a BullMQ/Redis queue, and Notification queues its own browser push notifications the same way; Chatbot calls the Gemini API outside the host; Prometheus scrapes every service and Grafana visualizes it; GitHub Actions deploys to the host by SSH on every push to main."
             >
               <defs>
                 <marker id="arch-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -136,7 +135,7 @@ export default function ArchitecturePage() {
               <text x="712" y="456" fontSize="10.5" fill="rgba(180,220,180,0.62)">routes /api/* by prefix</text>
 
               {/* CORE SERVICES ZONE */}
-              <rect x="100" y="470" width="1120" height="196" rx="10" fill="rgba(255,184,77,0.055)" stroke="#ffb84d" strokeWidth="1.5" />
+              <rect x="100" y="470" width="935" height="196" rx="10" fill="rgba(255,184,77,0.055)" stroke="#ffb84d" strokeWidth="1.5" />
               <text x="120" y="496" fontSize="12" fontWeight="700" letterSpacing="0.12em" fill="#ffb84d">CORE SERVICES</text>
 
               <rect x="115" y="516" width="165" height="76" rx="6" fill="rgba(255,184,77,0.12)" stroke="#ffb84d" />
@@ -145,18 +144,19 @@ export default function ArchitecturePage() {
               <text x="197" y="576" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">refresh tokens</text>
 
               <rect x="300" y="516" width="165" height="76" rx="6" fill="rgba(255,184,77,0.12)" stroke="#ffb84d" />
-              <text x="382" y="546" textAnchor="middle" fontSize="12" fill="#fff">Notification</text>
-              <text x="382" y="562" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">:5004 · in-app +</text>
-              <text x="382" y="576" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">email (Brevo)</text>
+              <text x="382" y="541" textAnchor="middle" fontSize="12" fill="#fff">Notification</text>
+              <text x="382" y="557" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">:5004 · in-app +</text>
+              <text x="382" y="570" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">email (Brevo) +</text>
+              <text x="382" y="583" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">web push (VAPID)</text>
 
               <path d="M 197,592 C 197,616 382,616 382,592" fill="none" stroke="#ff6bcb" strokeWidth="1.5" markerEnd="url(#arch-arrow)" />
-              <text x="290" y="622" textAnchor="middle" fontSize="9.5" fill="#ff6bcb">email jobs · BullMQ/Redis</text>
+              <text x="290" y="622" textAnchor="middle" fontSize="9.5" fill="#ff6bcb">email + push jobs · BullMQ/Redis</text>
 
               <rect x="485" y="516" width="165" height="76" rx="6" fill="rgba(255,184,77,0.12)" stroke="#ffb84d" />
               <text x="567" y="541" textAnchor="middle" fontSize="12" fill="#fff">Hackathon</text>
               <text x="567" y="557" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">:5002 · teams, judging,</text>
-              <text x="567" y="570" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">discussions, admin</text>
-              <text x="567" y="583" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">+ hourly reminder cron</text>
+              <text x="567" y="570" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">on-spot matches,</text>
+              <text x="567" y="583" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">discussions + 2 crons</text>
 
               <rect x="670" y="516" width="165" height="76" rx="6" fill="rgba(255,184,77,0.12)" stroke="#ffb84d" />
               <text x="752" y="546" textAnchor="middle" fontSize="12" fill="#fff">Media</text>
@@ -167,11 +167,6 @@ export default function ArchitecturePage() {
               <text x="937" y="546" textAnchor="middle" fontSize="12" fill="#fff">Chatbot</text>
               <text x="937" y="562" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">:5005 · FAQ only</text>
               <text x="937" y="576" textAnchor="middle" fontSize="9.5" fill="#ff6bcb">no database</text>
-
-              <rect x="1040" y="516" width="165" height="76" rx="6" fill="rgba(255,184,77,0.12)" stroke="#ffb84d" />
-              <text x="1122" y="546" textAnchor="middle" fontSize="12" fill="#fff">Analytics</text>
-              <text x="1122" y="562" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">:5006 · public stats</text>
-              <text x="1122" y="576" textAnchor="middle" fontSize="9.5" fill="#ff6bcb">no database</text>
 
               {/* DATA LAYER ZONE */}
               <rect x="140" y="706" width="560" height="160" rx="10" fill="rgba(180,120,255,0.055)" stroke="#b478ff" strokeWidth="1.5" />
@@ -193,7 +188,7 @@ export default function ArchitecturePage() {
               <path d="M 567,592 C 567,660 415,660 415,744" fill="none" stroke="rgba(150,190,150,0.45)" strokeWidth="1.2" markerEnd="url(#arch-arrow)" />
               <path d="M 382,592 C 382,660 300,660 300,744" fill="none" stroke="rgba(150,190,150,0.45)" strokeWidth="1.2" markerEnd="url(#arch-arrow)" />
               <path d="M 752,592 C 752,660 595,660 595,744" fill="none" stroke="rgba(150,190,150,0.45)" strokeWidth="1.2" markerEnd="url(#arch-arrow)" />
-              <text x="420" y="700" textAnchor="middle" fontSize="10" fill="rgba(180,220,180,0.62)">reads / writes — Chatbot &amp; Analytics touch neither store</text>
+              <text x="420" y="700" textAnchor="middle" fontSize="10" fill="rgba(180,220,180,0.62)">reads / writes — Chatbot touches neither store</text>
 
               {/* OBSERVABILITY ZONE */}
               <rect x="740" y="706" width="340" height="160" rx="10" fill="rgba(255,96,96,0.055)" stroke="#ff6060" strokeWidth="1.5" />
@@ -210,7 +205,7 @@ export default function ArchitecturePage() {
               <text x="1000" y="784" textAnchor="middle" fontSize="9" fill="rgba(180,220,180,0.62)">loopback-only</text>
 
               <path d="M 832,744 C 832,650 700,610 700,592" fill="none" stroke="#ff6060" strokeWidth="1" strokeDasharray="4 4" markerEnd="url(#arch-arrow)" />
-              <text x="1000" y="700" fontSize="9.5" fill="#ff6060">scrapes /metrics on all 6 services + gateway</text>
+              <text x="1000" y="700" fontSize="9.5" fill="#ff6060">scrapes /metrics on all 5 services + gateway</text>
 
               {/* CI/CD (compose file, inside host) */}
               <rect x="460" y="1000" width="400" height="70" rx="8" fill="rgba(154,167,184,0.08)" stroke="#9aa7b8" strokeWidth="1.5" />
@@ -220,20 +215,15 @@ export default function ArchitecturePage() {
               <line x1="660" y1="866" x2="660" y2="996" stroke="rgba(150,190,150,0.45)" strokeWidth="1" strokeDasharray="3 4" />
 
               {/* EXTERNAL APIs ZONE */}
-              <rect x="1300" y="470" width="340" height="200" rx="10" fill="rgba(255,107,203,0.055)" stroke="#ff6bcb" strokeWidth="1.5" />
+              <rect x="1300" y="470" width="340" height="115" rx="10" fill="rgba(255,107,203,0.055)" stroke="#ff6bcb" strokeWidth="1.5" />
               <text x="1320" y="496" fontSize="12" fontWeight="700" letterSpacing="0.12em" fill="#ff6bcb">EXTERNAL APIs</text>
               <text x="1320" y="512" fontSize="9.5" fill="rgba(150,190,150,0.45)">third-party — not on the host</text>
 
-              <rect x="1320" y="524" width="300" height="60" rx="6" fill="rgba(255,107,203,0.12)" stroke="#ff6bcb" />
-              <text x="1470" y="550" textAnchor="middle" fontSize="12" fill="#fff">Gemini API</text>
-              <text x="1470" y="566" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">generateContent()</text>
+              <rect x="1320" y="524" width="300" height="46" rx="6" fill="rgba(255,107,203,0.12)" stroke="#ff6bcb" />
+              <text x="1470" y="546" textAnchor="middle" fontSize="12" fill="#fff">Gemini API</text>
+              <text x="1470" y="561" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">generateContent()</text>
 
-              <rect x="1320" y="596" width="300" height="60" rx="6" fill="rgba(255,107,203,0.12)" stroke="#ff6bcb" />
-              <text x="1470" y="622" textAnchor="middle" fontSize="12" fill="#fff">Google Analytics Data API</text>
-              <text x="1470" y="638" textAnchor="middle" fontSize="9.5" fill="rgba(180,220,180,0.62)">runReport() / runRealtimeReport()</text>
-
-              <path d="M 1020,554 C 1180,554 1180,554 1315,554" fill="none" stroke="#ff6bcb" strokeWidth="1.3" markerEnd="url(#arch-arrow)" />
-              <path d="M 1205,566 C 1260,566 1260,626 1315,626" fill="none" stroke="#ff6bcb" strokeWidth="1.3" markerEnd="url(#arch-arrow)" />
+              <path d="M 1020,554 C 1180,554 1180,547 1315,547" fill="none" stroke="#ff6bcb" strokeWidth="1.3" markerEnd="url(#arch-arrow)" />
 
               {/* GitHub Actions, outside host */}
               <rect x="480" y="1160" width="360" height="70" rx="8" fill="rgba(154,167,184,0.08)" stroke="#9aa7b8" strokeWidth="1.5" />
@@ -253,10 +243,10 @@ export default function ArchitecturePage() {
           </div>
           <figcaption className="font-jb text-[0.7rem] text-[rgba(150,190,150,0.5)] leading-relaxed mt-3">
             Request flow top to bottom: browser → React SPA (Vercel) → Nginx → API Gateway → one of
-            six services. Four services share MongoDB; two of those also use Redis; only Media
-            writes to S3. Chatbot and Analytics are the two stateless services, each calling out to
-            a third-party API instead of a database. Prometheus/Grafana and the CI/CD pipeline sit
-            alongside, not in the request path.
+            five services. Four services share MongoDB; two of those also use Redis; only Media
+            writes to S3. Chatbot is the one stateless service, calling out to a third-party API
+            instead of a database. Prometheus/Grafana and the CI/CD pipeline sit alongside, not in
+            the request path.
           </figcaption>
         </figure>
 

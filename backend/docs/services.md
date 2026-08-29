@@ -53,7 +53,12 @@ The Hackathon Service owns hackathon management: creating, reading, updating, an
 
 This is the largest and most stateful of the five services, and it has its own internal authentication surface separate from the Auth Service: **admin authentication** (`/admin/auth` — Google OAuth login plus its own independent access/refresh-token pair and logout, mirroring the Auth Service's pattern for students) and **admin/judge operations** (`/platform/admin` — assigning and removing judges on a hackathon, reviewing and approving/rejecting admin verification requests, and admin/judge profile management). Judges authenticate as admins and are scoped to only the hackathons they've been assigned to.
 
-The service also owns **discussion threads** (`/api/discussions` — per-hackathon messages and threaded replies) and the platform's only scheduled background job: an hourly `node-cron` task that scans for registration/submission phases ending within 24 hours and fires "closing soon" notifications to the users who still need to act — wishlisted-but-unregistered users for a closing registration window, and registered participants/teams who haven't yet submitted for a closing submission window. Each phase is only reminded once, tracked via a `reminderSent` flag on the phase subdocument itself.
+The service also owns **discussion threads** (`/api/discussions` — per-hackathon messages and threaded replies) and two scheduled background jobs, both in-process `node-cron` timers rather than a job queue:
+
+- An hourly sweep for registration/submission phases ending soon, firing "closing soon" notifications at 24 hours out and again at 12 hours out — wishlisted-but-unregistered users for a closing registration window, registered participants/teams who haven't yet submitted for a closing submission window. Each milestone is tracked independently (a `remindersSent` array on the phase subdocument, not a single boolean), so both fire exactly once per phase without either one blocking the other.
+- A 5-minute sweep for on-spot event matches (see below) approaching their scheduled time, reminding both teams at 1 hour and again at 15 minutes out. The tighter interval than the phase-reminder job is deliberate: on-spot matches are same-day, so an hourly check would routinely miss a 15-minute window entirely.
+
+The service also supports a second event format: alongside the original **submission-based** hackathon (registration → project submission → judging), it now supports **on-spot** events — in-person, bracket/tournament-style competitions (e.g. drone combat, robotics) with no project submission at all. This is a field on the same `Hackathon` document (`eventFormat`), not a separate model or route surface, plus one new collection: `Match` (team A vs. team B, scores, a computed winner, an admin-settable `scheduledAt` for team-visible scheduling). Standings for an on-spot event are computed on read from `Match` documents — there's no persisted per-team status the way submission-based judging has — and are always publicly visible, unlike submission-based results which an admin can choose to hold back.
 
 This service does not manage the actual submission files themselves; file storage and file metadata management for uploads is the Media Service's responsibility (Section 4). The Hackathon Service deals with the hackathon-domain data that references those uploads, not the uploads themselves.
 
@@ -69,7 +74,14 @@ The split here is deliberate: the actual binary files live in Amazon S3, while m
 
 ## 5. Notification Service
 
-The Notification Service is responsible for notification management (creating notifications and reading notifications back through its APIs) and for transactional email delivery. In-app notification creation happens synchronously, the same as any other internal service call. Email is different: the Auth Service enqueues email jobs onto a BullMQ/Redis queue rather than calling out synchronously, and the Notification Service runs a BullMQ worker that consumes those jobs and sends the actual email through Brevo's transactional email API using Handlebars-rendered templates. This queue is the one asynchronous, message-passing exception in an otherwise synchronous-HTTP system.
+The Notification Service is responsible for notification management (creating notifications and reading notifications back through its APIs), transactional email delivery, and browser push delivery. In-app notification *creation* happens synchronously, the same as any other internal service call — every other service in the platform calls the same single `createNotification` entry point, which is what makes it possible for one change here to reach every existing notification site at once (see the push behavior below).
+
+Two things are queued rather than done inline, each on its own BullMQ/Redis queue:
+
+- **Email** — the Auth Service enqueues email jobs onto an `email` queue rather than calling out synchronously, and a worker here consumes them and sends the actual email through Brevo's transactional email API using Handlebars-rendered templates.
+- **Push** — every call to `createNotification`, regardless of which service or job triggered it, also enqueues a job onto a `push` queue. A worker here fans that out to every browser the recipient has subscribed from (a `PushSubscription` collection, one row per browser/device) using Web Push (VAPID-signed, no third-party push provider account required). A subscription that comes back expired or invalid (HTTP 404/410 from the push endpoint) is deleted automatically; any other failure is logged and simply skipped for that one device, without affecting delivery to the user's other devices or blocking the notification's creation.
+
+Both queues exist for the same reason: neither email delivery nor a push send should be able to slow down or fail the request/job that triggered the notification. This is the asynchronous, message-passing exception in an otherwise synchronous-HTTP system — there are now two such queues, not one.
 
 ---
 
@@ -100,7 +112,7 @@ sequenceDiagram
     Nginx-->>Client: HTTPS response
 ```
 
-Services communicate synchronously over HTTP for nearly everything, and most service-to-service calls follow the same synchronous request/response model as client-facing traffic. The one exception is transactional email: the Auth Service pushes email jobs onto a BullMQ/Redis queue instead of calling the Notification Service directly, and the Notification Service's worker consumes them asynchronously (see Section 5). This keeps the rest of the implementation simple and easy to reason about at the project's current size — that queue is the only asynchronous branch in the system today.
+Services communicate synchronously over HTTP for nearly everything, and most service-to-service calls follow the same synchronous request/response model as client-facing traffic. Two things are queued instead: the Auth Service pushes transactional email jobs onto a BullMQ/Redis queue rather than calling the Notification Service directly, and the Notification Service in turn pushes every push-notification send onto its own internal queue rather than doing it inline (see Section 5). Both are consumed asynchronously by workers. This keeps the rest of the implementation simple and easy to reason about at the project's current size — these two queues are the only asynchronous branches in the system today.
 
 ---
 

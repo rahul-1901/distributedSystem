@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { logger } from "../utils/logger.js";
 import { MatchRepository } from "../repositories/match.repository.js";
 import { NotificationClient } from "../clients/notification.client.js";
+import { Sentry } from "../config/sentry.js";
 
 const matchRepository = new MatchRepository();
 const notificationClient = new NotificationClient(logger);
@@ -53,6 +54,7 @@ export const runMatchReminderSweep = async () => {
           { err: error, matchId: match._id, milestone },
           "Failed to process match reminder"
         );
+        Sentry.captureException(error);
       }
     }
   }
@@ -64,6 +66,7 @@ export const startMatchReminderJob = () => {
   cron.schedule("*/5 * * * *", () => {
     runMatchReminderSweep().catch((error) => {
       logger.error({ err: error }, "Match reminder sweep failed");
+      Sentry.captureException(error);
     });
   });
 

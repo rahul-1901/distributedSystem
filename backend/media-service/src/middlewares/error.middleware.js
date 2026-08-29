@@ -1,4 +1,5 @@
 import { logger } from "../utils/logger.js";
+import { Sentry } from "../config/sentry.js";
 
 export const errorHandler = (
   err,
@@ -19,6 +20,10 @@ export const errorHandler = (
 
   const statusCode =
     err.statusCode || 500;
+
+  if (statusCode >= 500) {
+    Sentry.captureException(err);
+  }
 
   return res.status(statusCode).json({
     success: false,

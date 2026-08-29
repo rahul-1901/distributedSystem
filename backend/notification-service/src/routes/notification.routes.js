@@ -10,10 +10,12 @@ import {
   deleteNotification,
   clearAllNotifications,
 } from "../controllers/notification.controller.js";
+import { sendEmail } from "../controllers/email.controller.js";
 
 const router = express.Router();
 
 router.post("/internal", verifyInternalService, createNotification);
+router.post("/internal/email", verifyInternalService, sendEmail);
 router.get("/", verifyAuth, getNotifications);
 router.get("/unread-count", verifyAuth, getUnreadCount);
 router.patch("/:id/read", verifyAuth, markAsRead);

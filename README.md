@@ -14,7 +14,9 @@
 
 ## 1. What This Is
 
-HackSprint is a hackathon-hosting platform with two sides: **students** browse and register for hackathons (solo or in a team formed via a shareable invite code), submit their project (GitHub repo, live demo, documents) within a fixed window, and see results on a public leaderboard. **Admins/organizers** create and configure hackathons (subject to platform-admin approval), assign judges, review submissions, and score them. Both sides get email and in-app notifications for things like deadline reminders and team activity.
+HackSprint is a hackathon-hosting platform with two sides: **students** browse and register for hackathons (solo or in a team formed via a shareable invite code), submit their project (GitHub repo, live demo, documents) within a fixed window, and see results on a public leaderboard. **Admins/organizers** create and configure hackathons (subject to platform-admin approval), assign judges, review submissions, and score them. Both sides get email, in-app, and browser push notifications for things like deadline reminders and team activity.
+
+Alongside that original submission-based format, HackSprint also supports **on-spot events** — in-person, bracket/tournament-style competitions (drone combat, robotics, similar physical competitions) with no project submission at all. Admins pair teams into matches round by round and enter scores live; standings update automatically and are always publicly visible, and teams get reminded (in-app, email, and push) as their scheduled match time approaches.
 
 It's deliberately built as a **distributed system** rather than a single monolith — five independently deployable backend services behind one API gateway, a separately deployed frontend, containerized with Docker, monitored with Prometheus/Grafana, and shipped via GitHub Actions. Part of the point of this project is the engineering exercise of building and operating that kind of system, not just the product on top of it.
 
@@ -68,9 +70,9 @@ HackSprint
 ├── backend/
 │   ├── api-gateway/          Single public entry point — routing, CORS, rate limiting
 │   ├── auth-service/         Auth, Google OAuth, JWT + refresh tokens, profiles
-│   ├── hackathon-service/    Hackathons, registrations, teams, judging, discussions
+│   ├── hackathon-service/    Hackathons (submission-based + on-spot/bracket), registrations, teams, judging, discussions
 │   ├── media-service/        File uploads → Amazon S3
-│   ├── notification-service/ In-app notifications + transactional email (BullMQ)
+│   ├── notification-service/ In-app notifications + transactional email + browser push (BullMQ)
 │   ├── chatbot-service/      FAQ chatbot (Google Gemini) — stateless, no database, no user data access
 │   ├── nginx/                Reverse proxy + HTTPS termination config
 │   ├── prometheus/           Scrape config
@@ -92,7 +94,7 @@ HackSprint
 | Database | MongoDB (primary), Redis (caching) |
 | File Storage | Amazon S3 (IAM role–based access, no static credentials) |
 | Auth | Google OAuth + JWT access/refresh tokens (student and admin sessions are independent) |
-| Async work | BullMQ/Redis (transactional email), `node-cron` (deadline-reminder notifications) |
+| Async work | BullMQ/Redis (transactional email, browser push), `node-cron` (deadline + on-spot match reminders) |
 | AI | Google Gemini API — scoped to a stateless platform-FAQ chatbot, no access to user accounts/data |
 | Reverse proxy | Nginx (HTTPS via Let's Encrypt) |
 | Containerization | Docker + Docker Compose |
@@ -108,7 +110,7 @@ HackSprint
 cp <service>/.env.example <service>/.env   # per service, see backend/docs/services.md
 docker compose up -d --build
 ```
-Each service needs its own env file (Mongo/Redis connection strings, JWT secret, Google OAuth credentials, S3 credentials for `media-service`, Brevo API key for `notification-service`, etc.) — the exact requirements are enforced in each service's own startup validation, not duplicated here. See [`backend/docs/services.md`](backend/docs/services.md) for what each service owns.
+Each service needs its own env file (Mongo/Redis connection strings, JWT secret, Google OAuth credentials, S3 credentials for `media-service`, Brevo API key and VAPID (Web Push) keys for `notification-service`, etc.) — the exact requirements are enforced in each service's own startup validation, not duplicated here. See [`backend/docs/services.md`](backend/docs/services.md) for what each service owns.
 
 **Frontend** (from `frontend/hack-sprint/`):
 ```bash

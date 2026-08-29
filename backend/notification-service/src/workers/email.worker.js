@@ -2,11 +2,12 @@ import { Worker } from "bullmq";
 import emailService from "../services/email.service.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
+import { Sentry } from "../config/sentry.js";
 
 export const emailWorker = new Worker(
   "email",
   async (job) => {
-    const { type, user, token } = job.data;
+    const { type, user, token, hackathon } = job.data;
 
     switch (type) {
       case "verification":
@@ -23,6 +24,30 @@ export const emailWorker = new Worker(
 
       case "password-reset-success":
         await emailService.sendPasswordResetSuccessEmail(user);
+        break;
+
+      case "admin-welcome":
+        await emailService.sendAdminWelcomeEmail(user);
+        break;
+
+      case "hackathon-approved":
+        await emailService.sendHackathonApprovedEmail(user, hackathon);
+        break;
+
+      case "hackathon-rejected":
+        await emailService.sendHackathonRejectedEmail(user, hackathon);
+        break;
+
+      case "registration-confirmation":
+        await emailService.sendRegistrationConfirmationEmail(user, hackathon);
+        break;
+
+      case "submission-confirmation":
+        await emailService.sendSubmissionConfirmationEmail(user, hackathon);
+        break;
+
+      case "results-announcement":
+        await emailService.sendResultsAnnouncementEmail(user, hackathon);
         break;
 
       default:
@@ -68,6 +93,10 @@ emailWorker.on("failed", (job, err) => {
     },
     "Email job failed"
   );
+
+  if (job && job.attemptsMade >= (job.opts?.attempts || 1)) {
+    Sentry.captureException(err);
+  }
 });
 
 emailWorker.on("error", (err) => {

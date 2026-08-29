@@ -9,7 +9,10 @@ import { pushWorker } from "./workers/push.worker.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
+import { initSentry, Sentry } from "./config/sentry.js";
 dotenv.config();
+initSentry();
 const PORT = process.env.PORT || 5004;
 const app = express();
 
@@ -29,6 +32,8 @@ app.get("/health", (req, res) => {
 
 app.use("/", notificationRoutes);
 app.use("/push", pushRoutes);
+
+app.use(errorHandler);
 
 const startServer = async () => {
   try {
@@ -91,10 +96,12 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("uncaughtException", (error) => {
   logger.fatal({ err: error }, "Uncaught Exception");
+  Sentry.captureException(error);
   shutdown("UNCAUGHT_EXCEPTION");
 });
 
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ reason }, "Unhandled Rejection");
+  Sentry.captureException(reason);
   shutdown("UNHANDLED_REJECTION");
 });

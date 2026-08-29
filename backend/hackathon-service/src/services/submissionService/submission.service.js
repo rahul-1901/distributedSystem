@@ -17,7 +17,8 @@ export class SubmissionService {
     cacheService,
     notificationClient,
     logger,
-    submissionReviewRepository
+    submissionReviewRepository,
+    userRepository
   ) {
     this.submissionRepository = submissionRepository;
     this.hackathonRepository = hackathonRepository;
@@ -28,6 +29,7 @@ export class SubmissionService {
     this.notificationClient = notificationClient,
     this.logger = logger;
     this.submissionReviewRepository = submissionReviewRepository;
+    this.userRepository = userRepository;
   }
 
   async getHackathonResults(hackathonId) {
@@ -248,6 +250,18 @@ export class SubmissionService {
             hackathonId: hackathon._id.toString(),
           },
         });
+
+        const member = await this.userRepository.getById(memberId);
+        if (member?.email) {
+          await this.notificationClient.sendEmail({
+            type: "submission-confirmation",
+            user: { email: member.email, name: member.name },
+            hackathon: {
+              hackathonName: hackathon.title,
+              hackathonLink: `${process.env.FRONTEND_URL}/hackathon/${hackathon.slug}`,
+            },
+          });
+        }
       }
 
       this.logger.info(

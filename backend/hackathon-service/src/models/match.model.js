@@ -72,6 +72,12 @@ matchSchema.index({ hackathon: 1, phaseId: 1, order: 1 });
 matchSchema.index({ hackathon: 1, teamA: 1 });
 matchSchema.index({ hackathon: 1, teamB: 1 });
 
+// Backs the match-reminder cron's findUpcomingForReminder sweep (runs every
+// 5 minutes across every match) — without this it's a full collection scan
+// six times an hour, which gets expensive as the match count grows across
+// concurrent on-spot events.
+matchSchema.index({ status: 1, scheduledAt: 1 });
+
 const MatchModel = mongoose.model("matches", matchSchema);
 
 export default MatchModel;

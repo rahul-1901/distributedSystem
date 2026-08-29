@@ -150,6 +150,86 @@ class EmailService {
       },
     });
   }
+
+  async sendAdminWelcomeEmail(user) {
+    return this.sendMail({
+      to: user.email,
+      subject: "Welcome to HackSprint — Organizer Account Created",
+      templateName: "adminWelcome",
+      data: {
+        name: user.name,
+        email: user.email,
+      },
+    });
+  }
+
+  async sendHackathonApprovedEmail(user, hackathon) {
+    return this.sendMail({
+      to: user.email,
+      subject: `${hackathon.hackathonName} has been approved`,
+      templateName: "hackathonApproved",
+      data: {
+        name: user.name,
+        hackathonName: hackathon.hackathonName,
+        hackathonLink: hackathon.hackathonLink,
+      },
+    });
+  }
+
+  async sendHackathonRejectedEmail(user, hackathon) {
+    return this.sendMail({
+      to: user.email,
+      subject: `${hackathon.hackathonName} was not approved`,
+      templateName: "hackathonRejected",
+      data: {
+        name: user.name,
+        hackathonName: hackathon.hackathonName,
+        reason: hackathon.reason,
+      },
+    });
+  }
+
+  async sendRegistrationConfirmationEmail(user, hackathon) {
+    return this.sendMail({
+      to: user.email,
+      subject: `You're registered for ${hackathon.hackathonName}`,
+      templateName: "registrationConfirmation",
+      data: {
+        name: user.name,
+        hackathonName: hackathon.hackathonName,
+        hackathonLink: hackathon.hackathonLink,
+      },
+    });
+  }
+
+  async sendSubmissionConfirmationEmail(user, hackathon) {
+    return this.sendMail({
+      to: user.email,
+      subject: `Submission received for ${hackathon.hackathonName}`,
+      templateName: "submissionConfirmation",
+      data: {
+        name: user.name,
+        hackathonName: hackathon.hackathonName,
+        hackathonLink: hackathon.hackathonLink,
+      },
+    });
+  }
+
+  // Only for entities that reached the final round — not every participant.
+  // Callers decide "final round" (last SUBMISSION phase for weighted-scoring
+  // events, or the final bracket match for on-spot events).
+  async sendResultsAnnouncementEmail(user, hackathon) {
+    return this.sendMail({
+      to: user.email,
+      subject: `Final results are in for ${hackathon.hackathonName}`,
+      templateName: "resultsAnnouncement",
+      data: {
+        name: user.name,
+        hackathonName: hackathon.hackathonName,
+        hackathonLink: hackathon.hackathonLink,
+      },
+    });
+  }
 }
 
 export default new EmailService();

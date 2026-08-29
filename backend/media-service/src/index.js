@@ -8,7 +8,9 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 import { logger } from "./utils/logger.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
+import { initSentry, Sentry } from "./config/sentry.js";
 dotenv.config();
+initSentry();
 
 if (
   !process.env.AWS_REGION ||
@@ -104,6 +106,7 @@ process.on("uncaughtException", (error) => {
     },
     "Uncaught Exception"
   );
+  Sentry.captureException(error);
   process.exit(1);
 });
 process.on("unhandledRejection", (reason) => {
@@ -113,5 +116,6 @@ process.on("unhandledRejection", (reason) => {
     },
     "Unhandled Rejection"
   );
+  Sentry.captureException(reason);
   process.exit(1);
 });

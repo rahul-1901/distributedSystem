@@ -122,6 +122,15 @@ export class RegistrationService {
             hackathonId: hackathon._id.toString(),
           },
         });
+
+        await this.notificationClient.sendEmail({
+          type: "registration-confirmation",
+          user: { email: user.email, name: user.name },
+          hackathon: {
+            hackathonName: hackathon.title,
+            hackathonLink: `${process.env.FRONTEND_URL}/hackathon/${hackathon.slug}`,
+          },
+        });
       } catch (error) {
         this.logger.error(
           { err: error, userId, hackathonId },

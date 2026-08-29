@@ -104,6 +104,8 @@ const Footer = () => {
         { name: "Documentation", url: GITHUB_REPO_URL },
         { name: "Guides", url: GITHUB_REPO_URL },
         { name: "Explore Projects", url: "https://github.com/devlup-labs/" },
+        { name: "Terms & Conditions", url: "/terms-and-condition" },
+        { name: "Privacy Policy", url: "/privacy-policy" },
       ],
     },
     {

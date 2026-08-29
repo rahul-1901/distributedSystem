@@ -5,6 +5,7 @@ import { REDIS_KEYS } from "../../config/redisKeys.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import { getLifecycleStatus } from "../../utils/lifecycleStatus.js";
 import { buildWeightedLeaderboard } from "../../utils/weightedLeaderboard.js";
+import { mapWithConcurrency } from "../../utils/concurrency.js";
 
 export class HackathonService {
   constructor(
@@ -19,7 +20,8 @@ export class HackathonService {
     judgeAssignmentRepository,
     submissionReviewRepository,
     notificationClient,
-    matchRepository
+    matchRepository,
+    userRepository
   ) {
     this.hackathonRepository = hackathonRepository;
     this.submissionRepository = submissionRepository;
@@ -33,6 +35,7 @@ export class HackathonService {
     this.submissionReviewRepository = submissionReviewRepository;
     this.notificationClient = notificationClient;
     this.matchRepository = matchRepository;
+    this.userRepository = userRepository;
   }
 
   async deleteHackathonImage(hackathon, payload) {
@@ -478,6 +481,41 @@ export class HackathonService {
       metadata: { hackathonId: hackathonId.toString() },
     });
 
+    const creator = await this.adminRepository.getById(hackathon.createdBy);
+    if (creator?.email) {
+      await this.notificationClient.sendEmail({
+        type: "hackathon-approved",
+        user: { email: creator.email, name: creator.adminName },
+        hackathon: {
+          hackathonName: hackathon.title,
+          hackathonLink: `${process.env.FRONTEND_URL}/hackathon/${updated.slug}`,
+        },
+      });
+    }
+
+    // Platform-wide "new hackathon" announcement — in-app + push only (push
+    // has its own per-user opt-in and browser-level unsubscribe already;
+    // broadcasting the same thing over email would need a mailing-list
+    // unsubscribe mechanism this platform doesn't have, so that stays out).
+    // Fire-and-forget: a slow/failed broadcast must never hold up the
+    // approval response itself.
+    const allUsers = await this.userRepository.getAllUserIds();
+    mapWithConcurrency(allUsers, (u) =>
+      this.notificationClient.createNotification({
+        userId: u._id,
+        title: "New Hackathon Just Dropped",
+        message: `${hackathon.title} is now live on HackSprint — check it out.`,
+        type: "HACKATHON",
+        actionUrl: `/hackathon/${updated.slug}`,
+        metadata: { hackathonId: hackathonId.toString() },
+      })
+    ).catch((error) => {
+      this.logger.error(
+        { err: error, hackathonId: hackathonId.toString() },
+        "Failed to broadcast new-hackathon announcement"
+      );
+    });
+
     return updated;
   }
 
@@ -515,6 +553,18 @@ export class HackathonService {
       actionUrl: `/admin`,
       metadata: { hackathonId: hackathonId.toString() },
     });
+
+    const creator = await this.adminRepository.getById(hackathon.createdBy);
+    if (creator?.email) {
+      await this.notificationClient.sendEmail({
+        type: "hackathon-rejected",
+        user: { email: creator.email, name: creator.adminName },
+        hackathon: {
+          hackathonName: hackathon.title,
+          reason: reason || "No reason was provided.",
+        },
+      });
+    }
 
     return rejected;
   }
@@ -982,6 +1032,14 @@ export class HackathonService {
       entity.phaseScores.some((phase) => phase.averageScore > 0)
     );
 
+    // The final round is the last SUBMISSION phase by start date — used to
+    // scope the results EMAIL to finalists only, unlike the in-app
+    // notification below which still reaches everyone reviewed.
+    const submissionPhases = (hackathon.phases || [])
+      .filter((p) => p.phaseType === "SUBMISSION")
+      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    const finalPhase = submissionPhases[submissionPhases.length - 1];
+
     let notifiedCount = 0;
 
     await Promise.all(
@@ -1012,6 +1070,28 @@ export class HackathonService {
             })
           )
         );
+
+        const reachedFinal =
+          finalPhase &&
+          entity.phaseScores.some(
+            (phase) => phase.phaseId.toString() === finalPhase._id.toString()
+          );
+
+        if (reachedFinal) {
+          await mapWithConcurrency(recipientIds, async (userId) => {
+            const recipient = await this.userRepository.getById(userId);
+            if (!recipient?.email) return;
+
+            await this.notificationClient.sendEmail({
+              type: "results-announcement",
+              user: { email: recipient.email, name: recipient.name },
+              hackathon: {
+                hackathonName: hackathon.title,
+                hackathonLink: `${process.env.FRONTEND_URL}/hackathon/${hackathon.slug}`,
+              },
+            });
+          });
+        }
 
         notifiedCount += recipientIds.length;
       })

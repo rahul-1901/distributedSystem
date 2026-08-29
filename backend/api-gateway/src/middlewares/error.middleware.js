@@ -1,3 +1,5 @@
+import { Sentry } from "../config/sentry.js";
+
 export const errorMiddleware = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
 
@@ -12,6 +14,10 @@ export const errorMiddleware = (err, req, res, next) => {
       stack: process.env.NODE_ENV !== "production" ? err.stack : undefined,
     })
   );
+
+  if (statusCode >= 500) {
+    Sentry.captureException(err);
+  }
 
   res.status(statusCode).json({
     success: false,

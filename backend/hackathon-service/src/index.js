@@ -19,8 +19,10 @@ import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsMiddleware, metricsHandler } from "./metrics/metrics.js";
 import { startPhaseReminderJob } from "./jobs/phaseReminder.job.js";
 import { startMatchReminderJob } from "./jobs/matchReminder.job.js";
+import { initSentry, Sentry } from "./config/sentry.js";
 
 dotenv.config();
+initSentry();
 
 const app = express();
 
@@ -126,12 +128,14 @@ const startServer = async () => {
 
     process.on("uncaughtException", (error) => {
       logger.fatal({ err: error }, "Uncaught Exception");
+      Sentry.captureException(error);
 
       shutdown("UNCAUGHT_EXCEPTION");
     });
 
     process.on("unhandledRejection", (reason) => {
       logger.fatal({ reason }, "Unhandled Rejection");
+      Sentry.captureException(reason);
 
       shutdown("UNHANDLED_REJECTION");
     });

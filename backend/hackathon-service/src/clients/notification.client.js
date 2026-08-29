@@ -51,4 +51,27 @@ export class NotificationClient {
       );
     }
   }
+
+  // Fire-and-forget, same as createNotification — a failed email send
+  // should never block or fail the caller's actual operation (approving a
+  // hackathon, registering, submitting).
+  async sendEmail({ type, user, token, hackathon }) {
+    try {
+      await axios.post(
+        `${process.env.NOTIFICATION_SERVICE_URL}/internal/email`,
+        { type, user, token, hackathon },
+        {
+          headers: {
+            "x-service-secret": process.env.INTERNAL_SERVICE_SECRET,
+          },
+          timeout: 5000,
+        }
+      );
+    } catch (error) {
+      this.logger.error(
+        { err: error, type, userEmail: user?.email },
+        "Failed to queue email"
+      );
+    }
+  }
 }

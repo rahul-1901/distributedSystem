@@ -15,7 +15,9 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { requestIdMiddleware } from "./middlewares/requestId.middleware.js";
 import { metricsHandler, metricsMiddleware } from "./metrics/metrics.js";
 import dotenv from "dotenv"
+import { initSentry, Sentry } from "./config/sentry.js";
 dotenv.config();
+initSentry();
 
 const app = express();
 
@@ -120,10 +122,12 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection:", err);
+  Sentry.captureException(err);
   shutdown("unhandledRejection");
 });
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
+  Sentry.captureException(err);
   shutdown("uncaughtException");
 });

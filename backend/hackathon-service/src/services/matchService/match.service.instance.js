@@ -5,6 +5,7 @@ import { TeamRepository } from "../../repositories/team.repository.js";
 import { AdminRepository } from "../../repositories/admin.repository.js";
 import { notificationClient } from "../../clients/notification.client.instance.js";
 import { MatchService } from "./match.service.js";
+import { UserRepository } from "../../repositories/user.repository.js";
 
 const matchRepository = new MatchRepository();
 
@@ -14,11 +15,14 @@ const teamRepository = new TeamRepository();
 
 const adminRepository = new AdminRepository();
 
+const userRepository = new UserRepository();
+
 export const matchService = new MatchService(
   matchRepository,
   hackathonRepository,
   teamRepository,
   adminRepository,
   logger,
-  notificationClient
+  notificationClient,
+  userRepository
 );

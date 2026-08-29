@@ -6,10 +6,11 @@ import adminTokenService from "./adminToken.service.js";
 import { sha256 } from "../../utils/hash.utils.js";
 
 export class AdminAuthService {
-  constructor(adminRepository, logger) {
+  constructor(adminRepository, logger, notificationClient) {
     this.adminRepository = adminRepository;
 
     this.logger = logger;
+    this.notificationClient = notificationClient;
   }
 
   async googleLogin(code) {
@@ -52,6 +53,11 @@ export class AdminAuthService {
         },
         "Admin account created"
       );
+
+      await this.notificationClient.sendEmail({
+        type: "admin-welcome",
+        user: { email: admin.email, name: admin.adminName },
+      });
     } else {
       admin.lastLogin = new Date();
 

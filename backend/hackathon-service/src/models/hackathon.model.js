@@ -445,6 +445,13 @@ hackathonSchema.index({
   tags: 1,
 });
 
+// Backs the phase-reminder cron's getPhasesEndingSoon sweep (runs hourly
+// against every hackathon) — without this it's a full collection scan on
+// every tick, which gets expensive as the hackathon count grows.
+hackathonSchema.index({
+  "phases.endDate": 1,
+});
+
 hackathonSchema.pre("save", async function () {
   if (this.isModified("title") || !this.slug) {
     this.slug = slugify(`${this.title}-${Date.now()}`, {

@@ -12,7 +12,8 @@ export class MatchService {
     teamRepository,
     adminRepository,
     logger,
-    notificationClient
+    notificationClient,
+    userRepository
   ) {
     this.matchRepository = matchRepository;
     this.hackathonRepository = hackathonRepository;
@@ -20,6 +21,7 @@ export class MatchService {
     this.adminRepository = adminRepository;
     this.logger = logger;
     this.notificationClient = notificationClient;
+    this.userRepository = userRepository;
   }
 
   async assertAdminAccess(hackathon, adminId) {
@@ -242,6 +244,38 @@ export class MatchService {
         metadata: { hackathonId: hackathonId.toString(), matchId: matchId.toString() },
       }),
     ]);
+
+    // Results email only for the FINAL round's match — both teams that made
+    // it there, not every team eliminated earlier in the bracket.
+    const matchRoundPhases = (hackathon.phases || [])
+      .filter((p) => p.phaseType === "MATCH_ROUND")
+      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    const finalPhase = matchRoundPhases[matchRoundPhases.length - 1];
+    const isFinalRound =
+      finalPhase && finalPhase._id.toString() === match.phaseId.toString();
+
+    if (isFinalRound) {
+      const finalists = [winnerTeam, loserTeam].flatMap((team) => [
+        team.leader,
+        ...(team.members || []),
+      ]);
+
+      await Promise.all(
+        finalists.map(async (userId) => {
+          const recipient = await this.userRepository.getById(userId);
+          if (!recipient?.email) return;
+
+          await this.notificationClient.sendEmail({
+            type: "results-announcement",
+            user: { email: recipient.email, name: recipient.name },
+            hackathon: {
+              hackathonName: hackathon.title,
+              hackathonLink: `${process.env.FRONTEND_URL}/hackathon/${hackathon.slug}/bracket`,
+            },
+          });
+        })
+      );
+    }
 
     return updated;
   }

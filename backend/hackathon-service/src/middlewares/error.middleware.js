@@ -1,4 +1,5 @@
 import { logger } from "../utils/logger.js";
+import { Sentry } from "../config/sentry.js";
 
 export const errorHandler = (
   err,
@@ -19,6 +20,12 @@ export const errorHandler = (
 
   const statusCode =
     err.statusCode || 500;
+
+  // Only genuinely unexpected failures — a 4xx is an expected, handled
+  // outcome (bad input, not found, etc.), not an incident to page anyone on.
+  if (statusCode >= 500) {
+    Sentry.captureException(err);
+  }
 
   return res.status(statusCode).json({
     success: false,

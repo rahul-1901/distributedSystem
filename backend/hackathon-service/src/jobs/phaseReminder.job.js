@@ -6,6 +6,8 @@ import { RegistrationRepository } from "../repositories/registration.repository.
 import { TeamRepository } from "../repositories/team.repository.js";
 import { SubmissionRepository } from "../repositories/submission.repository.js";
 import { NotificationClient } from "../clients/notification.client.js";
+import { mapWithConcurrency } from "../utils/concurrency.js";
+import { Sentry } from "../config/sentry.js";
 
 const hackathonRepository = new HackathonRepository();
 const userRepository = new UserRepository();
@@ -35,17 +37,15 @@ const notifyRegistrationEndingSoon = async (hackathon, phase, label) => {
     (u) => !registeredIds.has(u._id.toString())
   );
 
-  await Promise.all(
-    recipients.map((u) =>
-      notificationClient.createNotification({
-        userId: u._id,
-        title: "Registration Closing Soon",
-        message: `Registration for ${hackathon.title} closes ${label}. Don't miss out!`,
-        type: "HACKATHON",
-        actionUrl: `/hackathon/${hackathon.slug}`,
-        metadata: { hackathonId: hackathon._id.toString(), phaseId: phase._id.toString() },
-      })
-    )
+  await mapWithConcurrency(recipients, (u) =>
+    notificationClient.createNotification({
+      userId: u._id,
+      title: "Registration Closing Soon",
+      message: `Registration for ${hackathon.title} closes ${label}. Don't miss out!`,
+      type: "HACKATHON",
+      actionUrl: `/hackathon/${hackathon.slug}`,
+      metadata: { hackathonId: hackathon._id.toString(), phaseId: phase._id.toString() },
+    })
   );
 
   return recipients.length;
@@ -90,17 +90,15 @@ const notifySubmissionEndingSoon = async (hackathon, phase, label) => {
       .map((p) => p.user._id);
   }
 
-  await Promise.all(
-    recipientIds.map((userId) =>
-      notificationClient.createNotification({
-        userId,
-        title: "Submission Deadline Approaching",
-        message: `The submission window for ${hackathon.title} closes ${label}.`,
-        type: "SUBMISSION",
-        actionUrl: `/hackathon/${hackathon.slug}`,
-        metadata: { hackathonId: hackathon._id.toString(), phaseId: phase._id.toString() },
-      })
-    )
+  await mapWithConcurrency(recipientIds, (userId) =>
+    notificationClient.createNotification({
+      userId,
+      title: "Submission Deadline Approaching",
+      message: `The submission window for ${hackathon.title} closes ${label}.`,
+      type: "SUBMISSION",
+      actionUrl: `/hackathon/${hackathon.slug}`,
+      metadata: { hackathonId: hackathon._id.toString(), phaseId: phase._id.toString() },
+    })
   );
 
   return recipientIds.length;
@@ -145,6 +143,7 @@ export const runPhaseReminderSweep = async () => {
           { err: error, hackathonId: hackathon._id, phaseId: phase._id, milestone },
           "Failed to process phase-ending reminder"
         );
+        Sentry.captureException(error);
       }
     }
   }
@@ -154,6 +153,7 @@ export const startPhaseReminderJob = () => {
   cron.schedule("0 * * * *", () => {
     runPhaseReminderSweep().catch((error) => {
       logger.error({ err: error }, "Phase reminder sweep failed");
+      Sentry.captureException(error);
     });
   });
 
