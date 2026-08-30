@@ -5,6 +5,7 @@ import { NotificationAPI } from "../api/notification.api.js";
 import {
   isPushSupported,
   getExistingSubscription,
+  registerExistingSubscription,
   subscribeToPush,
   unsubscribeFromPush,
 } from "../utils/pushNotifications.js";
@@ -34,6 +35,10 @@ const NotificationBell = ({ asAdmin = false }) => {
 
     getExistingSubscription().then((sub) => {
       if (sub) {
+        // Re-registers the existing browser subscription against whichever
+        // account is signed in right now — see registerExistingSubscription
+        // for why this can't just trust the local subscription object.
+        registerExistingSubscription(asAdmin).catch(() => {});
         setPushEnabled(true);
         return;
       }

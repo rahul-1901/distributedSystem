@@ -2,6 +2,7 @@ import { Toaster } from "react-hot-toast";
 import AppRoutes from "./routes/AppRoute";
 import InstallPrompt from "./components/InstallPrompt.jsx";
 import Chatbot from "./components/Chatbot.jsx";
+import FirstVisitIntro from "./components/FirstVisitIntro.jsx";
 import { usePageViewTracking } from "./hooks/useAnalytics.js";
 import React from 'react';
 
@@ -15,6 +16,9 @@ function App() {
         containerStyle={{ zIndex: 100000 }}
         toastOptions={{ style: { zIndex: 100000 } }}
       />
+      {/* Renders once ever per browser (localStorage-gated) — every other
+          loading state in the app (page loaders, spinners) is untouched. */}
+      <FirstVisitIntro />
       <AppRoutes />
       <Chatbot />
       <InstallPrompt />

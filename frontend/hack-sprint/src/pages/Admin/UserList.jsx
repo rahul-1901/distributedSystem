@@ -167,6 +167,68 @@ const exportParticipantsToExcel = (hackathon, teams, individualParticipants) => 
   toast.success("Exported to Excel.");
 };
 
+// One row per team/participant, ranked by final score, with one column per
+// submission round — not just the overall total — since organizers usually
+// want to see round-by-round performance, not just who won.
+const exportResultsToExcel = (hackathon, results) => {
+  if (!results || results.length === 0) {
+    toast.error("No results to export yet.");
+    return;
+  }
+
+  const title = hackathon.title || "Hackathon";
+
+  // Canonical round order/names come from the hackathon's own phase list,
+  // not from whatever order happens to show up in the results — otherwise
+  // column order could vary depending on who submitted what.
+  const roundNames = (hackathon.phases || [])
+    .filter((p) => p.phaseType === "SUBMISSION")
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    .map((p) => p.phaseName);
+
+  const rows = results.map((entity, i) => {
+    const name = entity.team?.name || entity.participant?.name || "Unknown";
+    const email = entity.participant?.email || "";
+
+    const row = {
+      Rank: i + 1,
+      Name: name,
+      Email: email,
+      "Final Score": entity.finalScore != null ? Number(entity.finalScore.toFixed(2)) : 0,
+    };
+
+    roundNames.forEach((roundName) => {
+      const roundScore = entity.phaseScores?.find((ps) => ps.phaseName === roundName);
+      row[roundName] = roundScore?.averageScore != null
+        ? Number(roundScore.averageScore.toFixed(2))
+        : roundScore
+        ? "Not scored"
+        : "—";
+    });
+
+    row["Submitted At"] = entity.submittedAt
+      ? new Date(entity.submittedAt).toLocaleString("en-IN")
+      : "";
+
+    return row;
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([[`${title} — Results & Scores`], []]);
+  XLSX.utils.sheet_add_json(ws, rows, { origin: "A3" });
+  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 + roundNames.length } }];
+  ws["!cols"] = [
+    { wch: 6 }, { wch: 24 }, { wch: 28 }, { wch: 12 },
+    ...roundNames.map(() => ({ wch: 16 })),
+    { wch: 20 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, "Results");
+
+  const safeName = title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+  XLSX.writeFile(wb, `${safeName || "hackathon"}-results.xlsx`);
+  toast.success("Exported to Excel.");
+};
+
 const JudgesSection = ({ hackathonId }) => {
   const [judges, setJudges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -910,31 +972,47 @@ const HackathonUsersPage = () => {
               <Trophy size={18} style={{ color: "var(--amber)", flexShrink: 0 }} />
               <div className="hu-modal-title">Scoreboard</div>
 
-              {!isJudgeViewer &&
-                (hackathon.showResult ? (
-                  <span
-                    style={{
-                      fontSize: "0.62rem",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "var(--green)",
-                      marginLeft: "auto",
-                      marginRight: "0.5rem",
-                    }}
-                  >
-                    Results released
-                  </span>
-                ) : (
+              <div
+                style={{
+                  marginLeft: "auto",
+                  marginRight: "0.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                }}
+              >
+                {result && result.length > 0 && (
                   <button
-                    onClick={handleReleaseResults}
-                    disabled={releasingResults}
-                    className="hu-results-btn"
-                    style={{ marginLeft: "auto", marginRight: "0.5rem" }}
+                    onClick={() => exportResultsToExcel(hackathon, result)}
+                    className="hu-export-btn"
                   >
-                    <Send size={12} />
-                    {releasingResults ? "Releasing…" : "Release Results"}
+                    <Download size={12} /> Export to Excel
                   </button>
-                ))}
+                )}
+
+                {!isJudgeViewer &&
+                  (hackathon.showResult ? (
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "var(--green)",
+                      }}
+                    >
+                      Results released
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleReleaseResults}
+                      disabled={releasingResults}
+                      className="hu-results-btn"
+                    >
+                      <Send size={12} />
+                      {releasingResults ? "Releasing…" : "Release Results"}
+                    </button>
+                  ))}
+              </div>
 
               <button onClick={() => setShowScoreboard(false)} className="hu-modal-close">
                 <X size={15} />

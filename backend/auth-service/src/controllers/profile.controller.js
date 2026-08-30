@@ -26,6 +26,33 @@ export const getPublicProfile = async (req, res, next) => {
   }
 };
 
+export const getPeopleForCluster = async (req, res, next) => {
+  try {
+    const people = await profileService.getPeopleForCluster();
+
+    return res.status(200).json({
+      success: true,
+      people,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendContactRequest = async (req, res, next) => {
+  try {
+    const result = await profileService.sendContactRequest(
+      req.user._id,
+      req.params.userId,
+      req.body.message
+    );
+
+    return res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const searchProfiles = async (req, res, next) => {
   try {
     const results = await profileService.searchProfiles(req.query.q);

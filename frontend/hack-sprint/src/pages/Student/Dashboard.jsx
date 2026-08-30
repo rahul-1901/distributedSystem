@@ -30,6 +30,8 @@ import {
   Rocket,
   Upload,
   Camera,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import CameraCapture from "../../components/CameraCapture.jsx";
@@ -643,6 +645,17 @@ export const UserDashboard = () => {
     }
   };
 
+  const handleTogglePeoplePage = async () => {
+    const next = !(data.showOnPeoplePage !== false);
+    try {
+      const res = await ProfileAPI.updateProfile({ showOnPeoplePage: next });
+      setData({ ...data, showOnPeoplePage: res.data.profile.showOnPeoplePage });
+      toast.success(next ? "You're visible on the People page" : "You're hidden from the People page");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update visibility");
+    }
+  };
+
   const handleLogout = async () => {
     await logoutAndClear(false);
     toast.success("Logged out", { duration: 1000 });
@@ -881,6 +894,25 @@ export const UserDashboard = () => {
                   </div>
                 </div>
               )}
+            </Card>
+
+            <Card>
+              <SectionHead>
+                {data.showOnPeoplePage !== false ? (
+                  <Eye size={13} className="inline mr-1.5 text-[rgba(95,255,96,0.5)]" />
+                ) : (
+                  <EyeOff size={13} className="inline mr-1.5 text-[rgba(95,255,96,0.5)]" />
+                )}
+                People Directory
+              </SectionHead>
+              <p className="font-[family-name:'JetBrains_Mono',monospace] text-[0.62rem] text-[rgba(180,220,180,0.4)] leading-relaxed mb-3">
+                {data.showOnPeoplePage !== false
+                  ? "You're visible on the People page — anyone can find and message you there."
+                  : "You're hidden from the People page — no one can find you there."}
+              </p>
+              <Btn onClick={handleTogglePeoplePage} color={data.showOnPeoplePage !== false ? "red" : "green"}>
+                {data.showOnPeoplePage !== false ? "Hide me" : "Show me"}
+              </Btn>
             </Card>
           </aside>
 

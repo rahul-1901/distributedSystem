@@ -552,7 +552,7 @@ export class SubmissionService {
       throw new ForbiddenError("Access denied");
     }
 
-    const submission = submissionDoc.toObject();
+    const submission = submissionDoc.toObject({ flattenMaps: true });
 
     // Score/feedback for THIS round becomes visible the moment every judge
     // assigned to the hackathon has reviewed it (resultAvailable, set in

@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   getMyProfile,
   getPublicProfile,
+  getPeopleForCluster,
+  sendContactRequest,
   searchProfiles,
   updateProfile,
   addEducation,
@@ -21,6 +23,10 @@ const router = Router();
 router.get("/me", verifyAuth, getMyProfile);
 router.patch("/me", verifyAuth, updateProfile);
 router.get("/search", searchProfiles);
+// Must come before "/:userName" — otherwise Express would treat "people" as
+// a userName value and route it to getPublicProfile instead.
+router.get("/people", getPeopleForCluster);
+router.post("/id/:userId/contact", verifyAuth, sendContactRequest);
 router.get("/:userName", getPublicProfile);
 router.post("/me/education", verifyAuth, addEducation);
 router.patch("/me/education/:id", verifyAuth, updateEducation);

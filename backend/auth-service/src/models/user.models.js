@@ -181,6 +181,13 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // Powers the People directory (3D cluster) — opt-out, not opt-in, so it
+    // defaults to visible; a user can hide themselves from their profile
+    // settings at any time.
+    showOnPeoplePage: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

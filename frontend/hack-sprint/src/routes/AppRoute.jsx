@@ -16,6 +16,7 @@ import Dashboard from "../pages/Student/Dashboard.jsx";
 import Signup from "../pages/Student/Signup.jsx";
 import ResetPassword from "../pages/Student/ResetPassword.jsx";
 import AllHackathons from "../pages/Student/AllHackathons.jsx";
+import PeoplePage from "../pages/People.jsx";
 import HackathonDetails from "../pages/Hackathon.jsx";
 import { OnSpotBracketPage } from "../hackathon/OnSpotBracketPage.jsx";
 import { RegistrationForm } from "../hackathon/RegistrationForm.jsx";
@@ -46,6 +47,7 @@ function AppRoutes() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/hackathons" element={<AllHackathons />} />
+        <Route path="/people" element={<PeoplePage />} />
         <Route path="/hackathon/:slug" element={<HackathonDetails />} />
         <Route path="/hackathon/:slug/bracket" element={<OnSpotBracketPage />} />
         <Route

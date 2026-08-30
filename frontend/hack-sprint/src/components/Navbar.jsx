@@ -3,9 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileAPI } from "../api/profile.api.js";
 import { useAuth } from "../hooks/useAuth.js";
 import NotificationBell from "./NotificationBell.jsx";
-import UserSearch from "./UserSearch.jsx";
 import {
-  Menu, X, User, Trophy, LogOut,
+  Menu, X, User, Trophy, LogOut, Users,
   LogIn, Github, GitBranch, ArrowRight, Shield,
 } from "lucide-react";
 import "./Navbar.css";
@@ -27,6 +26,7 @@ const Navbar = ({ variant = "student" }) => {
 
   const navItems = [
     { name: "Hackathons", pageLink: "/hackathons", icon: Trophy },
+    { name: "People", pageLink: "/people", icon: Users },
   ];
 
   const handleNavigate = (link) => { navigate(link); setIsOpen(false); setShowProfileMenu(false); };
@@ -145,8 +145,6 @@ const Navbar = ({ variant = "student" }) => {
                   Admin Panel <ArrowRight size={11} />
                 </button>
               )}
-
-              {!isAdminVariant && <UserSearch />}
 
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[rgba(95,255,96,0.1)]">
                 {isAdminVariant && adminLoggedIn && <NotificationBell asAdmin />}
@@ -287,12 +285,6 @@ const Navbar = ({ variant = "student" }) => {
         {isOpen && (
           <div className="nb-mobile md:hidden bg-[rgba(8,10,8,0.98)] border-t border-[rgba(95,255,96,0.08)]">
             <div className="max-w-[1200px] mx-auto px-5 py-4 flex flex-col gap-1">
-
-              {!isAdminVariant && (
-                <div className="mb-2">
-                  <UserSearch fullWidth />
-                </div>
-              )}
 
               {navItems.map(({ name, pageLink, icon: Icon }) => (
                 <button

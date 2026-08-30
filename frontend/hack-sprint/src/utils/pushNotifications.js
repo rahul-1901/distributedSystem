@@ -20,6 +20,20 @@ export const getExistingSubscription = async () => {
   return registration.pushManager.getSubscription();
 };
 
+// The browser-level push subscription lives on the service worker and
+// survives across app logins on a shared browser — it has no idea which
+// account is currently signed in. The backend association, on the other
+// hand, is keyed to whichever userId last called /push/subscribe. Without
+// re-registering on every mount, switching accounts on the same browser
+// leaves an existing subscription silently pointed at the previous user,
+// while the UI still shows push as "on" for the new one.
+export const registerExistingSubscription = async (asAdmin = false) => {
+  const subscription = await getExistingSubscription();
+  if (!subscription) return null;
+  await PushAPI.subscribe(subscription.toJSON(), asAdmin);
+  return subscription;
+};
+
 // Requests permission (must be called from a user gesture), subscribes this
 // browser to push, and registers the subscription with the backend so it
 // gets included the next time any notification is created for this user.

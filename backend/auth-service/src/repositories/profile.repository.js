@@ -15,6 +15,21 @@ export class ProfileRepository {
     });
   }
 
+  // Every opted-in user, regardless of whether their profile is complete —
+  // the point of this page is broad interaction, not filtering people out
+  // for missing a username, skills, or a photo.
+  async getPeopleForCluster() {
+    return UserModel.find({
+      showOnPeoplePage: { $ne: false },
+    })
+      .select("_id name userName image skills")
+      .lean();
+  }
+
+  async getByIdPublic(userId) {
+    return UserModel.findById(userId).select("_id name userName");
+  }
+
   async searchByUsername(query, limit) {
     const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
